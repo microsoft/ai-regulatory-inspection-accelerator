@@ -1,0 +1,33 @@
+{
+  "name": "food-safety",
+  "version": "1.0.0",
+  "description": "Food Safety Inspection Template — validates multi-document food import submissions against regulatory requirements including mandatory certificate presence, product classification, cross-document consistency, and certificate validity. Production-validated on the PAFN (Kuwait Public Authority for Food and Nutrition) deployment.",
+  "decisionType": "inspection",
+  "decisionLabels": {
+    "approve": "PASS",
+    "review": "HOLD",
+    "decline": "FAIL"
+  },
+  "platformVersionMin": "1.0.0",
+  "author": {
+    "name": "Microsoft CSE",
+    "organization": "Microsoft Corporation"
+  },
+  "primaryLanguages": ["en", "ar"],
+  "targetIndustries": ["food-safety", "food-import", "regulatory-inspection"],
+  "requiredArtifacts": {
+    "evidenceTypes": true,
+    "rules": true,
+    "referenceData": true,
+    "submissionSchema": true,
+    "riskWeightMatrix": true,
+    "riskThresholdBands": true,
+    "aliasPairs": true,
+    "crossValidationRules": true,
+    "decisionVocabulary": true,
+    "piiFieldList": true,
+    "chatTools": true,
+    "dashboardConfig": true
+  },
+  "tags": ["food", "import", "inspection", "regulatory", "halal", "hs-codes", "certificates"]
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/dstoolkit-document-inspection-agent/templates/_schema/template.schema.json",
+  "title": "ARIA Industry Template Schema",
+  "description": "Validation schema for ARIA industry decision templates. All templates must conform to this schema.",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "description",
+    "decisionType",
+    "decisionLabels",
+    "platformVersionMin",
+    "author"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Template identifier (kebab-case). Must be unique across all templates.",
+      "examples": ["food-safety", "kyc-aml", "insurance-claims"]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Template version in semver format (MAJOR.MINOR.PATCH).",
+      "examples": ["1.0.0", "1.2.0"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Human-readable description of the decision workflow this template supports."
+    },
+    "decisionType": {
+      "type": "string",
+      "enum": ["inspection", "approval", "adjudication", "qualification", "authorization", "audit"],
+      "description": "The category of decision workflow this template implements."
+    },
+    "decisionLabels": {
+      "type": "object",
+      "description": "Domain-specific labels for the three standard decision outcomes.",
+      "required": ["approve", "review", "decline"],
+      "properties": {
+        "approve": {
+          "type": "string",
+          "description": "Label for a fully compliant submission (e.g., PASS, CLEAR, APPROVE, AUTHORIZE)."
+        },
+        "review": {
+          "type": "string",
+          "description": "Label for a submission requiring human review (e.g., HOLD, EDD, ESCALATE)."
+        },
+        "decline": {
+          "type": "string",
+          "description": "Label for a non-compliant submission (e.g., FAIL, FLAG, DENY, REJECT)."
+        }
+      }
+    },
+    "platformVersionMin": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Minimum ARIA platform version required to use this template.",
+      "examples": ["1.0.0"]
+    },
+    "author": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "organization": { "type": "string" }
+      }
+    },
+    "primaryLanguages": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z]{2}$" },
+      "description": "Primary document languages for this template (ISO 639-1 codes).",
+      "examples": [["en"], ["en", "ar"], ["en", "fr", "de"]]
+    },
+    "targetIndustries": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Industries this template is designed for.",
+      "examples": [["food-safety", "pharmaceutical"], ["financial-services"]]
+    },
+    "requiredArtifacts": {
+      "type": "object",
+      "description": "List of required template artifact files. All must be present for the template to be valid.",
+      "properties": {
+        "evidenceTypes": { "type": "boolean", "const": true },
+        "rules": { "type": "boolean", "const": true },
+        "referenceData": { "type": "boolean", "const": true },
+        "submissionSchema": { "type": "boolean", "const": true },
+        "riskWeightMatrix": { "type": "boolean", "const": true },
+        "riskThresholdBands": { "type": "boolean", "const": true },
+        "aliasPairs": { "type": "boolean", "const": true },
+        "crossValidationRules": { "type": "boolean", "const": true },
+        "decisionVocabulary": { "type": "boolean", "const": true },
+        "piiFieldList": { "type": "boolean", "const": true },
+        "chatTools": { "type": "boolean", "const": true },
+        "dashboardConfig": { "type": "boolean", "const": true }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Searchable tags for template discovery."
+    }
+  },
+  "additionalProperties": false
+}
