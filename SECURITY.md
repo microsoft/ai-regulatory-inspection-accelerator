@@ -1,9 +1,14 @@
-# Security
+<!-- BEGIN MICROSOFT SECURITY.MD V1.0.0 BLOCK -->
 
-Microsoft takes the security of our software products and services seriously. If you believe you have found a security vulnerability in any Microsoft-owned repository, please report it to us as described below.
+## Security
+
+Microsoft takes the security of our software products and services seriously, which
+includes all source code repositories in our GitHub organizations.
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them to the Microsoft Security Response Center (MSRC) at [https://msrc.microsoft.com/create-report](https://msrc.microsoft.com/create-report).
+For security reporting information, locations, contact information, and policies,
+please review the latest guidance for Microsoft repositories at
+[https://aka.ms/SECURITY.md](https://aka.ms/SECURITY.md).
 
-For more information, see [Security Reporting](https://www.microsoft.com/en-us/msrc/faqs-report-an-issue).
+<!-- END MICROSOFT SECURITY.MD BLOCK -->
