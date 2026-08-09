@@ -1,17 +1,19 @@
-# Document Inspection Agent — dstoolkit
+# ARIA — AI Regulatory Inspection Accelerator
 
-**AI Evidence-to-Decision Platform**  |  Built on Microsoft Azure
+**AI Evidence-to-Decision Platform**  |  Microsoft Azure Solution Accelerator
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Azure](https://img.shields.io/badge/Azure-Enabled-0078D4?logo=microsoftazure)](https://azure.microsoft.com)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue?logo=python)](https://python.org)
 [![Azure Functions](https://img.shields.io/badge/Azure%20Functions-Durable-green?logo=azurefunctions)](https://learn.microsoft.com/azure/azure-functions/durable/)
 
-Process multi-document submissions by extracting structured facts from each document, reconciling evidence across the full bundle, applying configurable policy rules, and generating explainable, auditable AI decisions. Upload a package of documents — certificates, invoices, forms, images — and the solution automatically validates cross-document consistency, evaluates compliance rules, scores risk, and delivers a recommendation with a complete evidence trail.
+ARIA is a configurable AI platform that converts fragmented multi-document evidence into explainable, auditable decisions through cross-document validation, runtime-configurable policy reasoning, risk assessment, and human-in-the-loop review. It helps teams evaluate evidence bundles, detect cross-document inconsistencies, apply domain rules, generate explainable recommendations, and preserve complete decision lineage — for any regulated or compliance-intensive workflow.
 
-The core decision intelligence engine supports text-based and multi-modal documents with cross-evidence validation, runtime-configurable policy rules, and field-level decision traceability. These capabilities apply to regulatory inspection, customs clearance, KYC/AML onboarding, insurance claims adjudication, healthcare prior authorization, and any other domain where high-stakes decisions are made on multi-document submissions.
+ARIA is not a document extraction or knowledge mining tool. It is a **Decision Intelligence Platform** — the layer between raw documentary evidence and a defensible, auditable verdict. Document extraction is one step. The differentiated value is what happens after: cross-evidence reconciliation, configurable policy evaluation, risk scoring, traceable decision delivery, and grounded human review.
 
-> **PAFN Food Safety Inspection** (Kuwait Public Authority for Food and Nutrition) is the first production reference implementation included with this accelerator.
+ARIA ships with production-validated templates for regulatory inspection, customs clearance, KYC/AML onboarding, insurance claims adjudication, healthcare prior authorization, environmental permitting, licensing, and vendor qualification. New decision workflows onboard through configuration alone — no platform code changes required.
+
+> **Reference implementations included:** Food Safety Inspection (PAFN, Kuwait — production-deployed), with additional templates for Customs Clearance, KYC/AML Onboarding, Insurance Claims Adjudication, and Healthcare Prior Authorization.
 
 ---
 
@@ -80,7 +82,7 @@ graph TB
     end
 
     subgraph External["🔌 External Systems"]
-        CONN["Connector Framework\nRaqeb · SharePoint · Dynamics · REST · File"]
+        CONN["Connector Framework\nSharePoint · Dynamics · REST · File\n+ Customer Connectors"]
     end
 
     CONN --> APIM --> HTTP
@@ -100,6 +102,8 @@ graph TB
 </details>
 
 ### Key design principles
+
+> **Connector boundary note:** Platform connectors (SharePoint, Dynamics, REST, File) are reusable across all templates and deployments. Customer-specific connectors — such as the Raqeb connector used in the PAFN Food Safety reference implementation — live under `reference-implementations/{name}/connectors/` and are not part of the core platform connector framework.
 
 | Principle | What it means |
 |---|---|
@@ -170,10 +174,29 @@ Follow the deployment guide to deploy this solution to your own Azure subscripti
 
 ## Business scenario
 
+ARIA applies the same five-stage pipeline across any domain where multi-document submissions must produce consistent, auditable decisions. The decision workflow, the evidence bundle, and the policy rules change — the platform does not.
+
+### Platform applicability across industries
+
+| Decision workflow | Evidence bundle | Decision output | ARIA capabilities used |
+|---|---|---|---|
+| **Food Safety Inspection** | Invoice, Packing List, Certificate of Origin, Health Certificate, Halal Certificate, Lab Analysis | PASS / HOLD / FAIL | All 5 stages · RTL language normalization · HS code validation |
+| **Customs Clearance** | Commercial Invoice, Bill of Lading, Customs Declaration, Import License | CLEAR / HOLD / FLAG | Cross-document value comparison · Sanctions code validation |
+| **KYC / AML Onboarding** | Identity Document, Proof of Address, Source of Funds, Beneficial Ownership | APPROVE / EDD / REJECT | Cross-doc consistency · Sanctions screening · Risk scoring |
+| **Insurance Claims Adjudication** | Claim Form, Medical Records, Physician Notes, Treatment Plan, Bills | APPROVE / PARTIAL / DENY | Medical code reconciliation · Coverage policy evaluation |
+| **Healthcare Prior Authorization** | Authorization Request, Clinical Notes, Lab Results, Treatment Plan | AUTHORIZE / PEER REVIEW / DENY | Step therapy compliance · Medical necessity rules |
+| **Environmental Permitting** | Permit Application, EIA, Monitoring Reports, Emissions Test Results | APPROVE / CONDITIONAL / DENY | Threshold validation · Cross-period consistency |
+| **Licensing and Certification** | License Application, Credentials, CE Records, Background Check | APPROVE / PROVISIONAL / DENY | Certification currency · Temporal validity rules |
+| **Vendor Qualification** | Financial Statements, Insurance Certificates, Quality Certifications | QUALIFIED / CONDITIONAL / DISQUALIFIED | Financial threshold rules · Conflict of interest checks |
+
+---
+
+### Reference implementation: PAFN Food Safety Inspection
+
 | ![UI Screenshot](./docs/images/readme/ui.png) |
 |:---:|
 
-The included sample scenario demonstrates a **Food Import Inspection** workflow for Kuwait's Public Authority for Food and Nutrition (PAFN). A regulatory inspector receives incoming food import submissions — each containing a Commercial Invoice, Packing List, Certificate of Origin, Health Certificate, and category-specific certificates (Halal, Laboratory Analysis, Fumigation) — that must be reviewed together.
+The included sample scenario demonstrates the **Food Safety Inspection** template using the PAFN (Kuwait Public Authority for Food and Nutrition) deployment as the reference implementation. A regulatory inspector receives food import submissions — each containing a Commercial Invoice, Packing List, Certificate of Origin, Health Certificate, and category-specific certificates (Halal, Laboratory Analysis, Fumigation) — that must be reviewed together.
 
 The inspector submits the document bundle. The pipeline automatically:
 
@@ -181,11 +204,11 @@ The inspector submits the document bundle. The pipeline automatically:
 2. **Extracts** structured fields from every document — product descriptions, HS codes, declared weights, certificate issuers, expiry dates — using LLM prompts auto-generated from the food safety field schema
 3. **Reconciles** extracted evidence across all documents — resolving field name variations across Arabic and English, detecting weight discrepancies between the invoice and packing list, and flagging certificate inconsistencies
 4. **Evaluates** Kuwait Ministry of Health compliance rules loaded from Cosmos DB — mandatory certificate matrix, HS code validation, expiry date checks, cross-document quantity tolerance
-5. **Delivers** a PASS/HOLD/FAIL decision with a complete field-level evidence chain to the Raqeb customs management system within 2 minutes
+5. **Delivers** a PASS/HOLD/FAIL decision with a complete field-level evidence chain to the external case management system (Raqeb, in the PAFN deployment) within 2 minutes
 
 The inspector reviews AI-generated findings for flagged cases, interrogates the evidence using the Review Assistant Agent ("Why was this certificate flagged?"), and records override decisions with mandatory rationale. What previously required 20–35 minutes of manual document cross-referencing is completed in under 2 minutes.
 
-> **Sample data included:** The `evaluation/` folder contains sample food import submission data and ground truth datasets for accuracy validation. See [Evaluation Guide](./docs/EvaluationGuide.md) for a walkthrough.
+> **Sample data included:** The `templates/food-safety/evaluation/` folder contains sample food import submission data and ground truth datasets for accuracy validation. The platform evaluation framework lives in `src/evaluation/`. See [Evaluation Guide](./docs/EvaluationGuide.md) for a walkthrough.
 
 ⚠️ The sample data used in this repository is synthetic and generated using Azure OpenAI service. The data is intended for use as sample data only.
 
@@ -218,46 +241,65 @@ The inspector reviews AI-generated findings for flagged cases, interrogates the 
 
 ```
 dstoolkit-document-inspection-agent/
-├── src/                          # Platform source code
-│   ├── api/                      # REST API (FastAPI) — submission endpoints
-│   ├── pipeline/                 # Azure Durable Functions pipeline
-│   │   ├── activities/           # Five pipeline activity implementations
-│   │   ├── agents/               # Reusable AI agents
-│   │   ├── rules_engine/         # Policy evaluation engine
-│   │   └── shared/               # Shared utilities and models
-│   ├── chat/                     # Review Assistant Agent (conversational Q&A)
-│   └── models/                   # Data models and schemas
 │
-├── templates/                    # Industry Decision Templates (configuration only)
-│   ├── food-safety/              # Food Safety Inspection Template (PAFN reference)
-│   ├── customs/                  # Customs Clearance Template
-│   ├── kyc-aml/                  # KYC / AML Onboarding Template
-│   ├── insurance-claims/         # Insurance Claims Adjudication Template
-│   └── healthcare-prior-auth/    # Healthcare Prior Authorization Template
+├── src/                              # Platform source code (ARIA Core Platform)
+│   ├── platform/                     # 17-component decision intelligence platform
+│   │   ├── intake/                   # Evidence Intake Engine
+│   │   ├── document_intelligence/    # Document Intelligence Engine (OCR + extraction)
+│   │   ├── reconciliation/           # Data Reconciliation Engine (semantic alias resolution)
+│   │   ├── cross_document/           # Cross-Document Validation Engine
+│   │   ├── policy/                   # Policy Evaluation Engine (runtime rule loading)
+│   │   │   └── evaluators/           # One evaluator per rule category (8 categories)
+│   │   ├── risk/                     # Risk Assessment Engine
+│   │   ├── decision/                 # Decision Recommendation Engine + evidence chain
+│   │   ├── human_review/             # Human Review Framework (Review Assistant Agent)
+│   │   ├── explainability/           # Explainability Framework
+│   │   ├── audit/                    # Audit and Lineage Framework
+│   │   ├── orchestration/            # Workflow Orchestration (Durable Functions)
+│   │   ├── knowledge/                # Knowledge Framework (case history, reference data)
+│   │   └── reporting/                # Reporting Framework (telemetry, dashboards)
+│   ├── api/                          # REST API — submission gateway (FastAPI)
+│   ├── models/                       # Shared data models
+│   ├── shared/                       # Azure service clients + cross-platform utilities
+│   └── evaluation/                   # Evaluation Framework (platform code)
+│                                     # Ground truth data lives in templates/{name}/evaluation/
 │
-├── connectors/                   # External system connectors (customer extensions)
-│   ├── raqeb/                    # Raqeb Kuwait Customs connector (reference)
-│   ├── sharepoint/               # SharePoint document source connector
-│   └── generic-rest/             # Generic REST connector
+├── templates/                        # ARIA Industry Decision Templates (configuration only — no code)
+│   ├── _schema/                      # Template validation schema (template.schema.json)
+│   ├── food-safety/                  # Food Safety Inspection Template (PAFN-derived, production-validated)
+│   │   └── evaluation/               # Ground truth test data for this template
+│   ├── customs/                      # Customs Clearance Template
+│   ├── kyc-aml/                      # KYC / AML Onboarding Template
+│   ├── insurance-claims/             # Insurance Claims Adjudication Template
+│   └── healthcare-prior-auth/        # Healthcare Prior Authorization Template
 │
-├── infra/                        # Infrastructure as Code
-│   ├── terraform/                # Terraform modules (recommended)
-│   │   └── modules/              # Reusable Terraform modules per Azure service
-│   └── bicep/                    # Bicep alternative (for Azure Marketplace)
+├── connectors/                       # Platform connectors (reusable across all templates)
+│   ├── sdk/                          # Connector Developer SDK (BaseConnector contract)
+│   ├── rest/                         # Generic REST Connector (built-in)
+│   ├── file/                         # File-Based Connector (built-in)
+│   ├── sharepoint/                   # SharePoint Document Source Connector
+│   └── dynamics/                     # Dynamics 365 Connector
 │
-├── evaluation/                   # Evaluation framework and ground truth data
-├── tests/                        # Test suites
-│   ├── unit/                     # Unit tests per component
-│   ├── integration/              # Integration tests
-│   └── evaluation/               # End-to-end accuracy evaluation tests
+├── reference-implementations/        # ARIA Reference Implementations (customer-specific, isolated)
+│   └── pafn-food-inspection/         # PAFN — Kuwait Food Safety (Reference #1, production-deployed)
+│       ├── connectors/raqeb/         # Raqeb connector (PAFN-specific — not a platform connector)
+│       ├── config/                   # PAFN deployment configuration
+│       ├── ui/                       # PAFN inspector web application
+│       └── infra/terraform/          # PAFN-specific infrastructure extensions
 │
-├── scripts/                      # Deployment and operational scripts
-├── docs/                         # Documentation
-│   └── images/                   # README and architecture images
+├── infra/
+│   ├── terraform/                    # PRIMARY — Terraform IaC (5 modules)
+│   │   └── modules/                  # app-landing-zone, ai-landing-zone, network, monitoring, identity
+│   └── bicep/                        # SECONDARY — reserved for Azure Marketplace packaging
 │
-└── .github/                      # GitHub Actions workflows and issue templates
-    └── workflows/                # CI/CD pipeline definitions
+├── marketplace/                      # Reserved for Azure Marketplace Managed Application packaging
+├── tests/                            # Unit, integration, connector tests
+├── scripts/                          # seed_rules.py, install_template.py, run_evaluation.py
+├── docs/                             # Documentation and architecture images
+└── .github/workflows/                # CI/CD: lint, unit tests, template schema validation
 ```
+
+> **Three-tier architecture:** `src/platform/` is domain-neutral Core Platform. `templates/` are industry configuration packages (no code). `reference-implementations/` are complete customer deployments (isolated from platform). Customer-specific connectors (e.g., Raqeb) belong in `reference-implementations/{name}/connectors/` — not in `connectors/`.
 
 ### Additional resources
 
@@ -332,8 +374,16 @@ Check out related Microsoft solution accelerators:
 | [Conversation Knowledge Mining](https://github.com/microsoft/Conversation-Knowledge-Mining-Solution-Accelerator) | Derive insights from volumes of conversational data using generative AI. |
 | [GPT-RAG Accelerator](https://github.com/Azure/gpt-rag) | Secure enterprise GPT assistant framework using Retrieval-Augmented Generation to ground answers on your data. |
 
-> 💡 **How this accelerator differs from Document Knowledge Mining and Content Processing:**  
-> Document Knowledge Mining and Content Processing solve the **extraction problem** — turning documents into searchable, queryable structured data. This accelerator solves the **decision problem** — taking fragmented evidence across multiple documents, reconciling cross-document inconsistencies, evaluating configurable policy rules, and producing an explainable, auditable decision. The extraction step is shared infrastructure; the decision intelligence layer (evidence reconciliation, policy evaluation, risk scoring, human review, decision lineage) is this accelerator's unique contribution.
+> 💡 **How ARIA differs from Document Knowledge Mining and Content Processing:**
+>
+> **Document Knowledge Mining** and **Content Processing** solve the *extraction and knowledge retrieval problem* — turning documents into searchable, queryable, summarizable structured data. These are commodity capabilities that ARIA also uses as supporting steps.
+>
+> ARIA solves the *decision problem* — the layer that comes after extraction. ARIA takes fragmented evidence spread across multiple documents, cross-checks them against each other for logical consistency (cross-document validation), evaluates the reconciled evidence against a configurable policy rule set (policy reasoning), scores the risk posture of the submission, generates an explainable recommendation with natural language rationale, supports human review and override with full rationale capture, and delivers an immutable, field-level audit trail that any challenged decision can be reconstructed from — years later.
+>
+> **What ARIA reuses from extraction accelerators:** OCR, structured field extraction, semantic search.  
+> **What ARIA uniquely adds:** Cross-evidence reconciliation · Runtime-configurable policy evaluation · Risk scoring · Decision recommendation · Grounded human review · Decision lineage and point-in-time reproducibility · PII dual-tier evidence segregation.
+>
+> If you need to search documents or chat over a knowledge base, use Document Knowledge Mining. If you need to make a defensible, auditable decision on a multi-document submission bundle, use ARIA.
 
 ---
 
