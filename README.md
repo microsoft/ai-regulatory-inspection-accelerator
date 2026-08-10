@@ -12,6 +12,8 @@ The core evidence-to-decision engine supports any multi-document, policy-driven 
 
 > Note: With any AI solution you build using this accelerator, you are responsible for assessing associated risks and complying with applicable laws and standards. See [Responsible AI Transparency FAQ](TRANSPARENCY_FAQ.md).
 
+> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described below. Core Platform engine code (`src/platform/`) is under active implementation — see [Roadmap](#roadmap). Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
+
 ---
 
 ## Solution overview
@@ -220,7 +222,7 @@ To the extent this accelerator includes components derived from Microsoft produc
 
 | Stage | Focus |
 |---|---|
-| Current | Core Platform generalization from the validated Food Safety reference implementation |
+| Current | Core Platform engine implementation (`src/platform/`) in progress, generalized from the validated Food Safety reference implementation |
 | Next | Additional industry templates (customs, healthcare, licensing, environmental, financial compliance, KYC/AML) validated independently |
 | Future | Multi-tenant SaaS, Government Cloud, and sovereign/air-gapped deployment topologies; Azure Marketplace packaging |
 
