@@ -1,17 +1,22 @@
-# ARIA - Architecture Decision Record Catalog
+<!-- INTERNAL ENGINEERING DEEP-REFERENCE -->
+<!-- Not required reading for adopters. See ../TechnicalArchitecture.md for the short "Key decisions" table most readers need. -->
+<!-- Full 28-ADR catalog for engineering teams doing deep implementation or governance review work. -->
+
+# ARIA - Architecture Decision Record Catalog (Internal Engineering Deep-Reference)
 
 **Document:** 16-ARIA-ADR-Catalog.md
 **Version:** 1.0
 **Date:** 2026-08-10
-**Status:** Authoritative - Architecture Governance
+**Status:** Reference architecture - Core Platform implementation not yet started
 **Governance Role:** Architecture Governance Lead and ADR Reviewer
 **Primary Source:** 15-ARIA-Platform-Architecture.md
 **Supporting Sources:** 11-Architecture-Input-Pack.md · 04-Architecture-Decision-Records.md
 **Classification:** Microsoft Confidential - IP Strategy
+**Audience:** Engineering only (deep governance reference - see [TechnicalArchitecture.md](../TechnicalArchitecture.md#key-decisions) for the short summary)
 
 > This catalog supersedes and extends 04-Architecture-Decision-Records.md.
-> ADRs 001–008 are reproduced in summary form (originals in Document 04).
-> ADRs 009–028 are new formal records derived from the platform architecture in Document 15.
+> ADRs 001-008 are reproduced in summary form (originals in Document 04).
+> ADRs 009-028 are new formal records derived from the platform architecture in Document 15.
 > No architecture has been redesigned. This document only governs and formalizes decisions already present.
 
 ---

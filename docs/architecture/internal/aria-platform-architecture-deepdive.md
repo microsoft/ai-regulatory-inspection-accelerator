@@ -1,12 +1,18 @@
-# ARIA - Platform Architecture Document
+<!-- INTERNAL ENGINEERING DEEP-REFERENCE -->
+<!-- Not required reading for adopters. See ../TechnicalArchitecture.md for the concise reference most readers need. -->
+<!-- This document preserves the full, exhaustive architecture specification (all 17 component specs, -->
+<!-- every token-efficiency strategy with code samples, all 4 deployment topology diagrams, and full -->
+<!-- validation evidence) for engineering teams doing deep implementation work. -->
+
+# ARIA - Platform Architecture Document (Internal Engineering Deep-Reference)
 
 **Document:** 15-ARIA-Platform-Architecture.md
 **Version:** 1.0
 **Date:** 2026-08-10
-**Status:** Authoritative - Architecture Reference
+**Status:** Reference architecture - Core Platform implementation not yet started
 **Primary Input:** 11-Architecture-Input-Pack.md (read first; do not open source documents)
 **Classification:** Microsoft Confidential - IP Strategy
-**Audience:** Engineering · Leadership · Hackathon Submission · IP Governance Review
+**Audience:** Engineering only (deep implementation reference - see [TechnicalArchitecture.md](../TechnicalArchitecture.md) for the concise version)
 
 ---
 
