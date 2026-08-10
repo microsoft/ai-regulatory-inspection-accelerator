@@ -6,14 +6,17 @@ This folder contains supporting documentation for **ARIA - AI Regulatory Inspect
 
 ## Architecture
 
-- [ARIA Platform Architecture](architecture/aria-platform-architecture.md) - capability map, logical/component/agent architecture, token efficiency design, template framework, data and integration architecture, deployment topologies, and Azure reference architecture.
-- [ARIA ADR Summary](architecture/aria-adr-summary.md) - Architecture Decision Records covering platform orchestration, token efficiency, security, AI/agent design, data, integration, and deployment decisions.
+- [Technical Architecture](architecture/TechnicalArchitecture.md) - capability map, logical/component/agent architecture, token efficiency design, template framework, data and integration architecture, deployment topologies, Azure reference architecture, and key decisions.
 
-## Additional materials
+## Deployment and operations
 
-- [ARIA One-Pager](materials/aria-onepager.md) - condensed executive summary of the solution.
-- [ARIA Pitch](materials/aria-pitch.md) - presentation script and talking points.
-- [ARIA Demo Script](materials/aria-demo-script.md) - recordable end-to-end demo walkthrough.
-- [ARIA Poster](materials/aria-poster.md) - poster content, layout, and visual guidance.
+- [Deployment Guide](DeploymentGuide.md) - provisioning and deploying the platform. *(Planned - Core Platform not yet implemented.)*
+- [Local Development Setup](LocalDevelopmentSetup.md) - running the platform locally for development. *(Planned.)*
+- [Troubleshooting Steps](TroubleshootingSteps.md) - common issues and fixes. *(Planned.)*
+
+## Customize
+
+- [Customize: Add a New Industry Template](CustomizeIndustryTemplate.md) - the 13-artifact template contract and how to draft a new industry template today.
 
 ---
+

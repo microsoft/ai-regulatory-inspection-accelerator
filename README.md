@@ -30,7 +30,7 @@ Processing, extraction, validation, and decision steps are tracked with status a
 
 ### Solution architecture
 
-The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content: a domain-neutral **Core Platform** (the engines described above), **Industry Templates** (configuration packages - JSON and Markdown only, no executable code - that adapt the platform to a specific regulated domain), and **Reference Implementations** (complete, isolated deployments built on the Core Platform and a template). See [ARIA Platform Architecture](docs/architecture/aria-platform-architecture.md) for the full architecture, component design, and Azure reference architecture, and [ARIA ADR Summary](docs/architecture/aria-adr-summary.md) for the governing architecture decisions.
+The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content: a domain-neutral **Core Platform** (the engines described above), **Industry Templates** (configuration packages - JSON and Markdown only, no executable code - that adapt the platform to a specific regulated domain), and **Reference Implementations** (complete, isolated deployments built on the Core Platform and a template). See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
 
 | Component | Role |
 |---|---|
@@ -84,10 +84,10 @@ A background Knowledge Pack Agent keeps each industry template's compressed poli
 
 ## Getting Started
 
-1. Clone the repository and review [ARIA Platform Architecture](docs/architecture/aria-platform-architecture.md) for full platform context.
-2. Provision Azure prerequisites (Azure OpenAI, Azure Document Intelligence, Cosmos DB, Azure AI Search, Storage, Key Vault) using the Terraform modules in `infra/terraform/` for a single-tenant deployment.
+1. Clone the repository and review [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for full platform context.
+2. Provision Azure prerequisites (Azure OpenAI, Azure Document Intelligence, Cosmos DB, Azure AI Search, Storage, Key Vault) using the Terraform modules in `infra/terraform/` for a single-tenant deployment - see the [Deployment Guide](docs/DeploymentGuide.md).
 3. Configure environment variables for AI service endpoints and Managed Identity, following the zero-secrets configuration pattern (no connection strings or API keys in code).
-4. Install and activate an industry template (starting with the Food Safety template) using the template lifecycle tooling in `scripts/`.
+4. Install and activate an industry template (starting with the Food Safety template) - see [Customize: Add a New Industry Template](docs/CustomizeIndustryTemplate.md) if you want to add your own.
 5. Submit a sample multi-document case bundle to the intake endpoint and observe the pipeline through to decision delivery.
 
 ### Prerequisites and costs
