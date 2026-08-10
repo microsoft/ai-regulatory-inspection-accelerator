@@ -24,7 +24,7 @@
 | 2 | Business Capability Architecture | Capability hierarchy and capability map |
 | 3 | Logical Architecture | Layer-by-layer Mermaid diagram |
 | 4 | Component Architecture | 17 components with full specifications |
-| 5 | Agent Architecture | Multi-agent ecosystem + interaction diagram |
+| 5 | Agent Architecture | Agents and deterministic stages + interaction diagram |
 | 6 | Token Efficiency Architecture | Dedicated optimization layer - design and estimates |
 | 7 | Template Framework | Classification and industry mapping |
 | 8 | Data Architecture | Conceptual model + ERD |
@@ -52,7 +52,7 @@ ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
 | **AP-01** | **Domain neutrality by construction** | Zero industry vocabulary in `src/platform/`. CI lint enforcement. |
 | **AP-02** | **Configuration over code** | New document type = JSON entry. New rule = Cosmos DB document. New industry = 13 JSON template files. |
 | **AP-03** | **Decision traceability as a first-class concern** | Every decision traceable to field → document → rule → ETag. Point-in-time reproducibility always. |
-| **AP-04** | **Security by architecture, not configuration** | Managed Identity, private endpoints, PII dual-tier write - foundational, not optional. |
+| **AP-04** | **Security by architecture, not configuration** | Managed Identity, private endpoints, PII redaction at write boundary - foundational, not optional. |
 | **AP-05** | **Token efficiency by design** | Structured pre-processing before every LLM call. LLM receives minimum structured information, not raw documents. |
 | **AP-06** | **Human override, always** | No fully autonomous decisions. Human review framework is first-class, not an add-on. |
 | **AP-07** | **Durable, resumable orchestration** | Durable Functions checkpoint-based state persistence. Zero case loss on host restart. |
@@ -172,7 +172,7 @@ ARIA - AI Evidence-to-Decision Platform
 ├── 6. DECISION SUPPORT
 │   ├── 6.1 Verdict Synthesis (domain vocabulary)
 │   ├── 6.2 Evidence Chain Assembly (field-level provenance)
-│   ├── 6.3 PII Dual-Tier Write (secured + display)
+│   ├── 6.3 PII Redaction at Write Boundary (dual-tier optional, per-customer)
 │   ├── 6.4 Explainability Report Generation
 │   ├── 6.5 Top-N Impact Findings Selection
 │   └── 6.6 HMAC-Signed Callback Delivery
@@ -236,7 +236,7 @@ ARIA - AI Evidence-to-Decision Platform
 |  | EVALUATION     |  |                  |  |                        |  |
 |  | Runtime Rules  |  | Weighted Scoring |  | Verdict Synthesis      |  |
 |  | Mandatory Docs |  | Risk Grading     |  | Evidence Chain         |  |
-|  | Field Complete |  | History Pattern  |  | PII Dual-Tier Write    |  |
+|  | Field Complete |  | History Pattern  |  | PII Redaction          |  |
 |  | Value Valid    |  | Confidence Calc  |  | Explainability         |  |
 |  | Cross-Evidence |  | HOLD Logic       |  | Callback Delivery      |  |
 |  +----------------+  +------------------+  +------------------------+  |
@@ -783,7 +783,7 @@ Each component is specified across six dimensions:
 
 ### C-12: Decision Recommendation Engine
 
-**Purpose:** Synthesizes the final decision from the risk score and findings, assembles the field-level evidence chain, performs PII dual-tier write, selects top-N impact findings for the summary, and initiates HMAC-signed delivery to the external system.
+**Purpose:** Synthesizes the final decision from the risk score and findings, assembles the field-level evidence chain, performs PII redaction at the write boundary, selects top-N impact findings for the summary, and initiates HMAC-signed delivery to the external system.
 
 **Inputs:**
 - Risk score, risk grade, HOLD flag (from C-11)
@@ -794,9 +794,9 @@ Each component is specified across six dimensions:
 
 **Outputs:**
 - Structured decision: `{verdict, confidenceScore, riskGrade, holdFlag, topFindings[], evidenceChain[]}`
-- PII dual-tier write to Cosmos DB:
-  - `verdicts` container (secured): full evidence chain including PII values
-  - Display findings (PII-redacted): field labels replacing PII values
+- PII redaction at write to Cosmos DB:
+  - `verdicts` container: evidence chain with PII field values replaced by `[REDACTED: {fieldName}]` labels (default, matches PAFN)
+  - Optional secured container (per-customer opt-in only, see ADR-021): full evidence chain including PII values
 - Delivery callback (HMAC-signed HTTP POST to configured endpoint)
 - Delivery audit log entry in Cosmos DB (`callback-log` container)
 
@@ -986,37 +986,33 @@ def reportStatus(case_id: str, status: str, error: str | None) -> bool
 
 ## Output 5 - Agent Architecture
 
-### 5.1 Multi-Agent Ecosystem Design
+### 5.1 Agent and Stage Design
 
-ARIA's pipeline is implemented as a coordinated multi-agent ecosystem. Each agent is responsible for a bounded set of decisions and produces structured outputs consumed by the next agent. Agents share context through structured interfaces - not shared state.
+ARIA's pipeline is five sequential stages plus three components that run asynchronously or in the background, each responsible for a bounded set of decisions and producing structured output consumed by the next component. Components share context through structured interfaces - not shared state.
 
-| Agent | Role | Processing Stage | Primary Tool |
+| Component | Role | Processing Stage | Primary Tool |
 |---|---|---|---|
-| **Intake Agent** | Bundle reception, validation, staging, pre-processing | Activity 1 | Evidence Intake Engine (C-01) |
-| **Extraction Agent** | Document-to-field transformation | Activity 2 (Phase 1 + 2) | DI Engine (C-02) + DI Service |
-| **Classification Agent** | Field canonicalization and PII classification | Activity 2 (post-extraction) | Reconciliation Engine sub-component |
+| **Intake Stage** | Bundle reception, validation, staging, pre-processing | Activity 1 | Evidence Intake Engine (C-01) |
+| **Extraction Agent** | Document-to-field transformation, field canonicalization, and PII classification | Activity 2 (Phase 1 + 2, post-extraction) | DI Engine (C-02) + DI Service + Reconciliation Engine sub-component |
 | **Validation Agent** | Cross-document consistency and conflict detection | Activity 3 | Cross-Document Validation Engine (C-09) |
-| **Policy Agent** | Rule evaluation against evidence | Activity 4 | Policy Evaluation Engine (C-10) |
-| **Risk Agent** | Risk scoring, grading, HOLD determination | Activity 4 | Risk Assessment Engine (C-11) |
+| **Policy Stage** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
 | **Recommendation Agent** | Verdict synthesis, evidence chain, delivery | Activity 5 | Decision Recommendation Engine (C-12) |
-| **Review Assistant Agent** | Grounded evidence Q&A for human reviewers | Async / On-Demand | Human Review Framework (C-13) |
-| **Audit Assistant Agent** | Decision reconstruction, lineage querying | On-Demand | Audit Framework (C-15) |
-| **Knowledge Pack Agent** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
+| **Review Assistant Agent** | Grounded evidence Q&A for human reviewers *(Phase 2 - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
+| **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-Demand | Audit Framework (C-15) |
+| **Knowledge Pack Stage** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
 
 ### 5.2 Agent Interaction Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant KPA as Knowledge Pack Agent
-    participant INT as Intake Agent
+    participant KPA as Knowledge Pack Stage
+    participant INT as Intake Stage
     participant EXT as Extraction Agent
-    participant CLS as Classification Agent
     participant VAL as Validation Agent
-    participant POL as Policy Agent
-    participant RSK as Risk Agent
+    participant POL as Policy Stage
     participant REC as Recommendation Agent
-    participant AUD as Audit Agent
+    participant AUD as Audit Log
     participant REV as Review Assistant Agent
 
     Note over KPA: Runs on template activation / rule change
@@ -1032,12 +1028,9 @@ sequenceDiagram
 
     EXT->>EXT: Phase 1 - Azure DI structured extraction (pre-populate)
     EXT->>EXT: Phase 2 - LLM gap-filling (uncovered fields only, chunked)
-    EXT->>CLS: Raw extracted fields per document
-
-    CLS->>CLS: Semantic alias resolution (LLM - fast path for known aliases)
-    CLS->>CLS: Canonical evidence map assembly
-    CLS->>CLS: PII classification per field
-    CLS->>VAL: Canonical evidence map + PII map
+    EXT->>EXT: Semantic alias resolution + canonical evidence map assembly
+    EXT->>EXT: PII classification per field
+    EXT->>VAL: Canonical evidence map + PII map
 
     VAL->>VAL: Cross-document consistency check (LLM, canonical map only)
     VAL->>VAL: Coherence score + conflict grading
@@ -1045,22 +1038,19 @@ sequenceDiagram
 
     POL->>POL: Load rules from Cosmos DB (runtime, ETag pinned)
     POL->>POL: Evaluate 8 rule categories (deterministic - no LLM)
-    POL->>RSK: Findings list (PASS/FAIL/N/A) + rule ETags
-
-    RSK->>RSK: Weighted risk score computation
-    RSK->>RSK: Historical pattern query (AI Search)
-    RSK->>RSK: HOLD flag determination
-    RSK->>REC: Risk score + grade + HOLD flag + confidence
+    POL->>POL: Weighted risk score computation + historical pattern query (AI Search)
+    POL->>POL: HOLD flag determination
+    POL->>REC: Findings list (PASS/FAIL/N/A) + risk score + grade + HOLD flag + confidence
 
     REC->>REC: Verdict synthesis (domain vocabulary)
     REC->>REC: Evidence chain assembly (field→doc→rule→verdict)
-    REC->>REC: PII dual-tier write (secured + display)
+    REC->>REC: PII redaction at write boundary
     REC->>AUD: Decision + complete evidence chain + token metrics
 
     AUD->>AUD: Immutable event stream append
     AUD->>AUD: Token usage capture (prompt + completion + cached)
 
-    Note over REV: Async - triggered on HOLD or reviewer request
+    Note over REV: Async - triggered on HOLD or reviewer request (Phase 2)
     REC-->>REV: Case routed to human review queue
     REV->>REV: Retrieve top-3 evidence chunks (AI Search)
     REV->>REV: Assemble context (chunks + Knowledge Pack ≤ 1,800 tokens)
@@ -1070,16 +1060,14 @@ sequenceDiagram
 
 ### 5.3 Agent Communication Contracts
 
-| From Agent | To Agent | Payload | Format |
+| From | To | Payload | Format |
 |---|---|---|---|
-| Intake Agent | Extraction Agent | Bundle metadata, normalized doc URLs | Durable Functions activity input JSON |
-| Extraction Agent | Classification Agent | Raw extracted fields per document | `{documentId, fields: [{name, value, confidence}]}` |
-| Classification Agent | Validation Agent | Canonical evidence map | `{canonicalMap: {fieldName: {value, confidence, sourceDocumentId}}}` |
-| Validation Agent | Policy Agent | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
-| Policy Agent | Risk Agent | Findings list | `{findings: [{ruleId, category, field, result, ruleETag}]}` |
-| Risk Agent | Recommendation Agent | Risk assessment | `{score, grade, holdFlag, confidence, signals[]}` |
-| Recommendation Agent | Audit Agent | Complete decision package | `{decision, evidenceChain, tokenMetrics}` |
-| Knowledge Pack Agent | All agents | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
+| Intake Stage | Extraction Agent | Bundle metadata, normalized doc URLs | Durable Functions activity input JSON |
+| Extraction Agent | Validation Agent | Canonical evidence map + PII map | `{canonicalMap: {fieldName: {value, confidence, sourceDocumentId}}}` |
+| Validation Agent | Policy Stage | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
+| Policy Stage | Recommendation Agent | Findings + risk assessment | `{findings: [{ruleId, category, field, result, ruleETag}], score, grade, holdFlag, confidence, signals[]}` |
+| Recommendation Agent | Audit Log | Complete decision package | `{decision, evidenceChain, tokenMetrics}` |
+| Knowledge Pack Stage | Extraction Agent, Validation Agent, Review Assistant Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
 
 ---
 
@@ -2236,9 +2224,9 @@ For classified government, defense, and critical infrastructure with zero public
 
 ### Proof 3: Token Efficiency Is Built Into Architecture
 
-**Test:** Measure token consumption for a 5-document food safety case, unoptimized vs ARIA architecture.
+**Test:** Project token consumption for a 5-document food safety case, unoptimized vs ARIA architecture, using per-step estimates (this is an illustrative calculation, not a measurement against a running deployment - the Knowledge Pack, Context Assembly Engine, and semantic chunking components this depends on are not yet built).
 
-| Step | Unoptimized Approach | ARIA Architecture | Saving |
+| Step | Unoptimized Approach | ARIA Architecture (projected) | Saving |
 |---|---|---|---|
 | Bundle intake (DOCX invoice + Word cert) | 2 docs × 1,600 tokens raw = 3,200 tokens | 2 docs × 400 tokens MD = 800 tokens | 2,400 tokens (75%) |
 | PDF OCR output (3 certificates) | 3 docs × 4,000 tokens raw DI output = 12,000 | 3 docs × 2,800 tokens normalized = 8,400 | 3,600 tokens (30%) |
@@ -2248,9 +2236,9 @@ For classified government, defense, and critical infrastructure with zero public
 | Human review (10 queries) | 10 × full case 10,000 = 100,000 | 10 × retrieved chunks 1,800 = 18,000 | 82,000 tokens (82%) |
 | **Total** | **~191,200 tokens** | **~36,000 tokens** | **~155,200 tokens (81%)** |
 
-All optimizations are architectural decisions implemented in platform components - not manual per-deployment choices. Token efficiency is infrastructure, not convention.
+All optimizations are architectural decisions designed into platform components - not manual per-deployment choices. Once built, token efficiency is intended to be infrastructure, not convention. The figures above are projections based on assumed token counts per step, not measured results.
 
-**Verdict: Token efficiency is a measurable architectural property of ARIA, not an operational practice. ✓**
+**Verdict: Token efficiency is designed as a measurable architectural property of ARIA, not an operational practice - pending validation once the dependent components (Knowledge Pack, Context Assembly Engine, semantic chunking) are built. ~**
 
 ---
 
@@ -2285,7 +2273,7 @@ All optimizations are architectural decisions implemented in platform components
 | **Partner ecosystem** | GSI-deliverable without Microsoft co-engineering; template authoring is domain expertise, not platform engineering |
 | **Microsoft strategic fit** | Azure AI Services consumption · Government Cloud expansion · Azure Marketplace · Well-Architected Framework alignment |
 | **Governance quality** | 8 accepted ADRs · 15 architecture constraints · CI enforcement of domain neutrality · evaluation gate before production |
-| **Security posture** | Managed Identity zero-secrets · Private Endpoint network topology · PII dual-tier write · HMAC-signed delivery |
+| **Security posture** | Managed Identity zero-secrets · Private Endpoint network topology · PII redaction at write boundary · HMAC-signed delivery |
 | **Reusability score** | 19/34 PAFN components score ≥ 8/10 reusability (56% directly deployable, zero modification) |
 | **Generalization cost** | ~35 developer-days to convert from PAFN-specific to fully domain-agnostic accelerator |
 | **Competitive differentiation** | No competitor offers: multi-document cross-reasoning + config-driven + runtime rules + field-level audit trail + token efficiency |
@@ -2294,7 +2282,7 @@ All optimizations are architectural decisions implemented in platform components
 **Architecture suitability for each audience:**
 - **Engineering:** Component specifications (Output 4) · Agent interaction diagram (Output 5) · Data architecture ERD (Output 8)
 - **Leadership:** Executive summary (Output 1) · Business capability map (Output 2) · Validation proofs (Output 12)
-- **Hackathon submission:** Token efficiency architecture (Output 6) · Multi-agent ecosystem (Output 5) · Azure reference architecture (Output 11)
+- **Hackathon submission:** Token efficiency architecture (Output 6) · Agent and Stage architecture (Output 5) · Azure reference architecture (Output 11)
 - **IP Governance review:** Three-tier reusability model (Output 7) · Final validation (Output 12) · PAFN mapping (Section 6 of Input Pack)
 
 **Verdict: ARIA meets the bar for a Microsoft Solution Accelerator with Azure Marketplace listing, GSI partner ecosystem delivery, and cross-industry IP claim. Architecture is complete, enforced, and production-validated. ✓**

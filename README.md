@@ -14,17 +14,19 @@ The core evidence-to-decision engine supports any multi-document, policy-driven 
 
 > **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described below. Core Platform engine code (`src/platform/`) is under active implementation - see [Roadmap](#roadmap). Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
 
+> **Phase 1 scope:** This release covers the recommendation engine - Evidence Intake through Decision Recommendation. Human Review (the grounded review agent) is a Phase 2 capability, still in progress - see [Roadmap](#roadmap).
+
 ---
 
 ## Solution overview
 
 This accelerator leverages Azure Document Intelligence, Azure OpenAI Service, Azure Durable Functions, Azure Cosmos DB, and Azure AI Search to process multi-document evidence bundles through a five-stage pipeline:
 
-- **Evidence Intake** - Receive multi-document submissions via REST API with immediate acknowledgement (HTTP 202). Validates bundle integrity - checksums, MIME types, document count, and file sizes - before any AI processing begins.
+- **Evidence Intake** - Documents are staged in Blob Storage by the source system's connector (see Connector Framework below - staging mechanism is connector-specific, for example a direct upload integration or a SAS-scoped URL), then a REST API call with immediate acknowledgement (HTTP 202) references them by ID to start processing. Validates bundle integrity - checksums, MIME types, document count, and file sizes - via the Storage SDK before any AI processing begins.
 - **Document Intelligence** - Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
 - **Cross-Document Validation** - The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
 - **Policy & Risk Evaluation** - Compliance rules are loaded from Cosmos DB at runtime - rule changes take effect immediately without redeployment. A weighted risk score determines whether a case is auto-resolved or escalated for human review.
-- **Decision & Human Review** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are routed to a grounded, citation-backed review agent before a final decision is recorded.
+- **Decision Recommendation** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are flagged for human review.
 
 Processing, extraction, validation, and decision steps are tracked with status and scored for confidence to automate routine cases and identify as-needed human review.
 
@@ -40,22 +42,21 @@ The platform is structured in three tiers so that reusable IP stays cleanly sepa
 | Policy Evaluation Engine | Deterministic, runtime-configurable rule evaluation |
 | Risk Assessment Engine | Weighted risk scoring and escalation logic |
 | Decision Recommendation Engine | Verdict synthesis, evidence chain, secure decision delivery |
-| Human Review Framework | Grounded, citation-backed reviewer agent and override workflow |
+| Human Review Framework | Grounded, citation-backed reviewer agent and override workflow *(Phase 2)* |
 | Audit and Explainability Framework | Immutable event logging and plain-language decision rationale |
 | Connector Framework | Pluggable inbound/outbound integration contract |
 | Template Framework | Industry configuration packaging and lifecycle management |
 
 ### Agentic architecture
 
-The pipeline is orchestrated as a coordinated set of focused agents, each responsible for one stage of reasoning rather than a single monolithic prompt:
+The pipeline is orchestrated as a coordinated set of agents and processing stages, each responsible for one part of the reasoning rather than a single monolithic prompt. Five stages run sequentially per case; three additional components run asynchronously or in the background:
 
 ```
-Intake Agent → Extraction Agent → Classification Agent → Validation Agent
-     → Policy Agent → Risk Agent → Recommendation Agent
-           ↘ Review Assistant Agent    ↘ Audit Assistant Agent
+Intake Stage → Extraction Agent → Validation Agent → Policy Stage → Recommendation Agent
+           ↘ Review Assistant Agent    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
 ```
 
-A background Knowledge Pack Agent keeps each industry template's compressed policy context current whenever rules change, without requiring a redeployment.
+A background Knowledge Pack Stage keeps each industry template's compressed policy context current whenever rules change, without requiring a redeployment.
 
 | Design principle | Detail |
 |---|---|
@@ -76,7 +77,7 @@ A background Knowledge Pack Agent keeps each industry template's compressed poli
 - **Runtime-configurable policy engine** - Compliance rules are evaluated deterministically against eight rule categories, loaded from Cosmos DB and effective immediately on change.
 - **Weighted risk scoring** - Configurable risk weight matrix with historical case pattern calibration determines escalation to human review.
 - **Explainable decisions with full evidence chain** - Every decision traces back to the source document, field, and rule that produced it.
-- **Grounded human review** - A citation-backed review agent answers reviewer questions using only submitted case evidence, with mandatory override rationale capture.
+- **Grounded human review** *(Phase 2)* - A citation-backed review agent answers reviewer questions using only submitted case evidence, with mandatory override rationale capture.
 - **Immutable audit trail** - Every model call, rule evaluation, and human action is logged for point-in-time decision reconstruction.
 - **Pluggable connector framework** - Inbound submission sources and outbound decision delivery integrate via a documented connector contract.
 
@@ -116,8 +117,10 @@ src/platform/                          Core Platform - domain-neutral engines (T
   policy/                              Policy Evaluation Engine
   risk/                                Risk Assessment Engine
   decision/                            Decision Recommendation Engine
-  human_review/                        Human Review Framework
+  human_review/                        Human Review Framework (Phase 2 - see Roadmap)
+  explainability/                      Explainability Framework
   audit/                               Audit and Lineage Framework
+  reporting/                           Reporting Framework (observability, token cost, cache hit rate)
   orchestration/                       Durable Functions orchestrator
   knowledge/                           Knowledge Pack and retrieval services
 src/api/                               Submission gateway (FastAPI)
@@ -222,7 +225,8 @@ To the extent this accelerator includes components derived from Microsoft produc
 
 | Stage | Focus |
 |---|---|
-| Current | Core Platform engine implementation (`src/platform/`) in progress, generalized from the validated Food Safety reference implementation |
+| Current (Phase 1) | Core Platform recommendation engine (`src/platform/`) - Evidence Intake through Decision Recommendation - in progress, generalized from the validated Food Safety reference implementation |
+| Phase 2 | Human Review Framework (grounded review agent) - in progress |
 | Next | Additional industry templates (customs, healthcare, licensing, environmental, financial compliance, KYC/AML) validated independently |
 | Future | Multi-tenant SaaS, Government Cloud, and sovereign/air-gapped deployment topologies; Azure Marketplace packaging |
 
