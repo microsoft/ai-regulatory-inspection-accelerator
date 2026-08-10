@@ -39,7 +39,7 @@ Every industry that makes consequential decisions on document bundles - food saf
 | AP-01 | Domain neutrality by construction | Zero industry vocabulary in `src/platform/`. CI lint enforcement. |
 | AP-02 | Configuration over code | New document type = JSON entry. New rule = Cosmos DB document. New industry = 13 JSON template files. |
 | AP-03 | Decision traceability as a first-class concern | Every decision traceable to field → document → rule → ETag. |
-| AP-04 | Security by architecture, not configuration | Managed Identity, private endpoints, PII dual-tier write. |
+| AP-04 | Security by architecture, not configuration | Managed Identity, private endpoints, PII redaction at write boundary. |
 | AP-05 | Token efficiency by design | LLM receives minimum structured information, never raw documents. |
 | AP-06 | Human override, always | No fully autonomous decisions. |
 | AP-07 | Durable, resumable orchestration | Durable Functions checkpoint-based state; zero case loss on restart. |
@@ -215,49 +215,44 @@ Full Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact specificatio
 
 ## 5. Agent Architecture
 
-The pipeline is a coordinated multi-agent ecosystem. Each agent handles a bounded set of decisions and produces structured output for the next agent.
+The pipeline is five sequential stages plus three components that run asynchronously or in the background.
 
-| Agent | Role | Stage | Primary component |
+| Component | Role | Activity | Primary component |
 |---|---|---|---|
-| Intake Agent | Bundle reception, validation, staging | Activity 1 | Evidence Intake Engine (C-01) |
-| Extraction Agent | Document-to-field transformation | Activity 2 | Document Intelligence Engine (C-02) |
-| Classification Agent | Field canonicalization + PII classification | Activity 2 | Reconciliation sub-component |
+| Intake Stage | Bundle reception, validation, staging | Activity 1 | Evidence Intake Engine (C-01) |
+| Extraction Agent | Document-to-field transformation, field canonicalization and PII classification | Activity 2 | Document Intelligence Engine (C-02) |
 | Validation Agent | Cross-document consistency + conflict detection | Activity 3 | Cross-Document Validation Engine (C-09) |
-| Policy Agent | Rule evaluation against evidence | Activity 4 | Policy Evaluation Engine (C-10) |
-| Risk Agent | Risk scoring, grading, HOLD determination | Activity 4 | Risk Assessment Engine (C-11) |
+| Policy Stage | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
 | Recommendation Agent | Verdict synthesis, evidence chain, delivery | Activity 5 | Decision Recommendation Engine (C-12) |
-| Review Assistant Agent | Grounded evidence Q&A for reviewers | Async | Human Review Framework (C-13) |
-| Audit Assistant Agent | Decision reconstruction, lineage querying | On-demand | Audit Framework (C-15) |
-| Knowledge Pack Agent | Template knowledge compression + caching | Background | Knowledge Pack Generator (C-07) |
+| **Review Assistant Agent** | Grounded evidence Q&A for reviewers *(Phase 2 - see Roadmap)* | Async | Human Review Framework (C-13) |
+| **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-demand | Audit Framework (C-15) |
+| Knowledge Pack Stage | Template knowledge compression + caching | Background | Knowledge Pack Generator (C-07) |
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant INT as Intake Agent
+    participant INT as Intake Stage
     participant EXT as Extraction Agent
     participant VAL as Validation Agent
-    participant POL as Policy Agent
-    participant RSK as Risk Agent
+    participant POL as Policy Stage
     participant REC as Recommendation Agent
     participant REV as Review Assistant Agent
 
     INT->>INT: Validate bundle + normalize documents
     INT->>EXT: Staged bundle
-    EXT->>EXT: Phase 1 DI extraction + Phase 2 LLM gap-fill
+    EXT->>EXT: Phase 1 DI extraction + Phase 2 LLM gap-fill + canonicalization
     EXT->>VAL: Extracted fields (canonicalized)
     VAL->>VAL: Cross-document consistency check
     VAL->>POL: Validated evidence map + conflicts
-    POL->>POL: Evaluate 8 rule categories (deterministic)
-    POL->>RSK: Findings + rule ETags
-    RSK->>RSK: Weighted risk score + HOLD determination
-    RSK->>REC: Risk score + grade + confidence
+    POL->>POL: Evaluate 8 rule categories (deterministic) + weighted risk score + HOLD determination
+    POL->>REC: Findings + risk score + grade + confidence
     REC->>REC: Verdict synthesis + evidence chain
-    Note over REV: Async - triggered on HOLD or reviewer request
+    Note over REV: Async - triggered on HOLD or reviewer request (Phase 2)
     REC-->>REV: Case routed to human review queue
     REV->>REV: Retrieval-augmented Q&A grounded in evidence
 ```
 
-Full agent communication contracts (payload schemas between each agent) live in the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md#53-agent-communication-contracts).
+Full communication contracts (payload schemas between each component) live in the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md#53-agent-communication-contracts).
 
 ---
 
@@ -419,9 +414,9 @@ Full service map diagram and Azure service selection rationale (why each service
 | ADR-018 | Azure OpenAI prompt prefix caching | AI / Cost |
 | ADR-019 | Azure API Management as submission gateway | Integration |
 | ADR-020 | Azure AI Search for semantic case history retrieval | Search |
-| ADR-021 | PII dual-tier write architecture | Security / Privacy |
-| ADR-022 | Multi-agent orchestration architecture | AI / Agent |
-| ADR-023 | Knowledge Pack Agent as event-driven background agent | AI / Agent |
+| ADR-021 | PII redaction architecture (single-tier default; dual-tier optional) | Security / Privacy |
+| ADR-022 | Agent and Stage orchestration architecture (Agent reserved for LLM-driven components) | AI / Agent |
+| ADR-023 | Knowledge Pack Stage as event-driven background process | AI / Agent |
 | ADR-024 | Connector isolation model | Extensibility |
 | ADR-025 | Template CI enforcement | Governance |
 | ADR-026 | Sovereign deployment via environment variable substitution | Deployment |
@@ -438,7 +433,7 @@ Five architectural proofs validate the platform design. Full evidence for each l
 |---|---|---|
 | 1 | ARIA remains valuable if the PAFN reference implementation is removed | Core Platform + 5 additional industry templates remain fully deployable |
 | 2 | New industries can be onboarded without platform code changes | 13 JSON template artifacts are the only work required |
-| 3 | Token efficiency is built into the architecture, not bolted on | ~81% aggregate token reduction measured across a full case lifecycle |
+| 3 | Token efficiency is built into the architecture, not bolted on | ~81% aggregate token reduction targeted across a full case lifecycle, based on component-level projections - not yet measured against a production case set |
 | 4 | PAFN is a reference implementation, not the product | PAFN-specific code is fully isolated in `reference-implementations/` |
 | 5 | ARIA is reusable Microsoft-scale IP | 12 target verticals, TAM > $25B, 56% of PAFN components directly reusable with zero modification |
 

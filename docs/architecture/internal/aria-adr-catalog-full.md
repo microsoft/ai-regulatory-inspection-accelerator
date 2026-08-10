@@ -27,34 +27,34 @@
 
 | ADR ID | Title | Status | Category | Source |
 |---|---|---|---|---|
-| ADR-001 | Azure Durable Functions for Pipeline Orchestration | **Accepted** | Platform / Orchestration | Document 04 |
-| ADR-002 | Configuration-Driven Document Type Schema | **Accepted** | Platform / Extensibility | Document 04 |
-| ADR-003 | Cosmos DB for Rules Engine and Case Store | **Accepted** | Platform / Data | Document 04 |
-| ADR-004 | Azure Managed Identity Zero-Secrets Architecture | **Accepted** | Security / Identity | Document 04 |
-| ADR-005 | LLM Cross-Document Reasoning Pattern | **Accepted** | AI / Reasoning | Document 04 |
-| ADR-006 | Private Endpoint Network Topology | **Accepted** | Security / Network | Document 04 |
-| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted** | AI / Agent | Document 04 |
-| ADR-008 | Async Callback Delivery Pattern | **Accepted** | Integration / Delivery | Document 04 |
-| ADR-009 | Three-Tier Product Model | **Accepted** | Platform / Architecture | Document 15 |
-| ADR-010 | Domain Neutrality Enforcement via CI | **Accepted** | Platform / Governance | Document 15 |
-| ADR-011 | Token Efficiency as First-Class Architectural Concern | **Accepted** | AI / Cost | Document 15 |
-| ADR-012 | Document Normalization Before LLM Processing | **Accepted** | AI / Pre-Processing | Document 15 |
-| ADR-013 | Dual-Phase Extraction Strategy | **Accepted** | AI / Extraction | Document 15 |
-| ADR-014 | Semantic Chunking for Large Document Processing | **Accepted** | AI / Context Management | Document 15 |
-| ADR-015 | Knowledge Pack Strategy for Domain Context Compression | **Accepted** | AI / Context Management | Document 15 |
-| ADR-016 | Context Assembly Engine Pattern | **Accepted** | AI / Context Management | Document 15 |
-| ADR-017 | Retrieval-Augmented Human Review | **Accepted** | AI / Human Review | Document 15 |
-| ADR-018 | Azure OpenAI Prompt Prefix Caching | **Accepted** | AI / Cost | Document 15 |
-| ADR-019 | Azure API Management as Submission Gateway | **Accepted** | Integration / Gateway | Document 15 |
-| ADR-020 | Azure AI Search for Semantic Case History Retrieval | **Accepted** | Platform / Search | Document 15 |
-| ADR-021 | PII Dual-Tier Write Architecture | **Accepted** | Security / Privacy | Document 15 |
-| ADR-022 | Multi-Agent Orchestration Architecture | **Accepted** | AI / Agent | Document 15 |
-| ADR-023 | Knowledge Pack Agent as Event-Driven Background Agent | **Accepted** | AI / Agent | Document 15 |
-| ADR-024 | Connector Isolation Model | **Accepted** | Platform / Extensibility | Document 15 |
-| ADR-025 | Template CI Enforcement | **Accepted** | Platform / Governance | Document 15 |
-| ADR-026 | Sovereign Deployment via Environment Variable Substitution | **Accepted** | Platform / Deployment | Document 15 |
-| ADR-027 | Duplicate Detection Before AI Processing | **Accepted** | AI / Pre-Processing | Document 15 |
-| ADR-028 | Evaluation Framework as Mandatory Deployment Gate | **Accepted** | Platform / Quality | Document 15 |
+| ADR-001 | Azure Durable Functions for Pipeline Orchestration | **Accepted - Proven** | Platform / Orchestration | Document 04 |
+| ADR-002 | Configuration-Driven Document Type Schema | **Accepted - Proven** | Platform / Extensibility | Document 04 |
+| ADR-003 | Cosmos DB for Rules Engine and Case Store | **Accepted - Proven** | Platform / Data | Document 04 |
+| ADR-004 | Azure Managed Identity Zero-Secrets Architecture | **Accepted - Proven** | Security / Identity | Document 04 |
+| ADR-005 | LLM Cross-Document Reasoning Pattern | **Accepted - Proven** | AI / Reasoning | Document 04 |
+| ADR-006 | Private Endpoint Network Topology | **Accepted - Proven** | Security / Network | Document 04 |
+| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted - Proven** | AI / Agent | Document 04 |
+| ADR-008 | Async Callback Delivery Pattern | **Accepted - Proven** | Integration / Delivery | Document 04 |
+| ADR-009 | Three-Tier Product Model | **Accepted - Design** | Platform / Architecture | Document 15 |
+| ADR-010 | Domain Neutrality Enforcement via CI | **Accepted - Design** | Platform / Governance | Document 15 |
+| ADR-011 | Token Efficiency as First-Class Architectural Concern | **Accepted - Design** | AI / Cost | Document 15 |
+| ADR-012 | Document Normalization Before LLM Processing | **Accepted - Proven** | AI / Pre-Processing | Document 15 |
+| ADR-013 | Dual-Phase Extraction Strategy | **Accepted - Proven** | AI / Extraction | Document 15 |
+| ADR-014 | Semantic Chunking for Large Document Processing | **Accepted - Design** | AI / Context Management | Document 15 |
+| ADR-015 | Knowledge Pack Strategy for Domain Context Compression | **Accepted - Design** | AI / Context Management | Document 15 |
+| ADR-016 | Context Assembly Engine Pattern | **Accepted - Design** | AI / Context Management | Document 15 |
+| ADR-017 | Retrieval-Augmented Human Review | **Accepted - Design** | AI / Human Review | Document 15 |
+| ADR-018 | Azure OpenAI Prompt Prefix Caching | **Accepted - Design** | AI / Cost | Document 15 |
+| ADR-019 | Azure API Management as Submission Gateway | **Accepted - Proven** | Integration / Gateway | Document 15 |
+| ADR-020 | Azure AI Search for Semantic Case History Retrieval | **Accepted - Proven** | Platform / Search | Document 15 |
+| ADR-021 | PII Redaction Architecture (single-tier default; dual-tier optional) | **Accepted - Design** | Security / Privacy | Document 15 |
+| ADR-022 | Agent and Stage Orchestration Architecture | **Accepted - Design** | AI / Agent | Document 15 |
+| ADR-023 | Knowledge Pack Stage as Event-Driven Background Process | **Accepted - Design** | AI / Agent | Document 15 |
+| ADR-024 | Connector Isolation Model | **Accepted - Design** | Platform / Extensibility | Document 15 |
+| ADR-025 | Template CI Enforcement | **Accepted - Design** | Platform / Governance | Document 15 |
+| ADR-026 | Sovereign Deployment via Environment Variable Substitution | **Proposed** | Platform / Deployment | Document 15 |
+| ADR-027 | Duplicate Detection Before AI Processing | **Accepted - Proven** | AI / Pre-Processing | Document 15 |
+| ADR-028 | Evaluation Framework as Mandatory Deployment Gate | **Accepted - Proven** | Platform / Quality | Document 15 |
 
 **Total ADRs:** 28 (8 original + 20 new)
 
@@ -89,10 +89,13 @@
 
 ### 1.3 ADR Status Summary
 
+Status reflects maturity, not just approval - three tiers distinguish decisions matched by real evidence from decisions that are architecturally sound but unmeasured.
+
 | Status | Count | Notes |
 |---|---|---|
-| **Accepted** | 28 | All decisions are accepted and implemented in the platform architecture |
-| Proposed | 0 | No decisions pending review |
+| **Accepted - Proven** | 14 | Matches something real PAFN already does today (ADR-001 through 008, 012, 013, 019, 020, 027, 028) |
+| **Accepted - Design** | 13 | Architecturally decided, sound reasoning, not yet built or measured (ADR-009, 010, 011, 014-018, 021-025) |
+| **Proposed** | 1 | No path to validation without a real deployment (ADR-026) |
 | Deprecated | 0 | No decisions deprecated |
 | Superseded | 0 | No decisions superseded |
 
@@ -122,7 +125,7 @@ These ADRs are documented in full in 04-Architecture-Decision-Records.md. Summar
 ## ADR-009: Three-Tier Product Model
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not yet applied to PAFN; conceptual model for the generalized platform)
 **Category:** Platform / Architecture
 **Deciders:** Principal Product Manager · Principal Enterprise Architect
 **Source:** Document 15, Output 1 (Reusability Strategy) and Output 7 (Template Framework)
@@ -179,7 +182,7 @@ No tier may import from a lower tier's directory in reverse (e.g., `src/platform
 ## ADR-010: Domain Neutrality Enforcement via CI
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (CI enforcement not yet built)
 **Category:** Platform / Governance
 **Deciders:** Principal Enterprise Architect · Engineering Lead
 **Source:** Document 15, Output 7 (Template Framework CI Enforcement)
@@ -231,7 +234,7 @@ The banned-word list is intentionally configurable because new industries introd
 ## ADR-011: Token Efficiency as First-Class Architectural Concern
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (principle is sound; the 50-70% target is a projection, not a measured result)
 **Category:** AI / Cost
 **Deciders:** Principal Enterprise Architect · AI Systems Architect
 **Source:** Document 15, Output 6 (Token Efficiency Architecture) and Architecture Principle AP-05
@@ -293,7 +296,7 @@ Making token efficiency architectural means it cannot be removed by a developer 
 ## ADR-012: Document Normalization Before LLM Processing
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Proven (PAFN's `di_extraction.py` already normalizes to Markdown before LLM processing)
 **Category:** AI / Pre-Processing
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.2 (DOCX to Markdown) and 6.3 (PDF Normalization)
@@ -350,7 +353,7 @@ Normalized Markdown is stored in Blob Storage, enabling reuse if the same docume
 ## ADR-013: Dual-Phase Extraction Strategy
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Proven (matches PAFN's real `di_extraction.py` 8-step process)
 **Category:** AI / Extraction
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.4 (Structured Pre-Extraction)
@@ -411,14 +414,14 @@ The `diModel` field in `evidence_types.json` makes the Phase 1 model selection d
 ## ADR-014: Semantic Chunking for Large Document Processing
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not yet built; unproven at PAFN's actual document sizes)
 **Category:** AI / Context Management
 **Deciders:** AI Systems Architect
 **Source:** Document 15, Output 6, Strategy 6.5 (Semantic Chunking)
 
 ### Context
 
-Regulated submissions frequently include large documents: environmental impact assessments (30–100 pages), legal contracts (50–200 pages), medical records (20–60 pages), comprehensive audit reports (40–80 pages). Sending the full document to an LLM for field extraction wastes 80–90% of tokens on pages that contain no target fields.
+Regulated submissions frequently include large documents: environmental impact assessments (30–100 pages), legal contracts (50–200 pages), medical records (20–60 pages), comprehensive audit reports (40–80 pages). Sending the full document to an LLM for field extraction is estimated to waste 80–90% of tokens on pages that contain no target fields - this is a projection based on document structure, not a measurement against a production case set.
 
 The target fields for extraction are typically concentrated in specific sections (executive summary, certification section, signature block, itemized tables). A 30-page environmental assessment may contain the required fields on 2–4 pages.
 
@@ -437,7 +440,7 @@ Documents exceeding `CHUNKING_THRESHOLD_PAGES` (configurable, default 10 pages) 
 
 ### Rationale
 
-Focused context is both cheaper and more accurate than full-document context. An LLM processing the 3 most relevant pages of a 30-page document is less likely to hallucinate, more likely to find the target fields, and consumes 80–90% fewer tokens than processing the full document.
+Focused context is both cheaper and more accurate than full-document context. An LLM processing the 3 most relevant pages of a 30-page document is less likely to hallucinate, more likely to find the target fields, and is projected to consume 80–90% fewer tokens than processing the full document - pending measurement against real case data.
 
 Header-based chunking is preferred because it is deterministic, fast (no embedding call required), and reliable for structured regulatory documents that typically follow standard section conventions.
 
@@ -452,7 +455,7 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 ### Consequences
 
 **Positive:**
-- 60–80% token reduction for documents >10 pages
+- Projected 60–80% token reduction for documents >10 pages (estimate, not yet measured)
 - Reduced hallucination risk (focused context → more grounded extraction)
 - Chunk map recorded in extraction artifacts (audit: which chunk covered which fields)
 
@@ -466,7 +469,7 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 ## ADR-015: Knowledge Pack Strategy for Domain Context Compression
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not yet built; unproven at PAFN's ~47-rule scale)
 **Category:** AI / Context Management
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.6 (Knowledge Packs)
@@ -495,7 +498,7 @@ The **Knowledge Pack Generator** (C-07) pre-generates a compressed Knowledge Pac
 
 ### Rationale
 
-A Knowledge Pack is generated once and used across millions of cases. Its marginal cost per case is effectively zero (one Blob read). Its token savings are 70–85% per LLM call that previously required full rule context (~19,700 tokens saved per call).
+A Knowledge Pack is generated once and used across millions of cases. Its marginal cost per case is effectively zero (one Blob read). Its token savings are projected at 70–85% per LLM call that previously required full rule context (~19,700 tokens estimated saved per call) - this is a calculation based on rule-set size, not a measurement against a running deployment.
 
 The Knowledge Pack is a read-only context artifact - it does not replace the Cosmos DB rules engine (which evaluates rules deterministically). It provides LLMs with a compressed understanding of the domain for reasoning tasks where deterministic evaluation is insufficient.
 
@@ -510,7 +513,7 @@ The Knowledge Pack is a read-only context artifact - it does not replace the Cos
 ### Consequences
 
 **Positive:**
-- 70–85% reduction in policy context tokens per LLM call
+- Projected 70–85% reduction in policy context tokens per LLM call (estimate, not yet measured)
 - Knowledge Pack is version-stamped - supports future comparison of decisions made under different template versions
 - Change Feed trigger ensures Knowledge Pack is always current - no stale context risk
 
@@ -524,7 +527,7 @@ The Knowledge Pack is a read-only context artifact - it does not replace the Cos
 ## ADR-016: Context Assembly Engine Pattern
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not yet built)
 **Category:** AI / Context Management
 **Deciders:** AI Systems Architect · Engineering Lead
 **Source:** Document 15, Output 4, Component C-08 (Context Assembly Engine)
@@ -581,7 +584,7 @@ The per-call token budget acts as a circuit breaker: if the assembled context ex
 ## ADR-017: Retrieval-Augmented Human Review
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not confirmed as built this way in PAFN's chat engine)
 **Category:** AI / Human Review
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.7 (Retrieval-Augmented Human Review)
@@ -637,7 +640,7 @@ The mandatory citation requirement (source document, page, field value) ensures 
 ## ADR-018: Azure OpenAI Prompt Prefix Caching
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not confirmed as implemented in PAFN today)
 **Category:** AI / Cost
 **Deciders:** AI Systems Architect · Engineering Lead
 **Source:** Document 15, Output 6, Strategy 6.8 (Prompt Template Caching)
@@ -693,7 +696,7 @@ Prompt prefix caching is a zero-code-change cost reduction once prompts are stru
 ## ADR-019: Azure API Management as Submission Gateway
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Proven (PAFN already routes Raqeb submissions through APIM)
 **Category:** Integration / Gateway
 **Deciders:** Principal Enterprise Architect
 **Source:** Document 15, Output 11 (Azure Reference Architecture)
@@ -747,7 +750,7 @@ Schema validation at the gateway also provides an early, structured error respon
 ## ADR-020: Azure AI Search for Semantic Case History Retrieval
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Proven (PAFN already has `case_document_indexer.py` and `case_summary_indexer.py`)
 **Category:** Platform / Search
 **Deciders:** Principal Enterprise Architect · AI Systems Architect
 **Source:** Document 15, Output 11 (Azure Reference Architecture) and Output 4, Component C-13
@@ -799,10 +802,10 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 
 ---
 
-## ADR-021: PII Dual-Tier Write Architecture
+## ADR-021: PII Redaction Architecture (Single-Tier Default; Dual-Tier Optional)
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (real PAFN uses a simpler, single-tier redact-at-write-boundary pattern - see Context)
 **Category:** Security / Privacy
 **Deciders:** Principal Enterprise Architect · CISO
 **Source:** Document 15, Output 1 (Architecture Principle AP-04) and Output 4, Component C-12
@@ -811,118 +814,114 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 
 Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Decision Recommendation Engine (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
 
-Two conflicting access requirements must be satisfied simultaneously:
-1. **Auditors and senior reviewers** need the full evidence chain including PII for audit purposes and override decisions
-2. **Line reviewers and external integrations** must never see raw PII values - they need field-level citations (e.g., "Applicant Name field contained a value matching a sanctions entity") not the actual values
+Real PAFN's `shared/pii_redaction.py` already solves this with a simpler pattern: PII fields are redacted before the Cosmos write boundary, and no un-redacted tier is ever persisted. The pipeline uses full data in memory during processing; only the redacted version is stored. This is proven in production and has a smaller risk surface than storing raw PII anywhere.
 
-A single storage tier cannot satisfy both requirements. A design that exposes PII to all reviewers violates data protection law in most jurisdictions. A design that hides PII from auditors violates audit completeness requirements.
+A dual-tier write (a second, un-redacted "secured" container for auditors) is a materially different design - it persists raw PII, which is a larger risk surface than PAFN's current approach. That trade-off should only be made if a specific customer or regulatory requirement demands auditors see raw PII values rather than field-level citations. No such requirement has been documented for any current or planned ARIA deployment.
 
 ### Decision
 
-The Decision Recommendation Engine writes evidence chain data to two separate Cosmos DB destinations simultaneously:
+**Default (matches PAFN):** The platform redacts PII at the write boundary. A single evidence store is written per case, with PII field values replaced by `[REDACTED: {fieldName}]` labels. No un-redacted tier is persisted. PII field declarations live in the template's `pii_field_list.json` - platform applies redaction automatically based on template configuration, consistent with PAFN's existing implementation.
 
-**Tier 1 - Secured Evidence Store (with PII):**
-- Container: `verdicts` (secured) with restricted Managed Identity access (auditors + senior reviewers only)
-- Content: Full evidence chain with all extracted field values including PII
-- Access control: Separate RBAC role assignment; line reviewer identity does not have access
-
-**Tier 2 - Display Evidence Store (PII-redacted):**
-- Container: `verdicts` (display) with standard reviewer access
-- Content: Evidence chain with PII field values replaced by `[REDACTED: {fieldName}]` labels
-- PII field list declared in template's `pii_field_list.json` - platform applies redaction automatically based on template configuration
+**Optional dual-tier extension:** If a specific customer's compliance requirement mandates auditor access to raw PII values (documented and cited here before enabling), the platform may additionally write a second, access-restricted container containing the un-redacted evidence chain. This is a per-template, per-customer opt-in - never a platform-wide default.
 
 The PII field map (which fields in which documents contain PII) is generated during extraction (Activity 2) and stored in the extraction artifacts. The Decision Recommendation Engine uses this map to perform redaction without re-processing the documents.
 
 ### Rationale
 
-The dual-tier write is the only architectural pattern that satisfies both audit completeness and data protection simultaneously without case-by-case access control decisions. Access control is structural (container-level RBAC) rather than policy-based - reducing the risk of misconfiguration.
+Matching PAFN's proven single-tier pattern as the default minimizes risk surface - there is no scenario where raw PII sits in storage waiting to be queried or exfiltrated. The template-declared PII field list means domain experts (not platform engineers) control what is considered PII in their domain. Healthcare PII fields differ from financial PII fields differ from immigration PII fields - the platform should not hardcode this.
 
-The template-declared PII field list means domain experts (not platform engineers) control what is considered PII in their domain. Healthcare PII fields differ from financial PII fields differ from immigration PII fields - the platform should not hardcode this.
+The dual-tier extension remains available for the rare case where a real regulatory or contractual requirement forces auditor access to raw values, but it must be justified per-deployment rather than assumed as architecture.
 
 ### Alternatives Considered
 
-**Single store with field-level encryption:** Encrypt PII fields at rest; decrypt only for authorized queries. Technically feasible but adds complexity: key management per field, query performance impact, decryption at display time. Rejected in favor of the simpler dual-write pattern.
+**Dual-tier write as the default (original decision):** Write both a secured (with PII) and display (redacted) evidence store for every deployment. Rejected as the default because it persists raw PII with no demonstrated requirement forcing it, and it doubles storage cost and attack surface for every deployment regardless of need.
 
-**Single store with access control at query time:** All evidence in one container; access control filters PII fields in query results. Rejected because query-level PII filtering is error-prone - a single unguarded query path exposes PII. Structural separation is safer.
+**Single store with field-level encryption:** Encrypt PII fields at rest; decrypt only for authorized queries. Technically feasible but adds complexity: key management per field, query performance impact, decryption at display time. Rejected in favor of the simpler redact-at-write-boundary pattern PAFN already uses.
+
+**Single store with access control at query time:** All evidence in one container; access control filters PII fields in query results. Rejected because query-level PII filtering is error-prone - a single unguarded query path exposes PII. Redaction at write time is safer than filtering at read time.
 
 **No PII protection:** Accept that reviewers see all field values. Rejected - violates GDPR, data protection law, and government procurement requirements in virtually all target markets.
 
 ### Consequences
 
 **Positive:**
-- PII exposure is structurally impossible for line reviewers - cannot query the secured container
+- Matches PAFN's proven, production-validated pattern - no new risk introduced by default
+- No raw PII persisted anywhere by default - smaller attack surface than the dual-tier design
 - Template-controlled PII field list enables domain-specific PII handling without platform changes
-- Dual-write adds negligible latency (two Cosmos DB writes in a single Activity 5 transaction)
+- Dual-tier extension remains available, but only when a documented requirement justifies it
 
 **Negative / Trade-offs:**
-- Two Cosmos DB containers for verdict data doubles storage cost for this container tier
-- PII field list in template must be kept current - missing a PII field means it appears unredacted in the display store
+- If a future customer genuinely needs auditor access to raw PII, the dual-tier extension must be built and justified per-deployment rather than existing as a ready-made default
+- PII field list in template must be kept current - missing a PII field means it appears unredacted in storage
 - GDPR right-to-erasure creates tension with the immutable audit trail requirement (open decision in Architecture Readiness Checklist)
 
 ---
 
-## ADR-022: Multi-Agent Orchestration Architecture
+## ADR-022: Agent and Stage Orchestration Architecture
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (target model; not yet implemented as separate component classes)
 **Category:** AI / Agent
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 5 (Agent Architecture)
 
 ### Context
 
-ARIA's pipeline involves multiple AI-driven processing steps: document extraction, field classification and canonicalization, cross-document validation, and human review. Each step has distinct input/output contracts, distinct AI service dependencies, and distinct failure modes. A monolithic approach - one large LLM call for all processing - would lose traceability, mix concerns, and produce unpredictable outputs.
+ARIA's pipeline involves multiple processing steps, some AI-driven (document extraction, field classification and canonicalization, cross-document validation, human review) and some purely deterministic (intake validation, policy evaluation, risk scoring). Each step has distinct input/output contracts and distinct failure modes. A monolithic approach - one large LLM call for all processing - would lose traceability, mix concerns, and produce unpredictable outputs.
 
-A multi-agent architecture distributes responsibilities across bounded agents with explicit interfaces. But agent coordination must map to the existing Durable Functions orchestration (ADR-001) without introducing a separate agent framework.
+A bounded-component architecture distributes responsibilities across explicit interfaces, mapped onto the existing Durable Functions orchestration (ADR-001) without introducing a separate agent framework.
 
 ### Decision
 
-ARIA implements a 10-agent ecosystem where each agent is a bounded processing unit responsible for a specific pipeline stage. Agents communicate through structured output contracts passed as Durable Functions activity inputs.
+ARIA implements an 8-component pipeline of Agents and Stages: five sequential components and three that run asynchronously or in the background. Each component is a bounded processing unit responsible for a specific pipeline step. Agents perform LLM-driven reasoning; Stages perform deterministic, rule-based processing. All components communicate through structured output contracts passed as Durable Functions activity inputs.
 
-**Agent roster:**
-- Intake Agent (Activity 1) · Extraction Agent (Activity 2, Phase 2) · Classification Agent (Activity 2, post-extraction) · Validation Agent (Activity 3) · Policy Agent (Activity 4) · Risk Agent (Activity 4) · Recommendation Agent (Activity 5) · Audit Agent (cross-cutting) · Review Assistant Agent (async) · Knowledge Pack Agent (event-driven background)
+**Component roster:**
+- **Sequential (5):** Intake Stage (Activity 1) · Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · Validation Agent (Activity 3) · Policy Stage (Activity 4 - includes risk scoring and HOLD determination) · Recommendation Agent (Activity 5)
+- **Async / background (3):** Review Assistant Agent (async, Phase 2) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
 
-Each agent:
+Each component:
 - Has a single, well-defined responsibility
 - Consumes structured input and produces structured output
-- Operates independently - agents do not share mutable state
-- Routes LLM calls through the Context Assembly Engine (ADR-016)
+- Operates independently - components do not share mutable state
+- Agents route LLM calls through the Context Assembly Engine (ADR-016); Stages never call an LLM
 
-**Implementation:** Agents are not separate microservices or containers. They are Python classes with a single `process(input: AgentInput) -> AgentOutput` interface, called by Durable Functions activities. This preserves the simplicity of the Durable Functions orchestration while achieving agent-level separation of concerns.
+**Implementation:** Agents and Stages are not separate microservices or containers. They are Python classes with a single `process(input) -> output` interface, called by Durable Functions activities. This preserves the simplicity of the Durable Functions orchestration while achieving component-level separation of concerns.
 
 ### Rationale
 
-Agent-level boundaries make the pipeline testable in isolation: each agent can be unit-tested with mock inputs without spinning up the full Durable Functions orchestrator. The explicit input/output contracts prevent implicit data coupling - an agent that needs a value must receive it explicitly in its input, not read from shared state.
+Component-level boundaries make the pipeline testable in isolation: each component can be unit-tested with mock inputs without spinning up the full Durable Functions orchestrator. The explicit input/output contracts prevent implicit data coupling - a component that needs a value must receive it explicitly in its input, not read from shared state.
 
-The multi-agent model also enables future parallelization: the Durable Functions fan-out pattern (ADR-001) can parallelize multiple agent instances for large document bundles without changing the agent contract.
+The model also enables future parallelization: the Durable Functions fan-out pattern (ADR-001) can parallelize multiple component instances for large document bundles without changing the contract.
 
 ### Alternatives Considered
 
 **Single monolithic LLM prompt (all processing in one call):** Simplest implementation. Rejected because a single LLM call for intake + extraction + reconciliation + validation is not reliable, not traceable, and not independently testable.
 
-**Separate microservices per agent:** Highest isolation. Rejected because Durable Functions activities already provide isolation without the operational overhead of microservice deployment, service discovery, and inter-service communication.
+**Calling every component "Agent" regardless of processing type:** Simplest naming. Rejected in favor of distinguishing LLM-driven components (Agents) from deterministic rule-based components (Stages), which better reflects each component's actual function.
+
+**Separate microservices per component:** Highest isolation. Rejected because Durable Functions activities already provide isolation without the operational overhead of microservice deployment, service discovery, and inter-service communication.
 
 **External agent framework (AutoGen, Semantic Kernel Agent):** Framework-managed agent orchestration. Rejected because it adds an external framework dependency, obscures the Durable Functions state persistence model, and introduces a learning curve without material benefit for ARIA's sequential pipeline.
 
 ### Consequences
 
 **Positive:**
-- Each agent independently unit-testable
+- Each component independently unit-testable
 - Explicit input/output contracts prevent implicit data coupling
-- Future parallelization possible without agent contract changes
-- Clear ownership: each agent has a named engineering owner
+- Future parallelization possible without contract changes
+- Clear ownership: each component has a named engineering owner
 
 **Negative / Trade-offs:**
-- 10 agent classes add code surface area
-- Input/output contract schema evolution requires coordinated change across agents
-- Agent boundaries impose serialization overhead (Durable Functions serializes activity inputs to Azure Storage)
+- 8 component classes add code surface area
+- Input/output contract schema evolution requires coordinated change across components
+- Component boundaries impose serialization overhead (Durable Functions serializes activity inputs to Azure Storage)
 
 ---
 
-## ADR-023: Knowledge Pack Agent as Event-Driven Background Agent
+## ADR-023: Knowledge Pack Stage as Event-Driven Background Process
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (not yet built)
 **Category:** AI / Agent
 **Deciders:** AI Systems Architect
 **Source:** Document 15, Output 5 (Agent Architecture) and Output 4, Component C-07
@@ -931,18 +930,18 @@ The multi-agent model also enables future parallelization: the Durable Functions
 
 Knowledge Packs (ADR-015) must be current - stale Knowledge Packs containing outdated rule summaries could mislead LLM reasoning. They must also be available before any case processing begins - a Knowledge Pack generated on-demand per case would add latency and duplicate generation cost.
 
-The Knowledge Pack is regenerated whenever: (a) a template is activated, or (b) the rule set changes (any Cosmos DB rules document is inserted or modified). Both triggers are events, not schedules.
+The Knowledge Pack is regenerated whenever: (a) a template is activated, or (b) the rule set changes (any Cosmos DB rules document is inserted or modified). Both triggers are events, not schedules. Generation is deterministic compression and serialization of existing data.
 
 ### Decision
 
-The **Knowledge Pack Agent** operates as an event-driven background agent, entirely independent of case processing:
+The **Knowledge Pack Stage** operates as an event-driven background process, entirely independent of case processing:
 
-- **Trigger 1 - Template activation:** When `install_template.py` is run, it explicitly invokes the Knowledge Pack Agent to generate the initial Knowledge Pack for the new template
-- **Trigger 2 - Rule change:** Cosmos DB Change Feed on the `rules` container triggers the Knowledge Pack Agent when any rule document is created or modified (configurable: only trigger on `active: true` rule changes)
+- **Trigger 1 - Template activation:** When `install_template.py` is run, it explicitly invokes the Knowledge Pack Stage to generate the initial Knowledge Pack for the new template
+- **Trigger 2 - Rule change:** Cosmos DB Change Feed on the `rules` container triggers the Knowledge Pack Stage when any rule document is created or modified (configurable: only trigger on `active: true` rule changes)
 
-The Knowledge Pack Agent reads the full rule set, template artifacts, and alias pairs from Cosmos DB and template storage, compresses them into the Knowledge Pack JSON schema, and writes the result to `knowledge-packs/{templateId}/current.json` in Azure Blob, overwriting the previous version.
+The Knowledge Pack Stage reads the full rule set, template artifacts, and alias pairs from Cosmos DB and template storage, compresses them into the Knowledge Pack JSON schema, and writes the result to `knowledge-packs/{templateId}/current.json` in Azure Blob, overwriting the previous version.
 
-The Knowledge Pack Agent runs as a separate Azure Function (Change Feed trigger), isolated from the case processing pipeline Functions.
+The Knowledge Pack Stage runs as a separate Azure Function (Change Feed trigger), isolated from the case processing pipeline Functions.
 
 ### Rationale
 
@@ -975,7 +974,7 @@ Isolation from the case processing pipeline ensures that a slow or failed Knowle
 ## ADR-024: Connector Isolation Model
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (target model; real PAFN's Raqeb-specific logic is still embedded directly in `pre_validation.py` and `agency_code.py` today - see Context)
 **Category:** Platform / Extensibility
 **Deciders:** Principal Enterprise Architect · Engineering Lead
 **Source:** Document 15, Output 1 (Reusability Strategy) and Output 4, Component C-16
@@ -984,7 +983,7 @@ Isolation from the case processing pipeline ensures that a slow or failed Knowle
 
 External system integration is required in every ARIA deployment: inbound submission sources (SharePoint, workflow engines, CRMs, custom portals) and outbound decision delivery targets (customs management systems, healthcare claim systems, CRMs, case management platforms). Each customer has a different external system. If connector logic lives in the platform pipeline, adding a new connector requires platform engineering.
 
-The Raqeb connector (PAFN reference) was initially co-located with platform code - a violation that required correction (Document 13, INV-04). A formal isolation model was needed to prevent recurrence.
+**Current state:** In real PAFN today, Raqeb-specific logic is still embedded directly in `pre_validation.py` and `agency_code.py` rather than isolated behind a connector boundary - this ADR describes the target isolation model, not the as-built state. Migrating Raqeb into a standalone connector under `reference-implementations/` is outstanding work, not a completed correction.
 
 ### Decision
 
@@ -1031,7 +1030,7 @@ The Managed Identity isolation prevents connector security vulnerabilities from 
 ## ADR-025: Template CI Enforcement
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Design (CI gates not yet built)
 **Category:** Platform / Governance
 **Deciders:** Engineering Lead · Architecture Governance Lead
 **Source:** Document 15, Output 7 (Template Framework CI Enforcement Rules)
@@ -1085,7 +1084,7 @@ The executable code ban is a security gate: it prevents a template from becoming
 ## ADR-026: Sovereign Deployment via Environment Variable Substitution
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Proposed (not yet validated against any deployment; endpoint substitution is architecturally sound but unverified in practice)
 **Category:** Platform / Deployment
 **Deciders:** Principal Enterprise Architect
 **Source:** Document 15, Output 10 (Topology 4: Sovereign/Air-Gapped)
@@ -1138,7 +1137,7 @@ The two-endpoint substitution pattern works because ARIA's AI service clients ar
 ## ADR-027: Duplicate Detection Before AI Processing
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Proven (PAFN's `pre_validation.py` already deduplicates by checksum)
 **Category:** AI / Pre-Processing
 **Deciders:** AI Systems Architect · Engineering Lead
 **Source:** Document 15, Output 6, Strategy 6.7 (Duplicate Detection)
@@ -1190,7 +1189,7 @@ Near-duplicate detection adds compute cost (MinHash construction) but catches th
 ## ADR-028: Evaluation Framework as Mandatory Deployment Gate
 
 **Date:** 2026-08-10
-**Status:** Accepted
+**Status:** Accepted - Proven (PAFN already has a working evaluation framework - `run_evaluation.py`, ground truth data, accuracy thresholds)
 **Category:** Platform / Quality
 **Deciders:** Principal Enterprise Architect · Architecture Governance Lead
 **Source:** Document 15, Architecture Principle AP-10 and Output 1, Extensibility Model
@@ -1249,7 +1248,7 @@ The 85% threshold is calibrated from PAFN production experience - at 85% field e
 
 **Total ADRs in catalog:** 28
 **Date range:** ADR-001 through ADR-008 (2026-08-07) · ADR-009 through ADR-028 (2026-08-10)
-**All statuses:** Accepted
+**Status breakdown:** 14 Accepted - Proven · 13 Accepted - Design · 1 Proposed
 
 **Decisions by impact area:**
 - **Token efficiency:** ADR-011 · ADR-012 · ADR-013 · ADR-014 · ADR-015 · ADR-016 · ADR-017 · ADR-018 · ADR-027 (9 decisions)
