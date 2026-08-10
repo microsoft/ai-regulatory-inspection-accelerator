@@ -11,7 +11,7 @@
 **Date:** 2026-08-10
 **Status:** Reference architecture - Core Platform implementation not yet started
 **Primary Input:** 11-Architecture-Input-Pack.md (read first; do not open source documents)
-**Classification:** Microsoft Confidential - IP Strategy
+**Classification:** Microsoft Confidential
 **Audience:** Engineering only (deep implementation reference - see [TechnicalArchitecture.md](../TechnicalArchitecture.md) for the concise version)
 
 ---

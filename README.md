@@ -12,10 +12,6 @@ The core evidence-to-decision engine supports any multi-document, policy-driven 
 
 > Note: With any AI solution you build using this accelerator, you are responsible for assessing associated risks and complying with applicable laws and standards. See [Responsible AI Transparency FAQ](TRANSPARENCY_FAQ.md).
 
-> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described below. Core Platform engine code (`src/platform/`) is under active implementation - see [Roadmap](#roadmap). Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
-
-> **Phase 1 scope:** This release covers the recommendation engine - Evidence Intake through Decision Recommendation. Human Review (the grounded review agent) is a Phase 2 capability, still in progress - see [Roadmap](#roadmap).
-
 ---
 
 ## Solution overview
@@ -32,7 +28,7 @@ Processing, extraction, validation, and decision steps are tracked with status a
 
 ### Solution architecture
 
-The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content: a domain-neutral **Core Platform** (the engines described above), **Industry Templates** (configuration packages - JSON and Markdown only, no executable code - that adapt the platform to a specific regulated domain), and **Reference Implementations** (complete, isolated deployments built on the Core Platform and a template). See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
+The platform is structured in three tiers so it can be deployed across regulated industries without rework: a domain-neutral **Core Platform** (the engines described above) implements extraction, validation, and decisioning logic once; **Industry Templates** (configuration packages - JSON and Markdown only, no executable code) adapt the platform to a specific regulated domain in days, not months; and **Reference Implementations** are complete, isolated deployments built on the Core Platform and a template. See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
 
 | Component | Role |
 |---|---|
@@ -160,9 +156,19 @@ Rule changes made in the underlying configuration store take effect immediately 
 
 ## Business scenario
 
-The included reference scenario demonstrates a food import inspection workflow for a national food safety authority (PAFN). An inspector receives an incoming shipment declaration - an invoice, packing list, certificate of origin, health certificate, and (where applicable) a Halal certificate - that must be reviewed together before the shipment can be released.
+Teams that review multi-document regulatory and compliance submissions - customs clearance, KYC/AML checks, healthcare compliance, licensing, environmental compliance - face the same constraints regardless of industry:
 
-Prior to automation, an inspector manually cross-referenced every document: confirming the invoice's net weight matched the packing list, verifying the certificate of origin was valid for the declared HS code, checking certificate expiry against the shipment date, and applying the ministry's current food safety rules - a process taking 20 to 35 minutes per case, with consistency depending on individual inspector experience.
+- Cross-referencing every document by hand is slow, and consistency depends on individual reviewer experience.
+- Policy rules change frequently, but updates typically require a code deployment before they take effect.
+- Every decision must be defensible after the fact, but audit trails are often incomplete or scattered across systems.
+
+ARIA addresses this with a configuration-driven pipeline that extracts, reconciles, evaluates, and delivers an explainable decision for any multi-document, policy-driven review - built once on the Core Platform, then adapted to a new regulated industry through a template rather than a new codebase.
+
+### Reference case: food import inspection (PAFN)
+
+The first production-validated deployment is a food import inspection workflow for a national food safety authority (PAFN). An inspector receives an incoming shipment declaration - an invoice, packing list, certificate of origin, health certificate, and (where applicable) a Halal certificate - that must be reviewed together before the shipment can be released.
+
+Prior to automation, an inspector manually cross-referenced every document: confirming the invoice's net weight matched the packing list, verifying the certificate of origin was valid for the declared HS code, checking certificate expiry against the shipment date, and applying the ministry's current food safety rules - a process taking 20 to 35 minutes per case.
 
 With ARIA, the inspector submits the full document bundle to the platform, which automatically:
 
@@ -171,9 +177,17 @@ With ARIA, the inspector submits the full document bundle to the platform, which
 3. **Evaluates ministry policy rules** loaded at runtime from Cosmos DB - mandatory certificate requirements, HS code restrictions, and cross-document consistency checks - producing a weighted risk score.
 4. **Delivers a decision** - PASS, HOLD, or FAIL - with a complete, field-level evidence chain, escalating HOLD/FAIL cases to a grounded review agent that answers inspector questions with citations back to the specific document and field.
 
-What previously took up to 35 minutes of manual cross-referencing is completed in under two minutes, with a full audit trail available for any subsequent regulatory challenge.
+The same Core Platform, unchanged, applies this pattern to customs clearance, KYC/AML validation, healthcare compliance, and other multi-document, policy-driven decision workflows - only the industry template changes.
 
-> This scenario is the first production-validated reference implementation of ARIA. The platform itself carries no food-safety-specific logic - the same engine applies to customs clearance, KYC/AML validation, healthcare compliance, environmental compliance, and any other multi-document, policy-driven decision workflow through configuration alone.
+### Business value
+
+- **Faster decisions** - Cross-referencing that took 20-35 minutes per case in the PAFN reference deployment is completed in under two minutes, with a full audit trail retained for any subsequent regulatory challenge.
+- **Lower cost to expand into new regulated domains** - A new industry is a template - 13 JSON/Markdown configuration files - not a new codebase or a new deployment of platform engineering effort.
+- **Consistent, defensible outcomes** - Every decision traces back to the source document, field, and rule that produced it, reducing variance between reviewers and strengthening audit response.
+- **Rules that keep pace with policy change** - Compliance rules take effect immediately from configuration changes, without a redeployment cycle.
+- **Human accountability retained** - Low-confidence or high-risk cases are always escalated to a grounded reviewer; every override requires a documented rationale, and no high-stakes decision is made fully autonomously.
+
+> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described above. Core Platform engine code (`src/platform/`) is under active implementation, generalized from the validated PAFN reference deployment - see [Roadmap](#roadmap). Human Review (the grounded review agent) is a Phase 2 capability, still in progress. Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
 
 ---
 
