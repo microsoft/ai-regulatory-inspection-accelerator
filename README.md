@@ -1,6 +1,6 @@
-# ARIA — AI Regulatory Inspection Accelerator
+# ARIA - AI Regulatory Inspection Accelerator
 
-Process multi-document regulatory and compliance submissions by extracting structured data from every document, reconciling facts across the entire bundle, evaluating configurable policy rules, and producing an explainable, auditable decision. Upload a document bundle — invoices, certificates, declarations, applications, claims — and the solution processes each document through a token-efficient extraction pipeline, then orchestrates cross-document validation, risk scoring, and decision delivery through a multi-agent workflow.
+Process multi-document regulatory and compliance submissions by extracting structured data from every document, reconciling facts across the entire bundle, evaluating configurable policy rules, and producing an explainable, auditable decision. Upload a document bundle - invoices, certificates, declarations, applications, claims - and the solution processes each document through a token-efficient extraction pipeline, then orchestrates cross-document validation, risk scoring, and decision delivery through a multi-agent workflow.
 
 The core evidence-to-decision engine supports any multi-document, policy-driven review workflow with runtime-configurable rules and confidence scoring. These capabilities apply to numerous use cases including: food safety inspection, customs clearance, KYC/AML validation, healthcare compliance, environmental compliance, licensing and certification, and financial compliance review.
 
@@ -12,7 +12,7 @@ The core evidence-to-decision engine supports any multi-document, policy-driven 
 
 > Note: With any AI solution you build using this accelerator, you are responsible for assessing associated risks and complying with applicable laws and standards. See [Responsible AI Transparency FAQ](TRANSPARENCY_FAQ.md).
 
-> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described below. Core Platform engine code (`src/platform/`) is under active implementation — see [Roadmap](#roadmap). Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
+> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described below. Core Platform engine code (`src/platform/`) is under active implementation - see [Roadmap](#roadmap). Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
 
 ---
 
@@ -20,17 +20,17 @@ The core evidence-to-decision engine supports any multi-document, policy-driven 
 
 This accelerator leverages Azure Document Intelligence, Azure OpenAI Service, Azure Durable Functions, Azure Cosmos DB, and Azure AI Search to process multi-document evidence bundles through a five-stage pipeline:
 
-- **Evidence Intake** — Receive multi-document submissions via REST API with immediate acknowledgement (HTTP 202). Validates bundle integrity — checksums, MIME types, document count, and file sizes — before any AI processing begins.
-- **Document Intelligence** — Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
-- **Cross-Document Validation** — The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
-- **Policy & Risk Evaluation** — Compliance rules are loaded from Cosmos DB at runtime — rule changes take effect immediately without redeployment. A weighted risk score determines whether a case is auto-resolved or escalated for human review.
-- **Decision & Human Review** — A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are routed to a grounded, citation-backed review agent before a final decision is recorded.
+- **Evidence Intake** - Receive multi-document submissions via REST API with immediate acknowledgement (HTTP 202). Validates bundle integrity - checksums, MIME types, document count, and file sizes - before any AI processing begins.
+- **Document Intelligence** - Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
+- **Cross-Document Validation** - The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
+- **Policy & Risk Evaluation** - Compliance rules are loaded from Cosmos DB at runtime - rule changes take effect immediately without redeployment. A weighted risk score determines whether a case is auto-resolved or escalated for human review.
+- **Decision & Human Review** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are routed to a grounded, citation-backed review agent before a final decision is recorded.
 
 Processing, extraction, validation, and decision steps are tracked with status and scored for confidence to automate routine cases and identify as-needed human review.
 
 ### Solution architecture
 
-The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content: a domain-neutral **Core Platform** (the engines described above), **Industry Templates** (configuration packages — JSON and Markdown only, no executable code — that adapt the platform to a specific regulated domain), and **Reference Implementations** (complete, isolated deployments built on the Core Platform and a template). See [ARIA Platform Architecture](docs/architecture/aria-platform-architecture.md) for the full architecture, component design, and Azure reference architecture, and [ARIA ADR Summary](docs/architecture/aria-adr-summary.md) for the governing architecture decisions.
+The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content: a domain-neutral **Core Platform** (the engines described above), **Industry Templates** (configuration packages - JSON and Markdown only, no executable code - that adapt the platform to a specific regulated domain), and **Reference Implementations** (complete, isolated deployments built on the Core Platform and a template). See [ARIA Platform Architecture](docs/architecture/aria-platform-architecture.md) for the full architecture, component design, and Azure reference architecture, and [ARIA ADR Summary](docs/architecture/aria-adr-summary.md) for the governing architecture decisions.
 
 | Component | Role |
 |---|---|
@@ -60,7 +60,7 @@ A background Knowledge Pack Agent keeps each industry template's compressed poli
 | Design principle | Detail |
 |---|---|
 | Token efficiency | Documents are normalized to clean Markdown, structured extraction runs first so the model only fills genuine gaps, large documents are chunked to relevant sections, and policy context is compressed into a compact Knowledge Pack instead of injecting a full rule set into every prompt |
-| Deterministic policy evaluation | Rule evaluation is config-driven and deterministic — no LLM call is required to apply a compliance rule |
+| Deterministic policy evaluation | Rule evaluation is config-driven and deterministic - no LLM call is required to apply a compliance rule |
 | Human-in-the-loop | Low-confidence and high-risk cases are always routed to a grounded review agent; every override requires a documented rationale |
 | Extensibility | Add a new document type, rule, or industry template without modifying platform code |
 
@@ -70,15 +70,15 @@ A background Knowledge Pack Agent keeps each industry template's compressed poli
 
 ### Key features
 
-- **Multi-document bundle intake** — Upload a full evidence bundle in a single submission; the platform validates integrity and stages every document for processing as one unit.
-- **Configuration-driven extraction** — New document types are added via JSON configuration; the extraction prompt is auto-generated from the field schema.
-- **Cross-document semantic reconciliation** — Resolves field-name variations across documents and languages, and detects contradictions across the full bundle.
-- **Runtime-configurable policy engine** — Compliance rules are evaluated deterministically against eight rule categories, loaded from Cosmos DB and effective immediately on change.
-- **Weighted risk scoring** — Configurable risk weight matrix with historical case pattern calibration determines escalation to human review.
-- **Explainable decisions with full evidence chain** — Every decision traces back to the source document, field, and rule that produced it.
-- **Grounded human review** — A citation-backed review agent answers reviewer questions using only submitted case evidence, with mandatory override rationale capture.
-- **Immutable audit trail** — Every model call, rule evaluation, and human action is logged for point-in-time decision reconstruction.
-- **Pluggable connector framework** — Inbound submission sources and outbound decision delivery integrate via a documented connector contract.
+- **Multi-document bundle intake** - Upload a full evidence bundle in a single submission; the platform validates integrity and stages every document for processing as one unit.
+- **Configuration-driven extraction** - New document types are added via JSON configuration; the extraction prompt is auto-generated from the field schema.
+- **Cross-document semantic reconciliation** - Resolves field-name variations across documents and languages, and detects contradictions across the full bundle.
+- **Runtime-configurable policy engine** - Compliance rules are evaluated deterministically against eight rule categories, loaded from Cosmos DB and effective immediately on change.
+- **Weighted risk scoring** - Configurable risk weight matrix with historical case pattern calibration determines escalation to human review.
+- **Explainable decisions with full evidence chain** - Every decision traces back to the source document, field, and rule that produced it.
+- **Grounded human review** - A citation-backed review agent answers reviewer questions using only submitted case evidence, with mandatory override rationale capture.
+- **Immutable audit trail** - Every model call, rule evaluation, and human action is logged for point-in-time decision reconstruction.
+- **Pluggable connector framework** - Inbound submission sources and outbound decision delivery integrate via a documented connector contract.
 
 ---
 
@@ -108,7 +108,7 @@ Deployment requires an Azure subscription with permissions to create resource gr
 ### Repository Structure
 
 ```
-src/platform/                          Core Platform — domain-neutral engines (Tier 1)
+src/platform/                          Core Platform - domain-neutral engines (Tier 1)
   intake/                              Evidence Intake Engine
   document_intelligence/               Document Intelligence Engine
   reconciliation/                      Cross-document semantic reconciliation
@@ -125,10 +125,10 @@ src/models/                            Shared data models
 src/shared/                            Azure service client wrappers (incl. AI client)
 src/evaluation/                        Accuracy evaluation framework
 templates/_schema/                     Template validation schema
-templates/{industry-name}/             Industry Templates (Tier 2) — JSON + Markdown only
+templates/{industry-name}/             Industry Templates (Tier 2) - JSON + Markdown only
 connectors/sdk/                        BaseConnector abstract contract
 connectors/{name}/                     Built-in and named connectors
-reference-implementations/{name}/      Reference Implementations (Tier 3) — customer-isolated
+reference-implementations/{name}/      Reference Implementations (Tier 3) - customer-isolated
 infra/terraform/                       Infrastructure as Code modules
 ```
 
@@ -136,7 +136,7 @@ infra/terraform/                       Infrastructure as Code modules
 
 ## Configuration Overview
 
-Industry behavior is defined entirely through a template's configuration artifacts — never through platform code changes:
+Industry behavior is defined entirely through a template's configuration artifacts - never through platform code changes:
 
 - Document type and field definitions
 - Policy rule seed data
@@ -151,26 +151,26 @@ Industry behavior is defined entirely through a template's configuration artifac
 - Dashboard and KPI configuration
 - Ground truth evaluation data
 
-Rule changes made in the underlying configuration store take effect immediately for new cases — no code deployment required.
+Rule changes made in the underlying configuration store take effect immediately for new cases - no code deployment required.
 
 ---
 
 ## Business scenario
 
-The included reference scenario demonstrates a food import inspection workflow for a national food safety authority (PAFN). An inspector receives an incoming shipment declaration — an invoice, packing list, certificate of origin, health certificate, and (where applicable) a Halal certificate — that must be reviewed together before the shipment can be released.
+The included reference scenario demonstrates a food import inspection workflow for a national food safety authority (PAFN). An inspector receives an incoming shipment declaration - an invoice, packing list, certificate of origin, health certificate, and (where applicable) a Halal certificate - that must be reviewed together before the shipment can be released.
 
-Prior to automation, an inspector manually cross-referenced every document: confirming the invoice's net weight matched the packing list, verifying the certificate of origin was valid for the declared HS code, checking certificate expiry against the shipment date, and applying the ministry's current food safety rules — a process taking 20 to 35 minutes per case, with consistency depending on individual inspector experience.
+Prior to automation, an inspector manually cross-referenced every document: confirming the invoice's net weight matched the packing list, verifying the certificate of origin was valid for the declared HS code, checking certificate expiry against the shipment date, and applying the ministry's current food safety rules - a process taking 20 to 35 minutes per case, with consistency depending on individual inspector experience.
 
 With ARIA, the inspector submits the full document bundle to the platform, which automatically:
 
-1. **Extracts structured data from every document** — invoice values, certificate numbers, country of origin, expiry dates — using config-driven extraction, including Arabic and English bilingual documents.
-2. **Reconciles the bundle** — resolving field-name variations across languages and detecting cross-document inconsistencies (for example, a net weight mismatch between the invoice and packing list, or an expired certificate).
-3. **Evaluates ministry policy rules** loaded at runtime from Cosmos DB — mandatory certificate requirements, HS code restrictions, and cross-document consistency checks — producing a weighted risk score.
-4. **Delivers a decision** — PASS, HOLD, or FAIL — with a complete, field-level evidence chain, escalating HOLD/FAIL cases to a grounded review agent that answers inspector questions with citations back to the specific document and field.
+1. **Extracts structured data from every document** - invoice values, certificate numbers, country of origin, expiry dates - using config-driven extraction, including Arabic and English bilingual documents.
+2. **Reconciles the bundle** - resolving field-name variations across languages and detecting cross-document inconsistencies (for example, a net weight mismatch between the invoice and packing list, or an expired certificate).
+3. **Evaluates ministry policy rules** loaded at runtime from Cosmos DB - mandatory certificate requirements, HS code restrictions, and cross-document consistency checks - producing a weighted risk score.
+4. **Delivers a decision** - PASS, HOLD, or FAIL - with a complete, field-level evidence chain, escalating HOLD/FAIL cases to a grounded review agent that answers inspector questions with citations back to the specific document and field.
 
 What previously took up to 35 minutes of manual cross-referencing is completed in under two minutes, with a full audit trail available for any subsequent regulatory challenge.
 
-> This scenario is the first production-validated reference implementation of ARIA. The platform itself carries no food-safety-specific logic — the same engine applies to customs clearance, KYC/AML validation, healthcare compliance, environmental compliance, and any other multi-document, policy-driven decision workflow through configuration alone.
+> This scenario is the first production-validated reference implementation of ARIA. The platform itself carries no food-safety-specific logic - the same engine applies to customs clearance, KYC/AML validation, healthcare compliance, environmental compliance, and any other multi-document, policy-driven decision workflow through configuration alone.
 
 ---
 
@@ -178,7 +178,7 @@ What previously took up to 35 minutes of manual cross-referencing is completed i
 
 ### Security guidelines
 
-This accelerator uses [Managed Identity](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) for all service-to-service authentication — no connection strings or secrets are stored in application code. Secrets required for external integrations (such as HMAC callback signing keys) are stored in Azure Key Vault.
+This accelerator uses [Managed Identity](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) for all service-to-service authentication - no connection strings or secrets are stored in application code. Secrets required for external integrations (such as HMAC callback signing keys) are stored in Azure Key Vault.
 
 Additional security considerations for deployments built on this accelerator:
 
@@ -189,7 +189,7 @@ Additional security considerations for deployments built on this accelerator:
 
 ### Cross references
 
-This accelerator addresses the decision layer above document extraction — cross-document validation, configurable policy reasoning, risk assessment, and auditable decision delivery. For single-document extraction, knowledge mining, and chat-over-documents scenarios, see related Microsoft Solution Accelerators:
+This accelerator addresses the decision layer above document extraction - cross-document validation, configurable policy reasoning, risk assessment, and auditable decision delivery. For single-document extraction, knowledge mining, and chat-over-documents scenarios, see related Microsoft Solution Accelerators:
 
 | Accelerator | Focus |
 |---|---|

@@ -1,11 +1,11 @@
-# ARIA — Platform Architecture Document
+# ARIA - Platform Architecture Document
 
 **Document:** 15-ARIA-Platform-Architecture.md
 **Version:** 1.0
 **Date:** 2026-08-10
-**Status:** Authoritative — Architecture Reference
+**Status:** Authoritative - Architecture Reference
 **Primary Input:** 11-Architecture-Input-Pack.md (read first; do not open source documents)
-**Classification:** Microsoft Confidential — IP Strategy
+**Classification:** Microsoft Confidential - IP Strategy
 **Audience:** Engineering · Leadership · Hackathon Submission · IP Governance Review
 
 ---
@@ -19,7 +19,7 @@
 | 3 | Logical Architecture | Layer-by-layer Mermaid diagram |
 | 4 | Component Architecture | 17 components with full specifications |
 | 5 | Agent Architecture | Multi-agent ecosystem + interaction diagram |
-| 6 | Token Efficiency Architecture | Dedicated optimization layer — design and estimates |
+| 6 | Token Efficiency Architecture | Dedicated optimization layer - design and estimates |
 | 7 | Template Framework | Classification and industry mapping |
 | 8 | Data Architecture | Conceptual model + ERD |
 | 9 | Integration Architecture | Patterns for all external integration points |
@@ -29,13 +29,13 @@
 
 ---
 
-## Output 1 — Executive Architecture Summary
+## Output 1 - Executive Architecture Summary
 
 ### 1.1 Platform Vision
 
-ARIA is an **AI Evidence-to-Decision Platform** — a reusable, configuration-driven Microsoft Azure Solution Accelerator that operationalizes one universal capability: transforming any bundle of heterogeneous evidence documents into a consistent, explainable, auditable decision.
+ARIA is an **AI Evidence-to-Decision Platform** - a reusable, configuration-driven Microsoft Azure Solution Accelerator that operationalizes one universal capability: transforming any bundle of heterogeneous evidence documents into a consistent, explainable, auditable decision.
 
-The platform sits at the decision layer above document extraction. Every industry that makes consequential decisions on document bundles — food safety, customs, KYC, insurance, healthcare, environmental permitting, licensing — shares the same five-stage problem: intake → extract → reconcile → evaluate → decide. ARIA solves this problem once, at platform level, and configures it for any domain through templates.
+The platform sits at the decision layer above document extraction. Every industry that makes consequential decisions on document bundles - food safety, customs, KYC, insurance, healthcare, environmental permitting, licensing - shares the same five-stage problem: intake → extract → reconcile → evaluate → decide. ARIA solves this problem once, at platform level, and configures it for any domain through templates.
 
 ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
 
@@ -46,11 +46,11 @@ ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
 | **AP-01** | **Domain neutrality by construction** | Zero industry vocabulary in `src/platform/`. CI lint enforcement. |
 | **AP-02** | **Configuration over code** | New document type = JSON entry. New rule = Cosmos DB document. New industry = 13 JSON template files. |
 | **AP-03** | **Decision traceability as a first-class concern** | Every decision traceable to field → document → rule → ETag. Point-in-time reproducibility always. |
-| **AP-04** | **Security by architecture, not configuration** | Managed Identity, private endpoints, PII dual-tier write — foundational, not optional. |
+| **AP-04** | **Security by architecture, not configuration** | Managed Identity, private endpoints, PII dual-tier write - foundational, not optional. |
 | **AP-05** | **Token efficiency by design** | Structured pre-processing before every LLM call. LLM receives minimum structured information, not raw documents. |
 | **AP-06** | **Human override, always** | No fully autonomous decisions. Human review framework is first-class, not an add-on. |
 | **AP-07** | **Durable, resumable orchestration** | Durable Functions checkpoint-based state persistence. Zero case loss on host restart. |
-| **AP-08** | **Runtime configurability** | Rules, thresholds, vocabularies, and risk weights take effect immediately — no deployment cycle. |
+| **AP-08** | **Runtime configurability** | Rules, thresholds, vocabularies, and risk weights take effect immediately - no deployment cycle. |
 | **AP-09** | **Isolation of reference implementations** | All customer-specific code lives in `reference-implementations/`. Platform code is provably clean. |
 | **AP-10** | **Measurable accuracy before production** | Evaluation framework is a deployment gate, not an optional tool. ≥ 85% extraction accuracy required. |
 
@@ -58,20 +58,20 @@ ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
 
 ARIA achieves platform-level reusability through three mechanisms:
 
-**Mechanism 1 — Configuration-Driven Behavior**
-Every domain-specific behavior is expressed as data, not code. The extraction pipeline reads what fields to extract from `evidence_types.json`. The rules engine reads what rules to apply from Cosmos DB. The risk engine reads weight matrices from template JSON. Adding a new industry requires no platform code — only configuration authoring.
+**Mechanism 1 - Configuration-Driven Behavior**
+Every domain-specific behavior is expressed as data, not code. The extraction pipeline reads what fields to extract from `evidence_types.json`. The rules engine reads what rules to apply from Cosmos DB. The risk engine reads weight matrices from template JSON. Adding a new industry requires no platform code - only configuration authoring.
 
-**Mechanism 2 — Three-Tier Product Model**
+**Mechanism 2 - Three-Tier Product Model**
 ```
-Tier 1 — Core Platform (domain-neutral, deployed once)
+Tier 1 - Core Platform (domain-neutral, deployed once)
     ↓ configured by
-Tier 2 — Industry Templates (13 JSON artifacts, deployed per industry)
+Tier 2 - Industry Templates (13 JSON artifacts, deployed per industry)
     ↓ instantiated as
-Tier 3 — Reference Implementations (customer-specific, isolated)
+Tier 3 - Reference Implementations (customer-specific, isolated)
 ```
 Platform engineers own Tier 1. Domain experts own Tier 2. Customers own Tier 3. No tier leaks into another.
 
-**Mechanism 3 — Connector Abstraction**
+**Mechanism 3 - Connector Abstraction**
 The `BaseConnector` three-interface contract (`transformSubmission`, `deliverDecision`, `reportStatus`) means any external system can be integrated without modifying the platform. New connectors are deployment units, not code changes.
 
 ### 1.4 Extensibility Model
@@ -93,20 +93,20 @@ Token efficiency is a first-class architectural concern. The platform must not s
 
 **Three-layer token optimization architecture:**
 
-**Layer 1 — Pre-Processing (before any LLM call)**
+**Layer 1 - Pre-Processing (before any LLM call)**
 - DOCX/Office → clean Markdown conversion (eliminates XML overhead)
 - Azure DI structured extraction first (pre-populates known fields)
 - PDF normalization (strips layout markers)
 - Duplicate detection (SHA-256, eliminates redundant processing)
 - Semantic chunking for large documents (>10 pages)
 
-**Layer 2 — Context Assembly (at LLM call time)**
+**Layer 2 - Context Assembly (at LLM call time)**
 - Knowledge Pack per template (~300 tokens versus ~20,000 tokens for full rule set)
 - Retrieval-augmented context for human review (top-3 chunks, not full case)
 - Prompt template caching (Azure OpenAI prefix cache ≥ 1,024 tokens)
 - Minimum-context principle enforced by Context Assembly Engine
 
-**Layer 3 — Monitoring and Attribution**
+**Layer 3 - Monitoring and Attribution**
 - Token count tracked on every LLM call (prompt, completion, cached)
 - Cost per case reporting in Application Insights
 - Per-tenant token attribution for SaaS billing
@@ -114,12 +114,12 @@ Token efficiency is a first-class architectural concern. The platform must not s
 
 ---
 
-## Output 2 — Business Capability Architecture
+## Output 2 - Business Capability Architecture
 
 ### 2.1 Capability Hierarchy
 
 ```
-ARIA — AI Evidence-to-Decision Platform
+ARIA - AI Evidence-to-Decision Platform
 │
 ├── 1. EVIDENCE INTAKE
 │   ├── 1.1 Bundle Reception
@@ -212,7 +212,7 @@ ARIA — AI Evidence-to-Decision Platform
 
 ```
 +=========================================================================+
-|  ARIA — AI Evidence-to-Decision Platform                                |
+|  ARIA - AI Evidence-to-Decision Platform                                |
 +=========================================================================+
 |                                                                         |
 |  +----------------+  +------------------+  +------------------------+  |
@@ -257,7 +257,7 @@ ARIA — AI Evidence-to-Decision Platform
 
 ---
 
-## Output 3 — Logical Architecture
+## Output 3 - Logical Architecture
 
 ### 3.1 Logical Architecture Mermaid Diagram
 
@@ -403,17 +403,17 @@ flowchart TB
 
 ---
 
-## Output 4 — Component Architecture
+## Output 4 - Component Architecture
 
 ### Component Specification Format
 
 Each component is specified across six dimensions:
-- **Purpose** — What the component does
-- **Inputs** — What it receives
-- **Outputs** — What it produces
-- **Dependencies** — Azure services and other components required
-- **Extensibility** — How the component is extended without code changes
-- **Token Impact** — How the component affects LLM token consumption
+- **Purpose** - What the component does
+- **Inputs** - What it receives
+- **Outputs** - What it produces
+- **Dependencies** - Azure services and other components required
+- **Extensibility** - How the component is extended without code changes
+- **Token Impact** - How the component affects LLM token consumption
 
 ---
 
@@ -444,7 +444,7 @@ Each component is specified across six dimensions:
 - New document format: add format handler to Normalization Engine
 - Schema validation: update `submission_schema.json` in template (zero platform code)
 
-**Token Impact:** **HIGH POSITIVE** — This is the first and most impactful token reduction point.
+**Token Impact:** **HIGH POSITIVE** - This is the first and most impactful token reduction point.
 - Office documents converted to Markdown here (60–75% token reduction before any LLM sees the document)
 - Duplicate documents rejected here (100% savings for duplicates)
 - Target: LLM receives normalized Markdown only; never raw binary or XML-wrapped content
@@ -457,9 +457,9 @@ Each component is specified across six dimensions:
 
 **Inputs:**
 - Normalized document (clean Markdown or structured Azure DI output)
-- Document type field schema (`evidence_types.json` — field names, data types, PII flags, aliases)
+- Document type field schema (`evidence_types.json` - field names, data types, PII flags, aliases)
 - Knowledge Pack (domain context for extraction guidance)
-- Semantic chunks (for large documents — from Semantic Chunking Service)
+- Semantic chunks (for large documents - from Semantic Chunking Service)
 
 **Outputs:**
 - Per-document extraction artifact: `{fieldName: {value, confidence, sourceRef, isPII}}`
@@ -481,7 +481,7 @@ Each component is specified across six dimensions:
 - New Azure DI prebuilt model: configure per document type in template
 - Custom extraction prompts: override per document type in template
 
-**Token Impact:** **HIGH POSITIVE** — Core token optimization component.
+**Token Impact:** **HIGH POSITIVE** - Core token optimization component.
 - Phase 1 (Azure DI structured extraction): Zero LLM tokens for pre-populated fields
 - Phase 2 (LLM gap-filling): Only uncovered fields sent to LLM (40–60% token reduction)
 - Semantic chunking: Only relevant document sections sent (60–80% reduction for large docs)
@@ -491,7 +491,7 @@ Each component is specified across six dimensions:
 
 ### C-03: Metadata Extraction Engine
 
-**Purpose:** Extracts document metadata (format, language, page count, creation date, author, embedded entity hints) before full content processing. Drives intelligent routing decisions — which chunking strategy, which Azure DI model, which LLM extraction approach.
+**Purpose:** Extracts document metadata (format, language, page count, creation date, author, embedded entity hints) before full content processing. Drives intelligent routing decisions - which chunking strategy, which Azure DI model, which LLM extraction approach.
 
 **Inputs:**
 - Raw document blob URL or byte stream
@@ -511,7 +511,7 @@ Each component is specified across six dimensions:
 - New metadata field: add to metadata schema (no platform pipeline change)
 - New routing rule: add to routing configuration (template-level)
 
-**Token Impact:** **MEDIUM POSITIVE** — Enables downstream optimizations.
+**Token Impact:** **MEDIUM POSITIVE** - Enables downstream optimizations.
 - Correct chunking strategy selection prevents over-sending context
 - Language detection triggers RTL normalization (prevents garbled tokens)
 - Page count drives chunking threshold decision (skip chunking for docs ≤ 5 pages)
@@ -520,7 +520,7 @@ Each component is specified across six dimensions:
 
 ### C-04: Document Normalization Engine
 
-**Purpose:** Converts all incoming document formats to clean, normalized Markdown before any AI processing. This is the primary token reduction gateway — raw binary formats never reach LLMs.
+**Purpose:** Converts all incoming document formats to clean, normalized Markdown before any AI processing. This is the primary token reduction gateway - raw binary formats never reach LLMs.
 
 **Inputs:**
 - Raw document: PDF · DOCX · XLSX · PPTX · TIFF · JPEG · PNG
@@ -542,11 +542,11 @@ Each component is specified across six dimensions:
 - New document format: add converter class implementing `IDocumentConverter` interface
 - Custom normalization rules per document type: configure in template
 
-**Token Impact:** **CRITICAL — Highest impact component in token efficiency layer.**
+**Token Impact:** **CRITICAL - Highest impact component in token efficiency layer.**
 - DOCX/Office: 60–75% token reduction (removes XML namespace noise, revision history, formatting tags)
 - PDF (scanned): Azure DI Markdown then normalized (20–35% reduction from DI marker stripping)
 - Images: Azure DI Markdown output used directly
-- All formats unified to Markdown before LLM exposure — ensures downstream caching is effective
+- All formats unified to Markdown before LLM exposure - ensures downstream caching is effective
 
 ---
 
@@ -573,7 +573,7 @@ Each component is specified across six dimensions:
 - Conversion options configurable per document type via template
 - Custom table formatting rules per industry
 
-**Token Impact:** **CRITICAL** — First line of token defense for enterprise workflows where submitters provide Word/Excel documents.
+**Token Impact:** **CRITICAL** - First line of token defense for enterprise workflows where submitters provide Word/Excel documents.
 - DOCX: Removes XML tags (60–75% reduction) · preserves semantic content
 - XLSX: Converts to Markdown tables · strips cell formatting metadata
 - PPTX: Extracts text per slide · produces structured Markdown outline
@@ -605,7 +605,7 @@ Each component is specified across six dimensions:
 - Custom relevance scorer (override default embedding similarity)
 - Chunk size and overlap configurable per deployment
 
-**Token Impact:** **HIGH POSITIVE** — Eliminates the single biggest source of unnecessary token consumption (sending full large documents to LLM).
+**Token Impact:** **HIGH POSITIVE** - Eliminates the single biggest source of unnecessary token consumption (sending full large documents to LLM).
 - 30-page document → top-3 relevant chunks (typically 3–6 pages): 60–80% token reduction
 - Hybrid chunking: uses section headers when present (most reliable), falls back to page-window
 - Reduces hallucination risk: focused context is more grounded than full document stuffing
@@ -614,7 +614,7 @@ Each component is specified across six dimensions:
 
 ### C-07: Knowledge Pack Generator
 
-**Purpose:** Pre-generates and caches compact domain knowledge packages per template. A Knowledge Pack compresses the entire domain context (rules summary, alias quick-map, reference data categories, decision vocabulary) into ~300 tokens — replacing ~20,000 tokens of full rule set context.
+**Purpose:** Pre-generates and caches compact domain knowledge packages per template. A Knowledge Pack compresses the entire domain context (rules summary, alias quick-map, reference data categories, decision vocabulary) into ~300 tokens - replacing ~20,000 tokens of full rule set context.
 
 **Inputs:**
 - Template artifacts: `rules.json` (seed data) · `alias_pairs.json` · `decision_vocabulary.json` · `risk_threshold_bands.json`
@@ -626,7 +626,7 @@ Each component is specified across six dimensions:
 - Version-stamped (regenerated on template activation or rule change)
 
 **Dependencies:**
-- Cosmos DB (`rules` container — Change Feed triggers regeneration on rule changes)
+- Cosmos DB (`rules` container - Change Feed triggers regeneration on rule changes)
 - Azure Blob Storage (`knowledge-packs/` container)
 - Template artifacts (13 JSON files)
 
@@ -635,17 +635,17 @@ Each component is specified across six dimensions:
 - Custom knowledge sections per domain (e.g., medical ontology summary for healthcare)
 - Regeneration trigger configurable (rule change · manual · scheduled)
 
-**Token Impact:** **HIGH POSITIVE** — Transforms LLM policy context from thousands of tokens to hundreds.
+**Token Impact:** **HIGH POSITIVE** - Transforms LLM policy context from thousands of tokens to hundreds.
 - Full rule set: ~500 rules × ~40 tokens each = ~20,000 tokens
 - Knowledge Pack: ~300 tokens of structured summary
 - Savings: ~19,700 tokens per LLM call that previously used full rule context
-- Knowledge Pack is reused across all cases in the same template — generated once, used millions of times
+- Knowledge Pack is reused across all cases in the same template - generated once, used millions of times
 
 ---
 
 ### C-08: Context Assembly Engine
 
-**Purpose:** Assembles the minimum viable LLM context for each processing step. Acts as the enforcement layer for the minimum-context principle — no LLM call is made without passing through the Context Assembly Engine.
+**Purpose:** Assembles the minimum viable LLM context for each processing step. Acts as the enforcement layer for the minimum-context principle - no LLM call is made without passing through the Context Assembly Engine.
 
 **Inputs:**
 - Processing step identifier (extraction · reconciliation · cross-document · human review)
@@ -657,7 +657,7 @@ Each component is specified across six dimensions:
 **Outputs:**
 - Optimized prompt payload per LLM call: `{systemPrompt, userPrompt, context}`
 - Estimated token count (pre-call)
-- Context composition record (for audit — which chunks, which knowledge pack version)
+- Context composition record (for audit - which chunks, which knowledge pack version)
 
 **Dependencies:**
 - Semantic Chunking Service (C-06)
@@ -670,7 +670,7 @@ Each component is specified across six dimensions:
 - Custom prompt templates per domain (in template artifacts)
 - Context budget configurable (max tokens per LLM call)
 
-**Token Impact:** **CRITICAL ENFORCER** — This component is the guardrail that ensures all other token efficiency strategies are applied.
+**Token Impact:** **CRITICAL ENFORCER** - This component is the guardrail that ensures all other token efficiency strategies are applied.
 - Enforces: Knowledge Pack ≤ 300 tokens · chunks ≤ threshold · total context ≤ configured budget
 - Tracks: Estimated vs actual token usage per call
 - Optimizes: Prompt prefix structure to maximize Azure OpenAI prompt cache hit rate
@@ -679,10 +679,10 @@ Each component is specified across six dimensions:
 
 ### C-09: Cross-Document Validation Engine
 
-**Purpose:** Detects logical inconsistencies, value contradictions, and missing cross-document dependencies across the entire evidence bundle simultaneously. Operates on the canonical evidence map — not raw documents.
+**Purpose:** Detects logical inconsistencies, value contradictions, and missing cross-document dependencies across the entire evidence bundle simultaneously. Operates on the canonical evidence map - not raw documents.
 
 **Inputs:**
-- Canonical evidence map (output of Data Reconciliation Engine — all facts normalized to canonical field names)
+- Canonical evidence map (output of Data Reconciliation Engine - all facts normalized to canonical field names)
 - Cross-document validation rules (from template `cross_validation_rules.json`)
 - Knowledge Pack (for domain-specific tolerance thresholds)
 
@@ -694,7 +694,7 @@ Each component is specified across six dimensions:
 
 **Dependencies:**
 - Azure OpenAI (LLM semantic consistency reasoning)
-- Context Assembly Engine (C-08) — ensures only canonical map, not raw documents, sent to LLM
+- Context Assembly Engine (C-08) - ensures only canonical map, not raw documents, sent to LLM
 - Canonical evidence map (from Data Reconciliation Engine)
 - `cross_validation_rules.json` (template artifact)
 
@@ -703,7 +703,7 @@ Each component is specified across six dimensions:
 - Custom severity thresholds: configure in template
 - Numeric tolerance: per-field tolerance in `cross_validation_rules.json`
 
-**Token Impact:** **MEDIUM — Controlled by Context Assembly Engine.**
+**Token Impact:** **MEDIUM - Controlled by Context Assembly Engine.**
 - LLM receives canonical evidence map (~500–1,500 tokens), not raw documents
 - Knowledge Pack provides domain tolerance context (~300 tokens)
 - Total per call: ~1,800–2,000 tokens vs ~40,000 tokens if raw documents were sent
@@ -712,12 +712,12 @@ Each component is specified across six dimensions:
 
 ### C-10: Policy Evaluation Engine
 
-**Purpose:** Evaluates all active compliance rules against the canonical evidence map. Rules are loaded at evaluation time from Cosmos DB — changes take effect immediately, no restart required. Entirely deterministic — no LLM calls.
+**Purpose:** Evaluates all active compliance rules against the canonical evidence map. Rules are loaded at evaluation time from Cosmos DB - changes take effect immediately, no restart required. Entirely deterministic - no LLM calls.
 
 **Inputs:**
 - Canonical evidence map (validated, reconciled)
 - Active rules from Cosmos DB (`rules` container, filtered by category and template)
-- Reference data from Cosmos DB (`reference-data` collection — code lists, allowlists)
+- Reference data from Cosmos DB (`reference-data` collection - code lists, allowlists)
 - Rule ETag (pinned at load time for audit reproducibility)
 
 **Outputs:**
@@ -735,7 +735,7 @@ Each component is specified across six dimensions:
 - New rule category: add category evaluator class (platform code extension)
 - New reference data: insert Cosmos DB reference collection (zero code)
 
-**Token Impact:** **ZERO** — Entirely deterministic. No LLM calls in policy evaluation.
+**Token Impact:** **ZERO** - Entirely deterministic. No LLM calls in policy evaluation.
 - This is intentional by design (AP-02: deterministic over probabilistic for auditable rules)
 - Rule ETag pinning enables full point-in-time audit reproducibility
 
@@ -749,7 +749,7 @@ Each component is specified across six dimensions:
 - Policy findings list (from Policy Evaluation Engine)
 - Risk weight matrix (from template `risk_weight_matrix.json`)
 - Risk threshold bands (from template `risk_threshold_bands.json`)
-- Historical case patterns (from Azure AI Search — similar past cases)
+- Historical case patterns (from Azure AI Search - similar past cases)
 
 **Outputs:**
 - Risk score (0–100, weighted aggregate)
@@ -760,7 +760,7 @@ Each component is specified across six dimensions:
 
 **Dependencies:**
 - Policy findings (from C-10)
-- Azure AI Search (historical pattern retrieval — per-case similar case search)
+- Azure AI Search (historical pattern retrieval - per-case similar case search)
 - `risk_weight_matrix.json` (template artifact)
 - `risk_threshold_bands.json` (template artifact)
 
@@ -769,7 +769,7 @@ Each component is specified across six dimensions:
 - New threshold configuration: update `risk_threshold_bands.json` (no platform code)
 - Custom HOLD logic: configure in template (threshold, override rules)
 
-**Token Impact:** **MINIMAL** — Only historical pattern retrieval uses AI Search embedding.
+**Token Impact:** **MINIMAL** - Only historical pattern retrieval uses AI Search embedding.
 - Historical pattern query: single embedding call (~100 tokens) + retrieval
 - Risk scoring itself: fully deterministic weighted algorithm
 
@@ -805,7 +805,7 @@ Each component is specified across six dimensions:
 - New delivery format: implement `BaseConnector.deliverDecision()` in connector
 - Custom PII redaction: extend PII field list in template `pii_field_list.json`
 
-**Token Impact:** **MINIMAL** — Decision synthesis is algorithmic.
+**Token Impact:** **MINIMAL** - Decision synthesis is algorithmic.
 - No LLM calls in core decision synthesis
 - Natural language summary of top findings uses LLM but with minimal context (~500 tokens)
 
@@ -813,13 +813,13 @@ Each component is specified across six dimensions:
 
 ### C-13: Human Review Framework
 
-**Purpose:** Provides a grounded, evidence-citing conversational AI interface for human reviewers. The agent answers questions using only case evidence retrieved from Azure AI Search — never from general knowledge. Supports override workflow with mandatory rationale capture.
+**Purpose:** Provides a grounded, evidence-citing conversational AI interface for human reviewers. The agent answers questions using only case evidence retrieved from Azure AI Search - never from general knowledge. Supports override workflow with mandatory rationale capture.
 
 **Inputs:**
 - Reviewer natural language query
 - Case ID (all evidence accessible via AI Search case index)
-- Knowledge Pack (domain context — ~300 tokens)
-- Reviewer identity (from Entra ID — for authorization check)
+- Knowledge Pack (domain context - ~300 tokens)
+- Reviewer identity (from Entra ID - for authorization check)
 
 **Outputs:**
 - Evidence-cited answer: `{answer, citations: [{documentId, page, fieldName, extractedValue}]}`
@@ -828,10 +828,10 @@ Each component is specified across six dimensions:
 
 **Dependencies:**
 - Azure OpenAI (LLM reasoning for Q&A)
-- Azure AI Search (case evidence index — retrieval-augmented)
-- Context Assembly Engine (C-08) — enforces retrieval-augmented context, not full-case stuffing
+- Azure AI Search (case evidence index - retrieval-augmented)
+- Context Assembly Engine (C-08) - enforces retrieval-augmented context, not full-case stuffing
 - Minimum 5 core tools: case retrieval · finding retrieval · document summary · historical precedent · cross-document comparison
-- `chat_tools.json` (template artifact — domain-specific additional tools)
+- `chat_tools.json` (template artifact - domain-specific additional tools)
 - Cosmos DB (`feedback` container)
 - Entra ID (authorization for override action)
 
@@ -871,7 +871,7 @@ Each component is specified across six dimensions:
 - Explanation template per domain (override tone, vocabulary, detail level)
 - Report format configurable (JSON · Markdown · PDF via extension)
 
-**Token Impact:** **LOW** — Bounded by design.
+**Token Impact:** **LOW** - Bounded by design.
 - Each explanation generated from finding summary (~100–200 tokens input)
 - No full document context required for explanation generation
 - Batch explanation: all findings for a case in single LLM call with structured output
@@ -894,14 +894,14 @@ Each component is specified across six dimensions:
 - Token usage summary per case (for cost attribution)
 
 **Dependencies:**
-- Cosmos DB (audit container — append-only semantics enforced at application layer)
+- Cosmos DB (audit container - append-only semantics enforced at application layer)
 - All pipeline components (each component emits audit events)
 
 **Extensibility:**
 - Custom event types per domain (add to audit event schema)
 - Retention policy configurable per jurisdiction (TTL on Cosmos DB containers)
 
-**Token Impact:** **MONITORING** — Does not consume tokens; tracks tokens consumed by others.
+**Token Impact:** **MONITORING** - Does not consume tokens; tracks tokens consumed by others.
 - Every LLM call's token count captured and stored
 - Enables cost per case analytics
 - Enables per-tenant token attribution in SaaS topology
@@ -912,7 +912,7 @@ Each component is specified across six dimensions:
 
 **Purpose:** Adapts external submission formats to the ARIA standard inbound format, and delivers decisions in the format expected by each external system. Isolates all external integration logic from the platform pipeline.
 
-**Inputs (inbound):** External submission payload (any format — JSON, XML, custom schema)
+**Inputs (inbound):** External submission payload (any format - JSON, XML, custom schema)
 **Inputs (outbound):** ARIA-standard decision JSON
 
 **Outputs (inbound):** ARIA-standard submission JSON → passed to Evidence Intake Engine
@@ -938,13 +938,13 @@ def reportStatus(case_id: str, status: str, error: str | None) -> bool
 
 **Extensibility:** Extend `BaseConnector`, implement 3 methods, add `connector.json` manifest, register via Admin API. Zero platform code changes.
 
-**Token Impact:** **ZERO** — No LLM involvement in connector framework. All transformation is algorithmic.
+**Token Impact:** **ZERO** - No LLM involvement in connector framework. All transformation is algorithmic.
 
 ---
 
 ### C-17: Reporting Framework
 
-**Purpose:** Provides operational visibility into platform health, decision throughput, extraction accuracy, and token cost performance. All telemetry wired in platform code — customer requires no additional instrumentation.
+**Purpose:** Provides operational visibility into platform health, decision throughput, extraction accuracy, and token cost performance. All telemetry wired in platform code - customer requires no additional instrumentation.
 
 **Inputs:**
 - Application Insights telemetry (emitted by all pipeline activities)
@@ -972,17 +972,17 @@ def reportStatus(case_id: str, status: str, error: str | None) -> bool
 - Custom KPI tiles per deployment (via `dashboard_config.json` template artifact)
 - Alert thresholds configurable (cost per case threshold · token spike alert)
 
-**Token Impact:** **ENABLER** — Does not consume tokens; makes token consumption visible and actionable.
+**Token Impact:** **ENABLER** - Does not consume tokens; makes token consumption visible and actionable.
 - Target metrics to optimize: tokens per case · cache hit rate · cost per case
 - Anomaly alerts when any case exceeds 3× average token consumption
 
 ---
 
-## Output 5 — Agent Architecture
+## Output 5 - Agent Architecture
 
 ### 5.1 Multi-Agent Ecosystem Design
 
-ARIA's pipeline is implemented as a coordinated multi-agent ecosystem. Each agent is responsible for a bounded set of decisions and produces structured outputs consumed by the next agent. Agents share context through structured interfaces — not shared state.
+ARIA's pipeline is implemented as a coordinated multi-agent ecosystem. Each agent is responsible for a bounded set of decisions and produces structured outputs consumed by the next agent. Agents share context through structured interfaces - not shared state.
 
 | Agent | Role | Processing Stage | Primary Tool |
 |---|---|---|---|
@@ -1024,11 +1024,11 @@ sequenceDiagram
     INT->>INT: Normalize documents (Office→MD, PDF→clean MD)
     INT->>EXT: Staged bundle (normalizedDocs[], documentTypes[])
 
-    EXT->>EXT: Phase 1 — Azure DI structured extraction (pre-populate)
-    EXT->>EXT: Phase 2 — LLM gap-filling (uncovered fields only, chunked)
+    EXT->>EXT: Phase 1 - Azure DI structured extraction (pre-populate)
+    EXT->>EXT: Phase 2 - LLM gap-filling (uncovered fields only, chunked)
     EXT->>CLS: Raw extracted fields per document
 
-    CLS->>CLS: Semantic alias resolution (LLM — fast path for known aliases)
+    CLS->>CLS: Semantic alias resolution (LLM - fast path for known aliases)
     CLS->>CLS: Canonical evidence map assembly
     CLS->>CLS: PII classification per field
     CLS->>VAL: Canonical evidence map + PII map
@@ -1038,7 +1038,7 @@ sequenceDiagram
     VAL->>POL: Validated evidence map + conflict list
 
     POL->>POL: Load rules from Cosmos DB (runtime, ETag pinned)
-    POL->>POL: Evaluate 8 rule categories (deterministic — no LLM)
+    POL->>POL: Evaluate 8 rule categories (deterministic - no LLM)
     POL->>RSK: Findings list (PASS/FAIL/N/A) + rule ETags
 
     RSK->>RSK: Weighted risk score computation
@@ -1054,7 +1054,7 @@ sequenceDiagram
     AUD->>AUD: Immutable event stream append
     AUD->>AUD: Token usage capture (prompt + completion + cached)
 
-    Note over REV: Async — triggered on HOLD or reviewer request
+    Note over REV: Async - triggered on HOLD or reviewer request
     REC-->>REV: Case routed to human review queue
     REV->>REV: Retrieve top-3 evidence chunks (AI Search)
     REV->>REV: Assemble context (chunks + Knowledge Pack ≤ 1,800 tokens)
@@ -1077,15 +1077,15 @@ sequenceDiagram
 
 ---
 
-## Output 6 — Token Efficiency Architecture
+## Output 6 - Token Efficiency Architecture
 
 ### 6.1 Token Efficiency Layer Overview
 
-The Token Efficiency Layer is a cross-cutting concern implemented as a pipeline sub-layer that executes before, during, and after every LLM interaction. It is not a single component — it is a design pattern enforced across the platform.
+The Token Efficiency Layer is a cross-cutting concern implemented as a pipeline sub-layer that executes before, during, and after every LLM interaction. It is not a single component - it is a design pattern enforced across the platform.
 
 ```
 +================================================================+
-|  TOKEN EFFICIENCY LAYER — ARIA Platform                        |
+|  TOKEN EFFICIENCY LAYER - ARIA Platform                        |
 |  Design principle: LLM receives minimum structured information  |
 |  Target: 50–70% total LLM token reduction per case             |
 +================================================================+
@@ -1199,20 +1199,20 @@ Saving: 30% on DI output for typical invoice/certificate documents
 
 **Design:**
 ```
-Phase 1 — Azure DI Structured Extraction:
+Phase 1 - Azure DI Structured Extraction:
   input:  raw document blob URL
   tool:   Azure DI prebuilt-invoice / prebuilt-idDocument / prebuilt-layout
-  output: {field: {value, confidence}} — structured DI results
+  output: {field: {value, confidence}} - structured DI results
   cost:   Azure DI API call only (no LLM tokens)
 
-Phase 2 — Selective LLM Gap-Filling:
+Phase 2 - Selective LLM Gap-Filling:
   input:  evidence_types.json field list MINUS Phase 1 covered fields
   tool:   Azure OpenAI (GPT-4.x)
   output: {field: {value, confidence}} for uncovered fields only
   cost:   LLM tokens for uncovered fields only (~40% of full extraction)
 ```
 
-**Token flow (invoice — 12 configured fields):**
+**Token flow (invoice - 12 configured fields):**
 ```
 Without pre-extraction: 12 fields × LLM prompt → ~3,200 tokens input + ~600 tokens output
 Phase 1 covers 7 fields: 0 tokens (Azure DI)
@@ -1279,7 +1279,7 @@ Effective saving: ~16,800 tokens (70%) for large document extraction
 
 **Token count:** ~280 tokens for food safety Knowledge Pack versus ~22,000 tokens for full rule set.
 **Saving:** ~21,720 tokens per LLM call that previously used full rule context.
-**Cache lifetime:** Regenerated on rule change via Cosmos DB Change Feed trigger. Used across all cases — zero per-case generation cost.
+**Cache lifetime:** Regenerated on rule change via Cosmos DB Change Feed trigger. Used across all cases - zero per-case generation cost.
 
 **Architectural impact:** `KnowledgePackGenerator` in `src/platform/knowledge/`. Triggered by: template activation, rule document change (Change Feed), manual admin request. Stored: `knowledge-packs/{templateId}/current.json` in Blob. Loaded by: Context Assembly Engine on each pipeline invocation.
 
@@ -1287,7 +1287,7 @@ Effective saving: ~16,800 tokens (70%) for large document extraction
 
 ### 6.7 Strategy: Retrieval-Augmented Human Review
 
-**Where it applies:** Human Review Framework (C-13) — every reviewer query.
+**Where it applies:** Human Review Framework (C-13) - every reviewer query.
 
 **Without retrieval (anti-pattern):**
 ```
@@ -1315,21 +1315,21 @@ With retrieval:    20 × 1,830 = 36,600 tokens
 Session saving: 194,400 tokens (84%)
 ```
 
-**Architectural impact:** `EvidenceRetriever` in `src/platform/human_review/`. All tool call results include source citations (document ID, page, field name). Agent cannot access general knowledge — system prompt enforces grounding constraint.
+**Architectural impact:** `EvidenceRetriever` in `src/platform/human_review/`. All tool call results include source citations (document ID, page, field name). Agent cannot access general knowledge - system prompt enforces grounding constraint.
 
 ---
 
 ### 6.8 Strategy: Prompt Template Caching
 
-**Where it applies:** Activities 2 and 3 — all LLM extraction and reasoning calls.
+**Where it applies:** Activities 2 and 3 - all LLM extraction and reasoning calls.
 
 **Azure OpenAI prompt caching:** Available on GPT-4.1+ and GPT-5.x. Cached tokens cost 50% of standard input token price. Minimum cacheable prefix: 1,024 tokens.
 
 **Prompt structure for maximum cache benefit:**
 ```
-[SYSTEM PROMPT — static, ~200 tokens] (cached)
-[FIELD LIST — static per document type, ~800 tokens] (cached)
-[DOCUMENT CONTENT — variable, ~1,000–4,000 tokens] (not cached, but benefits from cached prefix)
+[SYSTEM PROMPT - static, ~200 tokens] (cached)
+[FIELD LIST - static per document type, ~800 tokens] (cached)
+[DOCUMENT CONTENT - variable, ~1,000–4,000 tokens] (not cached, but benefits from cached prefix)
 ```
 
 **Cache eligibility threshold:** Total prefix (system + field list) must be ≥ 1,024 tokens. For small field lists (<10 fields), pad with domain context from Knowledge Pack to meet threshold.
@@ -1340,7 +1340,7 @@ Session saving: 194,400 tokens (84%)
 
 ### 6.9 Strategy: Reference Data via Tool Calls (Not Context)
 
-**Where it applies:** Human Review Framework — domain reference data queries.
+**Where it applies:** Human Review Framework - domain reference data queries.
 
 **Anti-pattern (never do this):**
 ```python
@@ -1358,7 +1358,7 @@ def lookup_hs_code(code: str) -> dict:
 # Cost: 0 tokens (tool result ~20 tokens)
 ```
 
-**Architectural impact:** All reference data (HS codes, ICD codes, sanctions lists, code lists) lives in Cosmos DB reference data collection. Human Review Agent tools expose targeted lookup functions — not table dumps. Reference data never appears in LLM context as a raw table.
+**Architectural impact:** All reference data (HS codes, ICD codes, sanctions lists, code lists) lives in Cosmos DB reference data collection. Human Review Agent tools expose targeted lookup functions - not table dumps. Reference data never appears in LLM context as a raw table.
 
 ---
 
@@ -1395,7 +1395,7 @@ def _track_tokens(self, **kwargs):
 
 **Dashboard metrics:**
 - Tokens per case (average, P95, P99)
-- Cost per case ($ estimate — `total_tokens × model_price`)
+- Cost per case ($ estimate - `total_tokens × model_price`)
 - Cache hit rate per document type
 - Token efficiency ratio (extraction quality score / tokens consumed)
 - Per-tenant consumption (SaaS billing attribution)
@@ -1420,13 +1420,13 @@ def _track_tokens(self, **kwargs):
 
 ---
 
-## Output 7 — Template Framework
+## Output 7 - Template Framework
 
 ### 7.1 Three-Tier Classification
 
 ```
 +===============================================================+
-|  TIER 1 — CORE PLATFORM  (deploy once, serve all industries)  |
+|  TIER 1 - CORE PLATFORM  (deploy once, serve all industries)  |
 |                                                               |
 |  Evidence Intake Engine                                       |
 |  Document Intelligence Engine (incl. token efficiency layer) |
@@ -1446,29 +1446,29 @@ def _track_tokens(self, **kwargs):
 |  Context Assembly Engine (platform component)                |
 |  Semantic Chunking Service (platform component)              |
 +===============================================================+
-|  TIER 2 — INDUSTRY TEMPLATES  (13 JSON artifacts per domain)  |
+|  TIER 2 - INDUSTRY TEMPLATES  (13 JSON artifacts per domain)  |
 |                                                               |
-|  evidence_types.json     — Document types + field schemas    |
-|  rules.json              — Compliance rule seed data         |
-|  reference_data.json     — Domain code lists + taxonomies    |
-|  submission_schema.json  — APIM gateway validation schema    |
-|  risk_weight_matrix.json — Category risk weights             |
-|  risk_threshold_bands.json — LOW/MEDIUM/HIGH/CRITICAL bands  |
-|  alias_pairs.json        — Known field name alias fast-path  |
-|  cross_validation_rules.json — Cross-doc comparison rules   |
-|  decision_vocabulary.json — Outcome label mapping            |
-|  pii_field_list.json     — PII field declarations            |
-|  chat_tools.json         — Domain-specific review tools      |
-|  dashboard_config.json   — Domain KPI and alert thresholds  |
-|  evaluation/             — Ground truth test cases           |
+|  evidence_types.json - Document types + field schemas    |
+|  rules.json - Compliance rule seed data         |
+|  reference_data.json - Domain code lists + taxonomies    |
+|  submission_schema.json - APIM gateway validation schema    |
+|  risk_weight_matrix.json - Category risk weights             |
+|  risk_threshold_bands.json - LOW/MEDIUM/HIGH/CRITICAL bands  |
+|  alias_pairs.json - Known field name alias fast-path  |
+|  cross_validation_rules.json - Cross-doc comparison rules   |
+|  decision_vocabulary.json - Outcome label mapping            |
+|  pii_field_list.json - PII field declarations            |
+|  chat_tools.json - Domain-specific review tools      |
+|  dashboard_config.json - Domain KPI and alert thresholds  |
+|  evaluation/ - Ground truth test cases           |
 +===============================================================+
-|  TIER 3 — REFERENCE IMPLEMENTATIONS  (customer-isolated)      |
+|  TIER 3 - REFERENCE IMPLEMENTATIONS  (customer-isolated)      |
 |                                                               |
 |  reference-implementations/{name}/                           |
-|    connectors/{name}/     — Customer-specific connector      |
-|    ui/                    — Customer-facing review app       |
-|    config/                — Customer deployment config       |
-|    infra/terraform/       — Customer infra extensions        |
+|    connectors/{name}/ - Customer-specific connector      |
+|    ui/ - Customer-facing review app       |
+|    config/ - Customer deployment config       |
+|    infra/terraform/ - Customer infra extensions        |
 +===============================================================+
 ```
 
@@ -1495,27 +1495,27 @@ def _track_tokens(self, **kwargs):
 
 ---
 
-## Output 8 — Data Architecture
+## Output 8 - Data Architecture
 
 ### 8.1 Conceptual Data Model
 
 ```
-CASE — The atomic unit of work. One submission bundle. One decision.
-  ├── DOCUMENT (1..20) — Individual documents in the bundle
-  │     └── EVIDENCE_FACT (1..n) — Extracted field values per document
-  ├── VALIDATION_RESULT (1) — Cross-document consistency result
-  │     └── CONFLICT (0..n) — Individual contradictions detected
-  ├── FINDING (0..n) — Per-rule evaluation results
+CASE - The atomic unit of work. One submission bundle. One decision.
+  ├── DOCUMENT (1..20) - Individual documents in the bundle
+  │     └── EVIDENCE_FACT (1..n) - Extracted field values per document
+  ├── VALIDATION_RESULT (1) - Cross-document consistency result
+  │     └── CONFLICT (0..n) - Individual contradictions detected
+  ├── FINDING (0..n) - Per-rule evaluation results
   │     └── linked to RULE via ruleId + ETag
   │     └── linked to EVIDENCE_FACT via factId (field-level provenance)
-  ├── RISK_SCORE (1) — Weighted aggregate risk assessment
-  │     └── RISK_SIGNAL (0..n) — Contributing signals
-  ├── RECOMMENDATION (1) — AI-generated verdict proposal
-  │     └── DECISION (1) — Final decision (AI or human override)
-  └── AUDIT_EVENT (0..n) — Complete immutable event log
+  ├── RISK_SCORE (1) - Weighted aggregate risk assessment
+  │     └── RISK_SIGNAL (0..n) - Contributing signals
+  ├── RECOMMENDATION (1) - AI-generated verdict proposal
+  │     └── DECISION (1) - Final decision (AI or human override)
+  └── AUDIT_EVENT (0..n) - Complete immutable event log
 
-POLICY — Versioned rule set per template
-  └── RULE (1..n) — Individual compliance rule
+POLICY - Versioned rule set per template
+  └── RULE (1..n) - Individual compliance rule
         └── evaluated against EVIDENCE_FACT to produce FINDING
 ```
 
@@ -1682,11 +1682,11 @@ erDiagram
 | Index | Partition | Content | Query Type |
 |---|---|---|---|
 | `case-document-index` | Per `caseId` (filter) | Extracted field facts per document | Hybrid: vector (semantic similarity) + keyword (exact field lookup) |
-| `case-summary-index` | Per `caseId` (filter) | Decision narrative + GPT-generated case summary | Vector (semantic — for precedent search) |
+| `case-summary-index` | Per `caseId` (filter) | Decision narrative + GPT-generated case summary | Vector (semantic - for precedent search) |
 
 ---
 
-## Output 9 — Integration Architecture
+## Output 9 - Integration Architecture
 
 ### 9.1 Integration Patterns
 
@@ -1827,7 +1827,7 @@ Regulatory system connectors are always Customer-Specific (Tier 3). The Raqeb co
 
 ---
 
-## Output 10 — Deployment Architecture
+## Output 10 - Deployment Architecture
 
 ### 10.1 Topology 1: Single Tenant
 
@@ -1905,27 +1905,27 @@ For ISVs, partner-managed services, and Azure Marketplace offer.
 |  :  +---------------+     +---------------------------+   : |
 |  :                                                         : |
 |  :  +---------------------------------------------------+ : |
-|  :  |  Cosmos DB — logical tenant isolation             | : |
+|  :  |  Cosmos DB - logical tenant isolation             | : |
 |  :  |  cases:      partition by /tenantId               | : |
 |  :  |  verdicts:   partition by /tenantId               | : |
 |  :  |  rules:      partition by /tenantId               | : |
 |  :  +---------------------------------------------------+ : |
 |  :                                                         : |
 |  :  +---------------------------------------------------+ : |
-|  :  |  Azure AI Search — per-tenant index OR            | : |
+|  :  |  Azure AI Search - per-tenant index OR            | : |
 |  :  |  shared index with tenantId field filter          | : |
-|  :  |  (open decision — see Architecture Readiness)     | : |
+|  :  |  (open decision - see Architecture Readiness)     | : |
 |  :  +---------------------------------------------------+ : |
 |  :                                                         : |
 |  :  +---------------------------------------------------+ : |
-|  :  |  Azure Blob — per-tenant container                | : |
+|  :  |  Azure Blob - per-tenant container                | : |
 |  :  |  raw-uploads/{tenantId}/{caseId}/                 | : |
 |  :  |  artifacts/{tenantId}/{caseId}/                   | : |
 |  :  |  knowledge-packs/{tenantId}/{templateId}/         | : |
 |  :  +---------------------------------------------------+ : |
 |  :                                                         : |
 |  :  +---------------------------------------------------+ : |
-|  :  |  Key Vault — per-tenant HMAC secret namespace     | : |
+|  :  |  Key Vault - per-tenant HMAC secret namespace     | : |
 |  :  |  secret name: callback-secret-{tenantId}          | : |
 |  :  +---------------------------------------------------+ : |
 |  :---------------------------------------------------------: |
@@ -1958,25 +1958,25 @@ For FedRAMP High, IL4, and sovereign government requirements.
 |  Azure Government Cloud Region (e.g., US Gov Virginia)       |
 |                                                              |
 |  :--- Government Application Landing Zone ----------------: |
-|  :  Azure Functions (Flex Consumption — Gov Cloud)        : |
+|  :  Azure Functions (Flex Consumption - Gov Cloud)        : |
 |  :  Azure APIM (Gov Cloud)                                : |
-|  :  VNet — all private endpoints — no public internet     : |
-|  :  NSG — inbound from APIM only                          : |
+|  :  VNet - all private endpoints - no public internet     : |
+|  :  NSG - inbound from APIM only                          : |
 |  :----------------------------------------------------------: |
 |                                                              |
 |  :--- Government AI Landing Zone -------------------------: |
-|  :  Azure OpenAI (Gov Cloud — limited model availability) : |
+|  :  Azure OpenAI (Gov Cloud - limited model availability) : |
 |  :  Azure Document Intelligence (Gov Cloud)               : |
-|  :  Azure AI Search (Standard tier — Gov Cloud)           : |
-|  :  Cosmos DB (Gov Cloud — FedRAMP compliant)             : |
-|  :  Azure Blob (Gov Cloud — FedRAMP compliant)            : |
-|  :  Key Vault (Gov Cloud — HSM-backed)                    : |
+|  :  Azure AI Search (Standard tier - Gov Cloud)           : |
+|  :  Cosmos DB (Gov Cloud - FedRAMP compliant)             : |
+|  :  Azure Blob (Gov Cloud - FedRAMP compliant)            : |
+|  :  Key Vault (Gov Cloud - HSM-backed)                    : |
 |  :----------------------------------------------------------: |
 |                                                              |
 |  :--- Policy and Compliance Layer ------------------------: |
-|  :  Azure Policy — FedRAMP High blueprint                : |
+|  :  Azure Policy - FedRAMP High blueprint                : |
 |  :  Microsoft Defender for Cloud                         : |
-|  :  Azure Sentinel (SIEM — optional)                     : |
+|  :  Azure Sentinel (SIEM - optional)                     : |
 |  :----------------------------------------------------------: |
 |                                                              |
 |  Managed Identity: Government Cloud Managed Identity         |
@@ -2005,7 +2005,7 @@ For classified government, defense, and critical infrastructure with zero public
 |  :--- Sovereign Application Layer ------------------------: |
 |  :  Azure Functions (Azure Stack Hub worker)              : |
 |  :  Azure APIM (Stack Hub)                                : |
-|  :  No internet egress — air-gapped network              : |
+|  :  No internet egress - air-gapped network              : |
 |  :----------------------------------------------------------: |
 |                                                              |
 |  :--- Sovereign AI Layer ---------------------------------: |
@@ -2028,7 +2028,7 @@ For classified government, defense, and critical infrastructure with zero public
 |  :  Cosmos DB (Stack Hub) · Blob (Stack Hub)             : |
 |  :----------------------------------------------------------: |
 |                                                              |
-|  Zero code changes — only 2 environment variables changed:  |
+|  Zero code changes - only 2 environment variables changed:  |
 |  AZURE_OPENAI_ENDPOINT and AZURE_DI_ENDPOINT               |
 +==============================================================+
 ```
@@ -2042,13 +2042,13 @@ For classified government, defense, and critical infrastructure with zero public
 
 ---
 
-## Output 11 — Azure Reference Architecture
+## Output 11 - Azure Reference Architecture
 
 ### 11.1 Azure Service Map
 
 ```
 +==================================================================================+
-|  ARIA — Azure Reference Architecture                                             |
+|  ARIA - Azure Reference Architecture                                             |
 +==================================================================================+
 |                                                                                  |
 |  GATEWAY TIER                                                                    |
@@ -2170,26 +2170,26 @@ For classified government, defense, and critical infrastructure with zero public
 
 ---
 
-## Output 12 — Final Validation
+## Output 12 - Final Validation
 
 ### Proof 1: ARIA Remains Valuable if PAFN Is Removed
 
 **Test:** Remove all PAFN-specific artifacts from the repository. What remains?
 
-**Tier 1 (Core Platform) — 100% survives PAFN removal:**
+**Tier 1 (Core Platform) - 100% survives PAFN removal:**
 - All 17 platform components survive intact
 - No PAFN-specific logic in `src/platform/`
 - All ADRs remain valid (none are PAFN-specific)
 - All deployment topologies remain valid
 - Token efficiency layer is domain-neutral
 
-**Tier 2 (Industry Templates) — PAFN food safety template removed; platform template framework survives:**
+**Tier 2 (Industry Templates) - PAFN food safety template removed; platform template framework survives:**
 - `templates/_schema/` validation schema: intact
 - `install_template.py`: intact
 - Template lifecycle management: intact
 - 5 additional industry templates (customs, healthcare, licensing, environmental, KYC) immediately deployable
 
-**Tier 3 (Reference Implementations) — PAFN removed:**
+**Tier 3 (Reference Implementations) - PAFN removed:**
 - `reference-implementations/pafn-food-inspection/`: deleted
 - `connectors/raqeb/` was already isolated in Tier 3 per Document 13 correction
 - Platform `connectors/` (REST, File, SharePoint, Dynamics): intact
@@ -2202,8 +2202,8 @@ For classified government, defense, and critical infrastructure with zero public
 
 **Test:** Onboard "Insurance Claims Adjudication" as a new domain.
 
-**Step 1 — Create template directory:** `templates/insurance-claims/`
-**Step 2 — Author 13 JSON artifacts:**
+**Step 1 - Create template directory:** `templates/insurance-claims/`
+**Step 2 - Author 13 JSON artifacts:**
 - `evidence_types.json`: Claim Form · Medical Records · Physician Notes · Bills/Invoices · Prior Authorization
 - `rules.json`: Coverage rules · Benefit limits · Exclusion clauses · Medical necessity criteria
 - `submission_schema.json`: Insurance-specific submission format
@@ -2218,9 +2218,9 @@ For classified government, defense, and critical infrastructure with zero public
 - `reference_data.json`: ICD-10 code categories · CPT procedure codes
 - `evaluation/`: Test claim bundles with ground truth
 
-**Step 3 — Run `install_template.py`:** Seeds rules to Cosmos DB, activates template, generates Knowledge Pack.
+**Step 3 - Run `install_template.py`:** Seeds rules to Cosmos DB, activates template, generates Knowledge Pack.
 
-**Step 4 — Deploy:** Zero platform code changes. Zero Terraform module changes.
+**Step 4 - Deploy:** Zero platform code changes. Zero Terraform module changes.
 
 **Evidence:** 13 JSON files authored → new domain fully operational on ARIA platform.
 
@@ -2242,7 +2242,7 @@ For classified government, defense, and critical infrastructure with zero public
 | Human review (10 queries) | 10 × full case 10,000 = 100,000 | 10 × retrieved chunks 1,800 = 18,000 | 82,000 tokens (82%) |
 | **Total** | **~191,200 tokens** | **~36,000 tokens** | **~155,200 tokens (81%)** |
 
-All optimizations are architectural decisions implemented in platform components — not manual per-deployment choices. Token efficiency is infrastructure, not convention.
+All optimizations are architectural decisions implemented in platform components - not manual per-deployment choices. Token efficiency is infrastructure, not convention.
 
 **Verdict: Token efficiency is a measurable architectural property of ARIA, not an operational practice. ✓**
 
@@ -2258,8 +2258,8 @@ All optimizations are architectural decisions implemented in platform components
 | PAFN agency code and Bayan format removed from platform | Architecture Readiness Checklist (Section 13, PAFN-specific items: Remove disposition) |
 | Platform code contains no Kuwait/PAFN vocabulary | CI lint enforcement (banned word list in `src/platform/`) |
 | Food safety is one of 6 industry templates | Template framework (Output 7): food-safety · customs-trade · healthcare · licensing · environmental · kyc-aml |
-| PAFN rules are template data, not platform logic | `templates/food-safety/rules.json` — platform rules engine framework is generic |
-| ARIA supports 8 industries without code changes | Proof 2 above (insurance claims onboarding — zero platform code) |
+| PAFN rules are template data, not platform logic | `templates/food-safety/rules.json` - platform rules engine framework is generic |
+| ARIA supports 8 industries without code changes | Proof 2 above (insurance claims onboarding - zero platform code) |
 | Product name "ARIA" is independent of PAFN | Document 09/10 product definition; "AI Regulatory Inspection Accelerator" predates PAFN as product |
 | Executive positioning names E2D platform, not inspection authority | Product Definition (Document 10): "AI Evidence-to-Decision Platform" |
 
@@ -2296,7 +2296,7 @@ All optimizations are architectural decisions implemented in platform components
 ---
 
 *End of ARIA Platform Architecture Document*
-*Version 1.0 · 2026-08-10 · Microsoft Confidential — IP Strategy*
+*Version 1.0 · 2026-08-10 · Microsoft Confidential - IP Strategy*
 *Primary Input: 11-Architecture-Input-Pack.md*
 *Audience: Engineering · Leadership · Hackathon · IP Governance*
 *12 outputs delivered. 5 architectural proofs validated.*
