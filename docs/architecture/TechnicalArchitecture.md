@@ -1,8 +1,7 @@
 # ARIA - Technical Architecture
 
 **Status:** Reference architecture - Core Platform implementation not yet started. See [Roadmap](../../README.md#roadmap).
-**Classification:** Microsoft Confidential - IP Strategy
-**Audience:** Engineering · Leadership · IP Governance Review
+**Classification:** Microsoft Confidential
 
 > This is the concise architecture reference: diagrams, component tables, and short descriptions. For the full exhaustive specification (per-component Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact breakdowns, every token-efficiency strategy with code samples, all 4 deployment topology diagrams, the full 28-ADR catalog, and full validation evidence), see the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md) and [Internal ADR Catalog](internal/aria-adr-catalog-full.md).
 

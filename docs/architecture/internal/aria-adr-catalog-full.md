@@ -11,7 +11,7 @@
 **Governance Role:** Architecture Governance Lead and ADR Reviewer
 **Primary Source:** 15-ARIA-Platform-Architecture.md
 **Supporting Sources:** 11-Architecture-Input-Pack.md · 04-Architecture-Decision-Records.md
-**Classification:** Microsoft Confidential - IP Strategy
+**Classification:** Microsoft Confidential
 **Audience:** Engineering only (deep governance reference - see [TechnicalArchitecture.md](../TechnicalArchitecture.md#key-decisions) for the short summary)
 
 > This catalog supersedes and extends 04-Architecture-Decision-Records.md.
