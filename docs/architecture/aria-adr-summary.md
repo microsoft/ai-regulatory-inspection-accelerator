@@ -1,13 +1,13 @@
-# ARIA — Architecture Decision Record Catalog
+# ARIA - Architecture Decision Record Catalog
 
 **Document:** 16-ARIA-ADR-Catalog.md
 **Version:** 1.0
 **Date:** 2026-08-10
-**Status:** Authoritative — Architecture Governance
+**Status:** Authoritative - Architecture Governance
 **Governance Role:** Architecture Governance Lead and ADR Reviewer
 **Primary Source:** 15-ARIA-Platform-Architecture.md
 **Supporting Sources:** 11-Architecture-Input-Pack.md · 04-Architecture-Decision-Records.md
-**Classification:** Microsoft Confidential — IP Strategy
+**Classification:** Microsoft Confidential - IP Strategy
 
 > This catalog supersedes and extends 04-Architecture-Decision-Records.md.
 > ADRs 001–008 are reproduced in summary form (originals in Document 04).
@@ -16,7 +16,7 @@
 
 ---
 
-## Output 1 — ADR Inventory
+## Output 1 - ADR Inventory
 
 ### 1.1 Complete ADR Register
 
@@ -110,7 +110,7 @@ These ADRs are documented in full in 04-Architecture-Decision-Records.md. Summar
 
 ---
 
-## Output 2 — New Architecture Decision Records (ADR-009 to ADR-028)
+## Output 2 - New Architecture Decision Records (ADR-009 to ADR-028)
 
 ---
 
@@ -132,9 +132,9 @@ The core tension: domain experts must be able to configure the platform for thei
 
 ARIA is structured as a three-tier product model:
 
-- **Tier 1 — Core Platform:** All domain-neutral engines, frameworks, and pipeline logic. Lives in `src/platform/`. Contains zero industry vocabulary. Deployed once per ARIA instance. Modified only by platform engineers.
-- **Tier 2 — Industry Templates:** Configuration packages of 13 JSON artifacts per decision workflow. Lives in `templates/{name}/`. Contains no executable code. Authored by domain experts. Deployed per industry vertical.
-- **Tier 3 — Reference Implementations:** Complete customer deployments with customer-specific connectors, UI, and infrastructure. Lives in `reference-implementations/{name}/`. Completely isolated from Tier 1 and Tier 2. Owned by the customer or delivery partner.
+- **Tier 1 - Core Platform:** All domain-neutral engines, frameworks, and pipeline logic. Lives in `src/platform/`. Contains zero industry vocabulary. Deployed once per ARIA instance. Modified only by platform engineers.
+- **Tier 2 - Industry Templates:** Configuration packages of 13 JSON artifacts per decision workflow. Lives in `templates/{name}/`. Contains no executable code. Authored by domain experts. Deployed per industry vertical.
+- **Tier 3 - Reference Implementations:** Complete customer deployments with customer-specific connectors, UI, and infrastructure. Lives in `reference-implementations/{name}/`. Completely isolated from Tier 1 and Tier 2. Owned by the customer or delivery partner.
 
 No tier may import from a lower tier's directory in reverse (e.g., `src/platform/` must not import anything from `templates/` or `reference-implementations/`).
 
@@ -150,7 +150,7 @@ No tier may import from a lower tier's directory in reverse (e.g., `src/platform
 
 ### Alternatives Considered
 
-**Two-tier model (Platform + Customer):** No template tier — domain configuration embedded in customer deployments. Rejected because this recreates the PAFN problem: every new customer starts from scratch. The template tier enables partner-led delivery without Microsoft CSE involvement.
+**Two-tier model (Platform + Customer):** No template tier - domain configuration embedded in customer deployments. Rejected because this recreates the PAFN problem: every new customer starts from scratch. The template tier enables partner-led delivery without Microsoft CSE involvement.
 
 **Single tier (fully generic platform):** All configuration at runtime via API. Rejected because it requires engineering work to add any new domain, contradicting the "domain experts configure, not engineers" principle.
 
@@ -167,7 +167,7 @@ No tier may import from a lower tier's directory in reverse (e.g., `src/platform
 **Negative / Trade-offs:**
 - Template authoring requires discipline: incorrectly placing executable logic in a template violates the model
 - Tier boundary enforcement requires CI tooling (ADR-025) to be effective
-- Tier 3 isolation means customer connectors cannot share code with platform connectors — duplication may occur for common patterns
+- Tier 3 isolation means customer connectors cannot share code with platform connectors - duplication may occur for common patterns
 
 ---
 
@@ -181,7 +181,7 @@ No tier may import from a lower tier's directory in reverse (e.g., `src/platform
 
 ### Context
 
-Architecture Principle AP-01 requires that `src/platform/` contains zero industry vocabulary. Without automated enforcement, this principle degrades over time as engineers add domain-specific shortcuts, variable names, or conditionals into platform code. Manual code review is insufficient — reviewers may not recognize domain vocabulary in all supported industries.
+Architecture Principle AP-01 requires that `src/platform/` contains zero industry vocabulary. Without automated enforcement, this principle degrades over time as engineers add domain-specific shortcuts, variable names, or conditionals into platform code. Manual code review is insufficient - reviewers may not recognize domain vocabulary in all supported industries.
 
 Similarly, Industry Templates (Tier 2) must contain no executable code. A template with a `.py` file would be executable by domain experts, creating a security risk and a maintenance liability. Without CI enforcement, violations accumulate silently.
 
@@ -199,7 +199,7 @@ The CI pipeline enforces four hard constraints on every pull request:
 
 ### Rationale
 
-Domain neutrality is a claim, not a property — unless CI enforces it. Automated enforcement converts a design principle into a measurable, verifiable invariant. This is required for IP governance: the claim that "Tier 1 is domain-neutral" must be demonstrably true, not aspirationally stated.
+Domain neutrality is a claim, not a property - unless CI enforces it. Automated enforcement converts a design principle into a measurable, verifiable invariant. This is required for IP governance: the claim that "Tier 1 is domain-neutral" must be demonstrably true, not aspirationally stated.
 
 The banned-word list is intentionally configurable because new industries introduce new vocabulary. When a new template is authored for a previously unseen vertical, its vocabulary is added to the banned list to ensure it never leaks into platform code.
 
@@ -247,7 +247,7 @@ Token efficiency is declared a first-class architectural concern, equal in prior
 - The **Context Assembly Engine** (ADR-016) is a mandatory architectural component that all LLM calls must route through
 - The platform targets **50–70% reduction** in LLM token consumption per case compared to an unoptimized approach sending raw documents to LLMs
 - Token usage is tracked, attributed, and reported per case and per tenant (ADR-018 supports this via Application Insights)
-- No LLM call may be made outside the `shared/ai_client.py` wrapper — all calls route through the token-tracking client
+- No LLM call may be made outside the `shared/ai_client.py` wrapper - all calls route through the token-tracking client
 
 The following strategies are architectural requirements, not suggestions (each has its own ADR):
 - Document normalization before LLM processing (ADR-012)
@@ -279,7 +279,7 @@ Making token efficiency architectural means it cannot be removed by a developer 
 - Architectural review gate prevents new LLM-heavy patterns from being introduced without documented justification
 
 **Negative / Trade-offs:**
-- All LLM calls must route through a shared wrapper — adds coupling to a shared component
+- All LLM calls must route through a shared wrapper - adds coupling to a shared component
 - Token optimization adds implementation complexity (pre-processing pipeline, chunking, Knowledge Packs)
 - Target (50–70% reduction) requires measurement across representative case sets to verify
 
@@ -297,7 +297,7 @@ Making token efficiency architectural means it cannot be removed by a developer 
 
 Regulated industries submit documents in heterogeneous formats: Word documents (DOCX), Excel spreadsheets (XLSX), PowerPoint (PPTX), PDF, and images. Raw binary formats contain substantial non-semantic overhead: XML namespace declarations, revision history, formatting tags, embedded objects, headers/footers, bounding box coordinates, and layout markers.
 
-A raw DOCX file for a 2-page document may be 30–50 KB of XML, containing 5–8× more tokens than the semantic content. Sending raw DOCX to an LLM is architecturally wrong — it wastes tokens on non-semantic XML noise and may cause the LLM to reason about formatting rather than content.
+A raw DOCX file for a 2-page document may be 30–50 KB of XML, containing 5–8× more tokens than the semantic content. Sending raw DOCX to an LLM is architecturally wrong - it wastes tokens on non-semantic XML noise and may cause the LLM to reason about formatting rather than content.
 
 Similarly, Azure Document Intelligence Markdown output contains page layout markers, column separators, and repeated headers/footers that add 20–35% token overhead without contributing to field extraction accuracy.
 
@@ -325,7 +325,7 @@ Normalized Markdown is stored in Blob Storage, enabling reuse if the same docume
 
 **Use only Azure DI output without post-processing:** Acceptable for simple cases. Rejected because DI output includes 20–35% layout overhead that reduces LLM context efficiency.
 
-**Per-document-type normalization only for known formats:** Reject unknown formats. Rejected because ARIA must be resilient to unexpected document formats — a fallback to raw text extraction is preferable to rejection.
+**Per-document-type normalization only for known formats:** Reject unknown formats. Rejected because ARIA must be resilient to unexpected document formats - a fallback to raw text extraction is preferable to rejection.
 
 ### Consequences
 
@@ -338,7 +338,7 @@ Normalized Markdown is stored in Blob Storage, enabling reuse if the same docume
 **Negative / Trade-offs:**
 - Normalization adds latency to Activity 1 (~0.5–2 seconds per Office document)
 - python-docx, openpyxl, python-pptx are additional dependencies
-- Complex Office features (embedded charts, pivot tables, macros) may lose fidelity in Markdown conversion — acceptable for field extraction purposes
+- Complex Office features (embedded charts, pivot tables, macros) may lose fidelity in Markdown conversion - acceptable for field extraction purposes
 
 ---
 
@@ -360,13 +360,13 @@ However, for custom document types (Halal certificates, environmental impact ass
 
 Activity 2 (Document Intelligence Engine) implements a dual-phase extraction strategy:
 
-**Phase 1 — Azure DI Structured Extraction:**
+**Phase 1 - Azure DI Structured Extraction:**
 - Azure DI prebuilt model (configurable per document type in `evidence_types.json` via `diModel` field) extracts structured fields
 - Output: `{fieldName: {value, confidence}}` for all fields covered by the prebuilt model
 - Cost: Azure DI API call only (no LLM tokens)
 - High-confidence Phase 1 results (confidence ≥ configurable threshold, default 0.85) are marked as `extractionMethod: "azure_di_structured"`
 
-**Phase 2 — Selective LLM Gap-Filling:**
+**Phase 2 - Selective LLM Gap-Filling:**
 - The gap list = all fields in `evidence_types.json` MINUS Phase 1 covered fields
 - LLM extraction prompt contains only the gap field list + relevant document sections
 - Output: `{fieldName: {value, confidence}}` for uncovered fields
@@ -379,7 +379,7 @@ Activity 2 (Document Intelligence Engine) implements a dual-phase extraction str
 
 Azure DI prebuilt models are purpose-built for common document types (invoices, receipts, IDs) and provide higher accuracy at lower cost than LLM extraction for those fields. Using LLM only for uncovered fields captures the cost benefit of Azure DI while retaining LLM flexibility for custom fields.
 
-The `diModel` field in `evidence_types.json` makes the Phase 1 model selection domain-expert-configurable. If no prebuilt model applies, Phase 1 produces zero results and Phase 2 covers all fields — identical to the original single-phase approach.
+The `diModel` field in `evidence_types.json` makes the Phase 1 model selection domain-expert-configurable. If no prebuilt model applies, Phase 1 produces zero results and Phase 2 covers all fields - identical to the original single-phase approach.
 
 ### Alternatives Considered
 
@@ -399,7 +399,7 @@ The `diModel` field in `evidence_types.json` makes the Phase 1 model selection d
 **Negative / Trade-offs:**
 - Two-phase extraction adds implementation complexity (`DualPhaseExtractor` class required)
 - Phase 1/Phase 2 merge logic must handle confidence score aggregation correctly
-- For completely custom document types, Phase 1 produces no results — same cost as single-phase
+- For completely custom document types, Phase 1 produces no results - same cost as single-phase
 
 ---
 
@@ -453,7 +453,7 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 
 **Negative / Trade-offs:**
 - Semantic similarity chunking requires embedding API call (adds ~0.2–0.5 seconds per large document)
-- Chunk selection may miss a field if it appears in an unexpected section — mitigated by overlap parameter and fallback to full document if confidence is low
+- Chunk selection may miss a field if it appears in an unexpected section - mitigated by overlap parameter and fallback to full document if confidence is low
 - Threshold parameter requires tuning per industry (healthcare documents may warrant lower threshold)
 
 ---
@@ -468,9 +468,9 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 
 ### Context
 
-The Human Review Framework (ADR-007) and the Cross-Document Validation Engine both benefit from domain context — a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
+The Human Review Framework (ADR-007) and the Cross-Document Validation Engine both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
 
-A food safety deployment has ~47 active rules. Loading all 47 rules as JSON context for every LLM call in the human review session is 20,000+ tokens per call — commercially catastrophic at scale.
+A food safety deployment has ~47 active rules. Loading all 47 rules as JSON context for every LLM call in the human review session is 20,000+ tokens per call - commercially catastrophic at scale.
 
 ### Decision
 
@@ -492,7 +492,7 @@ The **Knowledge Pack Generator** (C-07) pre-generates a compressed Knowledge Pac
 
 A Knowledge Pack is generated once and used across millions of cases. Its marginal cost per case is effectively zero (one Blob read). Its token savings are 70–85% per LLM call that previously required full rule context (~19,700 tokens saved per call).
 
-The Knowledge Pack is a read-only context artifact — it does not replace the Cosmos DB rules engine (which evaluates rules deterministically). It provides LLMs with a compressed understanding of the domain for reasoning tasks where deterministic evaluation is insufficient.
+The Knowledge Pack is a read-only context artifact - it does not replace the Cosmos DB rules engine (which evaluates rules deterministically). It provides LLMs with a compressed understanding of the domain for reasoning tasks where deterministic evaluation is insufficient.
 
 ### Alternatives Considered
 
@@ -506,13 +506,13 @@ The Knowledge Pack is a read-only context artifact — it does not replace the C
 
 **Positive:**
 - 70–85% reduction in policy context tokens per LLM call
-- Knowledge Pack is version-stamped — supports future comparison of decisions made under different template versions
-- Change Feed trigger ensures Knowledge Pack is always current — no stale context risk
+- Knowledge Pack is version-stamped - supports future comparison of decisions made under different template versions
+- Change Feed trigger ensures Knowledge Pack is always current - no stale context risk
 
 **Negative / Trade-offs:**
-- Knowledge Pack is a compressed summary — detailed rule logic is not present; LLM may not correctly interpret edge cases
-- Knowledge Pack must be regenerated when rule set changes significantly — regeneration adds ~2–5 seconds when triggered
-- Knowledge Pack for very large rule sets (>200 rules) may still exceed 300 tokens — schema may need to compress further
+- Knowledge Pack is a compressed summary - detailed rule logic is not present; LLM may not correctly interpret edge cases
+- Knowledge Pack must be regenerated when rule set changes significantly - regeneration adds ~2–5 seconds when triggered
+- Knowledge Pack for very large rule sets (>200 rules) may still exceed 300 tokens - schema may need to compress further
 
 ---
 
@@ -544,11 +544,11 @@ The Context Assembly Engine:
 7. Records context composition (which Knowledge Pack version, which chunks) in audit metadata
 8. Routes to `shared/ai_client.py` for the actual LLM call with token tracking
 
-All prompt construction logic lives in the Context Assembly Engine — no prompt strings are constructed in activity functions.
+All prompt construction logic lives in the Context Assembly Engine - no prompt strings are constructed in activity functions.
 
 ### Rationale
 
-Centralizing context assembly creates a single enforcement point for all token efficiency strategies. Adding a new optimization strategy (e.g., a new context compression technique) requires only a change to the Context Assembly Engine — not changes to every component that calls LLMs.
+Centralizing context assembly creates a single enforcement point for all token efficiency strategies. Adding a new optimization strategy (e.g., a new context compression technique) requires only a change to the Context Assembly Engine - not changes to every component that calls LLMs.
 
 The per-call token budget acts as a circuit breaker: if the assembled context exceeds the budget, the Context Assembly Engine compresses further (fewer chunks, shorter Knowledge Pack prefix) before proceeding. This prevents runaway token consumption from mis-configured templates or unusually large documents.
 
@@ -567,8 +567,8 @@ The per-call token budget acts as a circuit breaker: if the assembled context ex
 - New optimization strategies require only Context Assembly Engine changes
 
 **Negative / Trade-offs:**
-- All LLM calls must route through Context Assembly Engine — adds coupling to a shared component
-- Context Assembly Engine becomes a critical dependency — its availability directly affects pipeline availability
+- All LLM calls must route through Context Assembly Engine - adds coupling to a shared component
+- Context Assembly Engine becomes a critical dependency - its availability directly affects pipeline availability
 - tiktoken pre-estimation adds ~5–10 ms latency per LLM call
 
 ---
@@ -583,9 +583,9 @@ The per-call token budget acts as a circuit breaker: if the assembled context ex
 
 ### Context
 
-The Human Review Framework (ADR-007) provides a conversational agent for reviewers. Naive implementation would inject the full case record into the LLM context for every reviewer query — giving the LLM complete visibility but consuming 10,000+ tokens per query. For a reviewer session with 20 queries on a complex case (typical for HOLD/FAIL decisions), this is 200,000+ tokens per session.
+The Human Review Framework (ADR-007) provides a conversational agent for reviewers. Naive implementation would inject the full case record into the LLM context for every reviewer query - giving the LLM complete visibility but consuming 10,000+ tokens per query. For a reviewer session with 20 queries on a complex case (typical for HOLD/FAIL decisions), this is 200,000+ tokens per session.
 
-A reviewer asking "Why was the weight flagged?" needs the 2–3 most relevant findings, not the entire case record. The LLM does not need all 10,000 tokens of context to answer accurately — it needs the right 1,500 tokens.
+A reviewer asking "Why was the weight flagged?" needs the 2–3 most relevant findings, not the entire case record. The LLM does not need all 10,000 tokens of context to answer accurately - it needs the right 1,500 tokens.
 
 ### Decision
 
@@ -596,15 +596,15 @@ The Human Review Framework implements **retrieval-augmented generation (RAG)** f
 3. Top-3 retrieved evidence chunks are returned (configurable K)
 4. The Context Assembly Engine assembles: Knowledge Pack (~300 tokens) + top-3 chunks (~1,200 tokens) + system prompt (~300 tokens) + user query (~50 tokens) = ~1,850 tokens total
 5. The LLM answers using only the assembled context
-6. Every answer must cite source document, page, and extracted field value — no uncited claims permitted
+6. Every answer must cite source document, page, and extracted field value - no uncited claims permitted
 
 The `EvidenceRetriever` class in `src/platform/human_review/` encapsulates the retrieval step.
 
 ### Rationale
 
-Retrieval-augmented generation achieves 80–90% token reduction per query (from ~11,550 tokens full-case to ~1,850 tokens retrieved) while maintaining or improving answer accuracy. Focused context reduces hallucination risk — the LLM cannot generate claims about evidence it has not been shown.
+Retrieval-augmented generation achieves 80–90% token reduction per query (from ~11,550 tokens full-case to ~1,850 tokens retrieved) while maintaining or improving answer accuracy. Focused context reduces hallucination risk - the LLM cannot generate claims about evidence it has not been shown.
 
-The mandatory citation requirement (source document, page, field value) ensures that every answer is evidence-grounded and auditable. If the retrieved chunks do not contain the answer, the agent must say so — it cannot draw on general knowledge.
+The mandatory citation requirement (source document, page, field value) ensures that every answer is evidence-grounded and auditable. If the retrieved chunks do not contain the answer, the agent must say so - it cannot draw on general knowledge.
 
 ### Alternatives Considered
 
@@ -625,7 +625,7 @@ The mandatory citation requirement (source document, page, field value) ensures 
 **Negative / Trade-offs:**
 - Retrieval adds ~20–50 ms latency per query (acceptable for human review workflows)
 - Retrieval may miss relevant evidence if case indexing is incomplete (mitigated by evaluation framework)
-- Top-K selection may exclude relevant evidence for unusual reviewer queries — configurable K allows tuning
+- Top-K selection may exclude relevant evidence for unusual reviewer queries - configurable K allows tuning
 
 ---
 
@@ -648,11 +648,11 @@ Without deliberate prompt structuring, prompts may place variable content before
 All LLM extraction prompts are structured to place the static prefix first and the variable content last, ensuring the static prefix meets the minimum caching threshold of 1,024 tokens:
 
 ```
-[System prompt — static, ~200 tokens] (cached)
-[Field list template — static per document type, ~800 tokens] (cached)
-[Separator instruction — static, ~24 tokens] (cached)
+[System prompt - static, ~200 tokens] (cached)
+[Field list template - static per document type, ~800 tokens] (cached)
+[Separator instruction - static, ~24 tokens] (cached)
 ----
-[Document content — variable, ~1,000–4,000 tokens] (not cached)
+[Document content - variable, ~1,000–4,000 tokens] (not cached)
 ```
 
 If the static prefix is shorter than 1,024 tokens (e.g., for document types with few fields), the Knowledge Pack summary is appended to the static prefix section to meet the threshold.
@@ -669,7 +669,7 @@ Prompt prefix caching is a zero-code-change cost reduction once prompts are stru
 
 **No prompt caching:** Accept full token pricing. Rejected because prompt caching is zero-effort savings once prompts are structured correctly.
 
-**Semantic caching (cache LLM responses):** Cache LLM outputs for identical inputs. More aggressive savings but requires a separate cache store and invalidation logic. Deferred to future optimization — prompt prefix caching is simpler and immediate.
+**Semantic caching (cache LLM responses):** Cache LLM outputs for identical inputs. More aggressive savings but requires a separate cache store and invalidation logic. Deferred to future optimization - prompt prefix caching is simpler and immediate.
 
 ### Consequences
 
@@ -679,7 +679,7 @@ Prompt prefix caching is a zero-code-change cost reduction once prompts are stru
 - Cache hit rate surfaced in Application Insights dashboard
 
 **Negative / Trade-offs:**
-- Prompt structure must be maintained across all prompt builders — any change that moves variable content before static prefix breaks cache eligibility
+- Prompt structure must be maintained across all prompt builders - any change that moves variable content before static prefix breaks cache eligibility
 - Minimum 1,024 token prefix threshold requires padding for short field lists
 - Cache invalidation when field list changes requires one cache warm-up call per document type per deployment
 
@@ -695,7 +695,7 @@ Prompt prefix caching is a zero-code-change cost reduction once prompts are stru
 
 ### Context
 
-ARIA receives multi-document submission bundles from external systems. These submissions must be authenticated, rate-limited, schema-validated, and routed to the Durable Functions pipeline. Without a dedicated gateway layer, the Function App HTTP trigger must implement all of these concerns inline — coupling business logic with infrastructure concerns.
+ARIA receives multi-document submission bundles from external systems. These submissions must be authenticated, rate-limited, schema-validated, and routed to the Durable Functions pipeline. Without a dedicated gateway layer, the Function App HTTP trigger must implement all of these concerns inline - coupling business logic with infrastructure concerns.
 
 Additionally, the submission schema varies by industry template (`submission_schema.json`). The gateway must apply the correct schema validation policy for each template deployment.
 
@@ -708,13 +708,13 @@ Azure API Management (APIM) is the submission gateway for all inbound case submi
 - **Schema validation:** Inbound JSON schema validation against `submission_schema.json` loaded from the active template; invalid submissions rejected at the gateway with HTTP 400 before any Azure compute is consumed
 - **Routing:** All validated submissions routed to the Durable Functions HTTP starter endpoint
 
-APIM is deployed in the Application Landing Zone subnet with VNet integration. The Durable Functions HTTP trigger is not exposed publicly — only accessible via APIM's private VNet path.
+APIM is deployed in the Application Landing Zone subnet with VNet integration. The Durable Functions HTTP trigger is not exposed publicly - only accessible via APIM's private VNet path.
 
 ### Rationale
 
 APIM is the established Microsoft enterprise API gateway pattern. Placing schema validation at the gateway eliminates the cost of loading invalid submissions into the pipeline (preventing wasted Azure DI and Azure OpenAI calls). Rate limiting at the gateway prevents a single submitter from consuming all pipeline capacity.
 
-Schema validation at the gateway also provides an early, structured error response to submitters — they receive a detailed validation failure immediately rather than waiting for the pipeline to reject the submission internally.
+Schema validation at the gateway also provides an early, structured error response to submitters - they receive a detailed validation failure immediately rather than waiting for the pipeline to reject the submission internally.
 
 ### Alternatives Considered
 
@@ -770,15 +770,15 @@ Queries include `caseId` and `templateId` filters to ensure case isolation and t
 
 Azure AI Search is the native Azure semantic search service. Hybrid search (vector + keyword) outperforms either approach alone for regulatory document queries, which often mix exact regulatory code terms (benefiting from keyword) with semantic paraphrases (benefiting from vector search). Semantic ranker (available on Standard tier) improves relevance ranking for longer natural language queries.
 
-Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case store) — no additional messaging infrastructure is required.
+Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case store) - no additional messaging infrastructure is required.
 
 ### Alternatives Considered
 
-**Cosmos DB full-text search:** Available but limited — no vector search, no semantic ranking. Insufficient for natural language query quality required by the Human Review Agent.
+**Cosmos DB full-text search:** Available but limited - no vector search, no semantic ranking. Insufficient for natural language query quality required by the Human Review Agent.
 
 **Elasticsearch:** Powerful semantic search capability. Rejected because it is not natively Azure-managed, adds operational complexity, and lacks private endpoint support comparable to Azure AI Search.
 
-**Azure Cognitive Search (older name):** Same service — Azure AI Search is the current product name.
+**Azure Cognitive Search (older name):** Same service - Azure AI Search is the current product name.
 
 ### Consequences
 
@@ -788,7 +788,7 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 - Standard tier semantic ranker improves relevance for complex natural language queries
 
 **Negative / Trade-offs:**
-- Standard tier is required for semantic ranker — higher cost than Basic tier
+- Standard tier is required for semantic ranker - higher cost than Basic tier
 - Per-case index population adds ~1–3 seconds post-completion latency before case is searchable in history
 - Index schema changes when template evolves (open decision: versioning strategy documented in Architecture Readiness Checklist, ADR-009 of architecture input pack)
 
@@ -804,11 +804,11 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 
 ### Context
 
-Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Decision Recommendation Engine (C-12) assembles a complete evidence chain that includes extracted field values — many of which are PII.
+Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Decision Recommendation Engine (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
 
 Two conflicting access requirements must be satisfied simultaneously:
 1. **Auditors and senior reviewers** need the full evidence chain including PII for audit purposes and override decisions
-2. **Line reviewers and external integrations** must never see raw PII values — they need field-level citations (e.g., "Applicant Name field contained a value matching a sanctions entity") not the actual values
+2. **Line reviewers and external integrations** must never see raw PII values - they need field-level citations (e.g., "Applicant Name field contained a value matching a sanctions entity") not the actual values
 
 A single storage tier cannot satisfy both requirements. A design that exposes PII to all reviewers violates data protection law in most jurisdictions. A design that hides PII from auditors violates audit completeness requirements.
 
@@ -816,42 +816,42 @@ A single storage tier cannot satisfy both requirements. A design that exposes PI
 
 The Decision Recommendation Engine writes evidence chain data to two separate Cosmos DB destinations simultaneously:
 
-**Tier 1 — Secured Evidence Store (with PII):**
+**Tier 1 - Secured Evidence Store (with PII):**
 - Container: `verdicts` (secured) with restricted Managed Identity access (auditors + senior reviewers only)
 - Content: Full evidence chain with all extracted field values including PII
 - Access control: Separate RBAC role assignment; line reviewer identity does not have access
 
-**Tier 2 — Display Evidence Store (PII-redacted):**
+**Tier 2 - Display Evidence Store (PII-redacted):**
 - Container: `verdicts` (display) with standard reviewer access
 - Content: Evidence chain with PII field values replaced by `[REDACTED: {fieldName}]` labels
-- PII field list declared in template's `pii_field_list.json` — platform applies redaction automatically based on template configuration
+- PII field list declared in template's `pii_field_list.json` - platform applies redaction automatically based on template configuration
 
 The PII field map (which fields in which documents contain PII) is generated during extraction (Activity 2) and stored in the extraction artifacts. The Decision Recommendation Engine uses this map to perform redaction without re-processing the documents.
 
 ### Rationale
 
-The dual-tier write is the only architectural pattern that satisfies both audit completeness and data protection simultaneously without case-by-case access control decisions. Access control is structural (container-level RBAC) rather than policy-based — reducing the risk of misconfiguration.
+The dual-tier write is the only architectural pattern that satisfies both audit completeness and data protection simultaneously without case-by-case access control decisions. Access control is structural (container-level RBAC) rather than policy-based - reducing the risk of misconfiguration.
 
-The template-declared PII field list means domain experts (not platform engineers) control what is considered PII in their domain. Healthcare PII fields differ from financial PII fields differ from immigration PII fields — the platform should not hardcode this.
+The template-declared PII field list means domain experts (not platform engineers) control what is considered PII in their domain. Healthcare PII fields differ from financial PII fields differ from immigration PII fields - the platform should not hardcode this.
 
 ### Alternatives Considered
 
 **Single store with field-level encryption:** Encrypt PII fields at rest; decrypt only for authorized queries. Technically feasible but adds complexity: key management per field, query performance impact, decryption at display time. Rejected in favor of the simpler dual-write pattern.
 
-**Single store with access control at query time:** All evidence in one container; access control filters PII fields in query results. Rejected because query-level PII filtering is error-prone — a single unguarded query path exposes PII. Structural separation is safer.
+**Single store with access control at query time:** All evidence in one container; access control filters PII fields in query results. Rejected because query-level PII filtering is error-prone - a single unguarded query path exposes PII. Structural separation is safer.
 
-**No PII protection:** Accept that reviewers see all field values. Rejected — violates GDPR, data protection law, and government procurement requirements in virtually all target markets.
+**No PII protection:** Accept that reviewers see all field values. Rejected - violates GDPR, data protection law, and government procurement requirements in virtually all target markets.
 
 ### Consequences
 
 **Positive:**
-- PII exposure is structurally impossible for line reviewers — cannot query the secured container
+- PII exposure is structurally impossible for line reviewers - cannot query the secured container
 - Template-controlled PII field list enables domain-specific PII handling without platform changes
 - Dual-write adds negligible latency (two Cosmos DB writes in a single Activity 5 transaction)
 
 **Negative / Trade-offs:**
 - Two Cosmos DB containers for verdict data doubles storage cost for this container tier
-- PII field list in template must be kept current — missing a PII field means it appears unredacted in the display store
+- PII field list in template must be kept current - missing a PII field means it appears unredacted in the display store
 - GDPR right-to-erasure creates tension with the immutable audit trail requirement (open decision in Architecture Readiness Checklist)
 
 ---
@@ -866,7 +866,7 @@ The template-declared PII field list means domain experts (not platform engineer
 
 ### Context
 
-ARIA's pipeline involves multiple AI-driven processing steps: document extraction, field classification and canonicalization, cross-document validation, and human review. Each step has distinct input/output contracts, distinct AI service dependencies, and distinct failure modes. A monolithic approach — one large LLM call for all processing — would lose traceability, mix concerns, and produce unpredictable outputs.
+ARIA's pipeline involves multiple AI-driven processing steps: document extraction, field classification and canonicalization, cross-document validation, and human review. Each step has distinct input/output contracts, distinct AI service dependencies, and distinct failure modes. A monolithic approach - one large LLM call for all processing - would lose traceability, mix concerns, and produce unpredictable outputs.
 
 A multi-agent architecture distributes responsibilities across bounded agents with explicit interfaces. But agent coordination must map to the existing Durable Functions orchestration (ADR-001) without introducing a separate agent framework.
 
@@ -880,14 +880,14 @@ ARIA implements a 10-agent ecosystem where each agent is a bounded processing un
 Each agent:
 - Has a single, well-defined responsibility
 - Consumes structured input and produces structured output
-- Operates independently — agents do not share mutable state
+- Operates independently - agents do not share mutable state
 - Routes LLM calls through the Context Assembly Engine (ADR-016)
 
 **Implementation:** Agents are not separate microservices or containers. They are Python classes with a single `process(input: AgentInput) -> AgentOutput` interface, called by Durable Functions activities. This preserves the simplicity of the Durable Functions orchestration while achieving agent-level separation of concerns.
 
 ### Rationale
 
-Agent-level boundaries make the pipeline testable in isolation: each agent can be unit-tested with mock inputs without spinning up the full Durable Functions orchestrator. The explicit input/output contracts prevent implicit data coupling — an agent that needs a value must receive it explicitly in its input, not read from shared state.
+Agent-level boundaries make the pipeline testable in isolation: each agent can be unit-tested with mock inputs without spinning up the full Durable Functions orchestrator. The explicit input/output contracts prevent implicit data coupling - an agent that needs a value must receive it explicitly in its input, not read from shared state.
 
 The multi-agent model also enables future parallelization: the Durable Functions fan-out pattern (ADR-001) can parallelize multiple agent instances for large document bundles without changing the agent contract.
 
@@ -924,7 +924,7 @@ The multi-agent model also enables future parallelization: the Durable Functions
 
 ### Context
 
-Knowledge Packs (ADR-015) must be current — stale Knowledge Packs containing outdated rule summaries could mislead LLM reasoning. They must also be available before any case processing begins — a Knowledge Pack generated on-demand per case would add latency and duplicate generation cost.
+Knowledge Packs (ADR-015) must be current - stale Knowledge Packs containing outdated rule summaries could mislead LLM reasoning. They must also be available before any case processing begins - a Knowledge Pack generated on-demand per case would add latency and duplicate generation cost.
 
 The Knowledge Pack is regenerated whenever: (a) a template is activated, or (b) the rule set changes (any Cosmos DB rules document is inserted or modified). Both triggers are events, not schedules.
 
@@ -932,8 +932,8 @@ The Knowledge Pack is regenerated whenever: (a) a template is activated, or (b) 
 
 The **Knowledge Pack Agent** operates as an event-driven background agent, entirely independent of case processing:
 
-- **Trigger 1 — Template activation:** When `install_template.py` is run, it explicitly invokes the Knowledge Pack Agent to generate the initial Knowledge Pack for the new template
-- **Trigger 2 — Rule change:** Cosmos DB Change Feed on the `rules` container triggers the Knowledge Pack Agent when any rule document is created or modified (configurable: only trigger on `active: true` rule changes)
+- **Trigger 1 - Template activation:** When `install_template.py` is run, it explicitly invokes the Knowledge Pack Agent to generate the initial Knowledge Pack for the new template
+- **Trigger 2 - Rule change:** Cosmos DB Change Feed on the `rules` container triggers the Knowledge Pack Agent when any rule document is created or modified (configurable: only trigger on `active: true` rule changes)
 
 The Knowledge Pack Agent reads the full rule set, template artifacts, and alias pairs from Cosmos DB and template storage, compresses them into the Knowledge Pack JSON schema, and writes the result to `knowledge-packs/{templateId}/current.json` in Azure Blob, overwriting the previous version.
 
@@ -941,9 +941,9 @@ The Knowledge Pack Agent runs as a separate Azure Function (Change Feed trigger)
 
 ### Rationale
 
-Event-driven generation ensures Knowledge Packs are always current without periodic polling or per-case generation. The Change Feed trigger provides exactly-once processing semantics — a rule change triggers exactly one Knowledge Pack regeneration, regardless of how many case-processing Functions are running concurrently.
+Event-driven generation ensures Knowledge Packs are always current without periodic polling or per-case generation. The Change Feed trigger provides exactly-once processing semantics - a rule change triggers exactly one Knowledge Pack regeneration, regardless of how many case-processing Functions are running concurrently.
 
-Isolation from the case processing pipeline ensures that a slow or failed Knowledge Pack regeneration does not affect in-flight case processing — the previous Knowledge Pack remains available until the new one is written.
+Isolation from the case processing pipeline ensures that a slow or failed Knowledge Pack regeneration does not affect in-flight case processing - the previous Knowledge Pack remains available until the new one is written.
 
 ### Alternatives Considered
 
@@ -958,12 +958,12 @@ Isolation from the case processing pipeline ensures that a slow or failed Knowle
 **Positive:**
 - Knowledge Pack is always current within seconds of a rule change (Change Feed delay: typically <5 seconds)
 - Zero per-case Knowledge Pack generation overhead
-- Isolated from case processing pipeline — regeneration failures do not affect case processing
+- Isolated from case processing pipeline - regeneration failures do not affect case processing
 
 **Negative / Trade-offs:**
 - Change Feed trigger adds one additional Azure Function deployment
-- Concurrent rule changes (many rules updated rapidly) may trigger multiple Knowledge Pack regenerations in quick succession — mitigated by debounce logic (configurable delay before regeneration, default 30 seconds)
-- Knowledge Pack overwrite is not atomic — a case processing Function reading the Knowledge Pack during a write may get a partial file (mitigated by write-then-rename pattern in Blob Storage)
+- Concurrent rule changes (many rules updated rapidly) may trigger multiple Knowledge Pack regenerations in quick succession - mitigated by debounce logic (configurable delay before regeneration, default 30 seconds)
+- Knowledge Pack overwrite is not atomic - a case processing Function reading the Knowledge Pack during a write may get a partial file (mitigated by write-then-rename pattern in Blob Storage)
 
 ---
 
@@ -979,7 +979,7 @@ Isolation from the case processing pipeline ensures that a slow or failed Knowle
 
 External system integration is required in every ARIA deployment: inbound submission sources (SharePoint, workflow engines, CRMs, custom portals) and outbound decision delivery targets (customs management systems, healthcare claim systems, CRMs, case management platforms). Each customer has a different external system. If connector logic lives in the platform pipeline, adding a new connector requires platform engineering.
 
-The Raqeb connector (PAFN reference) was initially co-located with platform code — a violation that required correction (Document 13, INV-04). A formal isolation model was needed to prevent recurrence.
+The Raqeb connector (PAFN reference) was initially co-located with platform code - a violation that required correction (Document 13, INV-04). A formal isolation model was needed to prevent recurrence.
 
 ### Decision
 
@@ -997,13 +997,13 @@ The Connector Framework enforces three isolation rules:
 
 ### Rationale
 
-Connector isolation means adding a new external system requires only connector development — no platform engineering, no platform review, no platform deployment. This enables partner-delivered connectors without Microsoft engineering involvement.
+Connector isolation means adding a new external system requires only connector development - no platform engineering, no platform review, no platform deployment. This enables partner-delivered connectors without Microsoft engineering involvement.
 
-The Managed Identity isolation prevents connector security vulnerabilities from compromising the platform data layer. A compromised connector cannot read Cosmos DB verdicts or Blob artifacts — it can only call the public API.
+The Managed Identity isolation prevents connector security vulnerabilities from compromising the platform data layer. A compromised connector cannot read Cosmos DB verdicts or Blob artifacts - it can only call the public API.
 
 ### Alternatives Considered
 
-**Platform-embedded connectors:** Connector logic in platform pipeline activities. Rejected because every new external system requires platform engineering and deployment — eliminating the extensibility benefit.
+**Platform-embedded connectors:** Connector logic in platform pipeline activities. Rejected because every new external system requires platform engineering and deployment - eliminating the extensibility benefit.
 
 **Plugin model (dynamically loaded connector code):** Connector code loaded at runtime. Rejected due to security risk (arbitrary code execution in the platform process) and the complexity of safe dynamic loading.
 
@@ -1012,14 +1012,14 @@ The Managed Identity isolation prevents connector security vulnerabilities from 
 ### Consequences
 
 **Positive:**
-- New connector requires only connector code — zero platform changes
+- New connector requires only connector code - zero platform changes
 - Managed Identity isolation prevents connector compromise from reaching platform data
 - Customer connectors in `reference-implementations/` are excluded from platform IP claims
 
 **Negative / Trade-offs:**
-- Three-interface contract limits connector design flexibility — complex integrations must be expressed within the three methods
+- Three-interface contract limits connector design flexibility - complex integrations must be expressed within the three methods
 - Connector deployment unit isolation adds operational overhead (separate deployment pipeline per connector)
-- Connectors cannot access platform internals — advanced integrations (e.g., real-time case status subscriptions) require the platform to expose additional APIs
+- Connectors cannot access platform internals - advanced integrations (e.g., real-time case status subscriptions) require the platform to expose additional APIs
 
 ---
 
@@ -1035,7 +1035,7 @@ The Managed Identity isolation prevents connector security vulnerabilities from 
 
 Industry Templates (Tier 2) must satisfy two properties to be safe for partner ecosystem delivery:
 1. **No executable code:** Domain experts must be able to author templates without engineering oversight. If templates could contain executable code, a malicious or misconfigured template could compromise the platform.
-2. **Valid schema:** Templates that fail schema validation produce runtime errors during case processing — a PR-time failure is far preferable to a production failure.
+2. **Valid schema:** Templates that fail schema validation produce runtime errors during case processing - a PR-time failure is far preferable to a production failure.
 
 Without CI enforcement, neither property can be reliably maintained as the template ecosystem grows across multiple partner teams.
 
@@ -1066,14 +1066,14 @@ The executable code ban is a security gate: it prevents a template from becoming
 ### Consequences
 
 **Positive:**
-- Template quality enforced automatically — no reviewer expertise required for quality gate
+- Template quality enforced automatically - no reviewer expertise required for quality gate
 - Executable code ban prevents security risk from partner-authored templates
 - Schema validation prevents runtime errors from malformed templates
 
 **Negative / Trade-offs:**
 - CI validation adds ~10–20 seconds to PR pipelines touching template directories
-- Schema must be kept current as template format evolves — outdated schema causes false-positive failures
-- Completeness check requires all 13 artifacts — partial templates (during authoring) cannot be committed mid-work
+- Schema must be kept current as template format evolves - outdated schema causes false-positive failures
+- Completeness check requires all 13 artifacts - partial templates (during authoring) cannot be committed mid-work
 
 ---
 
@@ -1087,9 +1087,9 @@ The executable code ban is a security gate: it prevents a template from becoming
 
 ### Context
 
-Classified government, defense, and critical infrastructure customers require deployments with zero public internet connectivity (air-gapped) and data that never leaves a physically controlled environment. These requirements conflict with the use of Azure OpenAI (cloud-hosted LLM) and Azure Document Intelligence (cloud-hosted OCR) — both standard services in the ARIA reference architecture.
+Classified government, defense, and critical infrastructure customers require deployments with zero public internet connectivity (air-gapped) and data that never leaves a physically controlled environment. These requirements conflict with the use of Azure OpenAI (cloud-hosted LLM) and Azure Document Intelligence (cloud-hosted OCR) - both standard services in the ARIA reference architecture.
 
-The sovereign requirement cannot be satisfied by cloud-hosted AI services. However, creating a separate code branch for sovereign deployments would create maintenance split — any platform change would require dual updates.
+The sovereign requirement cannot be satisfied by cloud-hosted AI services. However, creating a separate code branch for sovereign deployments would create maintenance split - any platform change would require dual updates.
 
 ### Decision
 
@@ -1098,35 +1098,35 @@ ARIA achieves sovereign deployment through **endpoint substitution via two envir
 - `AZURE_OPENAI_ENDPOINT`: Set to a local LLM endpoint (Azure OpenAI on Azure Stack Hub, open-weight model such as Phi-4 or Mistral served via local inference, or ONNX runtime) instead of the Azure public endpoint
 - `AZURE_DI_ENDPOINT`: Set to a local OCR service endpoint (Azure Document Intelligence on Azure Stack Hub or Tesseract-based local service) instead of the Azure public endpoint
 
-The platform code calls these endpoints identically regardless of their value — the platform does not know whether it is calling a cloud service or a local endpoint. All other platform behavior (Durable Functions, Cosmos DB, Blob Storage, AI Search) uses Azure Stack Hub equivalents or locally hosted services, configured identically via existing Terraform module parameters.
+The platform code calls these endpoints identically regardless of their value - the platform does not know whether it is calling a cloud service or a local endpoint. All other platform behavior (Durable Functions, Cosmos DB, Blob Storage, AI Search) uses Azure Stack Hub equivalents or locally hosted services, configured identically via existing Terraform module parameters.
 
 **No code fork is created.** The same platform codebase serves all five deployment topologies.
 
 ### Rationale
 
-A single codebase serving all topologies is essential for Microsoft-scale IP maintenance. If sovereign deployment required a code fork, every platform update would require dual testing and dual release — a maintenance burden that scales poorly as ARIA is deployed across more customers.
+A single codebase serving all topologies is essential for Microsoft-scale IP maintenance. If sovereign deployment required a code fork, every platform update would require dual testing and dual release - a maintenance burden that scales poorly as ARIA is deployed across more customers.
 
-The two-endpoint substitution pattern works because ARIA's AI service clients are abstracted behind environment variable configuration (following ADR-004 — no hardcoded endpoints). This was not designed specifically for sovereign deployment; it is a consequence of clean dependency management. Sovereign deployment is a "free" property of good configuration hygiene.
+The two-endpoint substitution pattern works because ARIA's AI service clients are abstracted behind environment variable configuration (following ADR-004 - no hardcoded endpoints). This was not designed specifically for sovereign deployment; it is a consequence of clean dependency management. Sovereign deployment is a "free" property of good configuration hygiene.
 
 ### Alternatives Considered
 
 **Separate sovereign code branch:** Maintain a separate codebase for sovereign deployments. Rejected because of dual-maintenance overhead and the risk of sovereign and standard codebases diverging.
 
-**Conditional compilation / feature flags:** Platform code checks `IS_SOVEREIGN_DEPLOYMENT` flag and routes to different service clients. Rejected because it couples sovereign-awareness into platform code — violating the principle that the platform is deployment-topology-agnostic.
+**Conditional compilation / feature flags:** Platform code checks `IS_SOVEREIGN_DEPLOYMENT` flag and routes to different service clients. Rejected because it couples sovereign-awareness into platform code - violating the principle that the platform is deployment-topology-agnostic.
 
 **Container-based service substitution (sidecar pattern):** Local AI proxy container that intercepts cloud-bound calls. Technically feasible. Deferred: adds container infrastructure complexity without benefit over environment variable substitution for the current architecture.
 
 ### Consequences
 
 **Positive:**
-- Sovereign deployment is a two-variable configuration change — no engineering involvement required
+- Sovereign deployment is a two-variable configuration change - no engineering involvement required
 - Single codebase for all five topologies reduces maintenance overhead
 - Government cloud and sovereign customers can use the same Terraform modules with different parameter values
 
 **Negative / Trade-offs:**
-- Local LLM models may not have feature parity with Azure OpenAI (GPT-5.x capabilities) — sovereign deployments may have lower extraction accuracy
+- Local LLM models may not have feature parity with Azure OpenAI (GPT-5.x capabilities) - sovereign deployments may have lower extraction accuracy
 - Local Azure DI may not support all prebuilt models available in cloud
-- Sovereign infrastructure (Azure Stack Hub) is the customer's responsibility — ARIA provides the configuration, not the sovereign infrastructure
+- Sovereign infrastructure (Azure Stack Hub) is the customer's responsibility - ARIA provides the configuration, not the sovereign infrastructure
 
 ---
 
@@ -1140,7 +1140,7 @@ The two-endpoint substitution pattern works because ARIA's AI service clients ar
 
 ### Context
 
-Submitters frequently include duplicate documents in evidence bundles — the same invoice submitted as both a digital PDF and a scanned TIFF, or two versions of the same certificate with minor formatting differences. Processing duplicate documents wastes 100% of the AI compute cost (Azure DI + LLM extraction) for the duplicate, produces identical extraction results, and may artificially increase cross-document conflict detection if the same values appear with minor formatting differences.
+Submitters frequently include duplicate documents in evidence bundles - the same invoice submitted as both a digital PDF and a scanned TIFF, or two versions of the same certificate with minor formatting differences. Processing duplicate documents wastes 100% of the AI compute cost (Azure DI + LLM extraction) for the duplicate, produces identical extraction results, and may artificially increase cross-document conflict detection if the same values appear with minor formatting differences.
 
 In PAFN production data, approximately 3–5% of submitted documents are duplicates. For a 1,000-case/day deployment at 5 documents per case = 5,000 documents/day → 150–250 duplicate document processing events saved per day.
 
@@ -1148,11 +1148,11 @@ In PAFN production data, approximately 3–5% of submitted documents are duplica
 
 Activity 1 (Evidence Intake Engine) performs duplicate detection before any document is routed to Activity 2 (Document Intelligence Engine).
 
-**Exact duplicate detection (primary):** SHA-256 hash is computed for each submitted document blob. The hash is compared against all other document hashes in the same submission and against the case's document hash store in Cosmos DB. Exact duplicates are flagged and skipped — they are recorded in the extraction artifacts with `extractionMethod: "skipped_duplicate"` and do not consume AI compute.
+**Exact duplicate detection (primary):** SHA-256 hash is computed for each submitted document blob. The hash is compared against all other document hashes in the same submission and against the case's document hash store in Cosmos DB. Exact duplicates are flagged and skipped - they are recorded in the extraction artifacts with `extractionMethod: "skipped_duplicate"` and do not consume AI compute.
 
 **Near-duplicate detection (optional, configurable):** MinHash or SimHash for structural similarity detection (same document, minor formatting differences). Configurable similarity threshold (default: 0.95 similarity = treated as duplicate). Enabled via `ENABLE_NEAR_DUPLICATE_DETECTION=true` environment variable.
 
-Duplicate flags are included in the audit event stream — reviewers can see which documents were identified as duplicates and why.
+Duplicate flags are included in the audit event stream - reviewers can see which documents were identified as duplicates and why.
 
 ### Rationale
 
@@ -1162,7 +1162,7 @@ Near-duplicate detection adds compute cost (MinHash construction) but catches th
 
 ### Alternatives Considered
 
-**No duplicate detection:** Process all submitted documents regardless of duplication. Rejected because duplicate processing is pure waste — identical inputs produce identical outputs with no additional decision quality.
+**No duplicate detection:** Process all submitted documents regardless of duplication. Rejected because duplicate processing is pure waste - identical inputs produce identical outputs with no additional decision quality.
 
 **Post-extraction deduplication:** Extract all documents, then de-duplicate results. Rejected because duplication is caught after the expensive AI processing has already occurred.
 
@@ -1177,8 +1177,8 @@ Near-duplicate detection adds compute cost (MinHash construction) but catches th
 
 **Negative / Trade-offs:**
 - Near-duplicate detection adds latency and implementation complexity
-- SHA-256 hash is computed on the raw blob — a document reformatted (different PDF compression) will not be detected as a duplicate by hash alone
-- Near-duplicate false positives (documents flagged as duplicates that are actually different versions) could suppress important evidence — configurable threshold allows tuning
+- SHA-256 hash is computed on the raw blob - a document reformatted (different PDF compression) will not be detected as a duplicate by hash alone
+- Near-duplicate false positives (documents flagged as duplicates that are actually different versions) could suppress important evidence - configurable threshold allows tuning
 
 ---
 
@@ -1194,7 +1194,7 @@ Near-duplicate detection adds compute cost (MinHash construction) but catches th
 
 ARIA's decision quality depends on the accuracy of LLM field extraction. If extraction accuracy is below threshold (e.g., critical fields are consistently mis-extracted), subsequent pipeline stages (cross-document validation, policy evaluation, risk assessment) produce incorrect results regardless of how correct their logic is. A decision based on wrong extracted values is wrong, regardless of rule correctness.
 
-Without a mandatory accuracy gate, ARIA deployments could go to production with unacceptably low extraction accuracy — generating incorrect AI decisions at scale in regulated environments where incorrect decisions have legal consequences.
+Without a mandatory accuracy gate, ARIA deployments could go to production with unacceptably low extraction accuracy - generating incorrect AI decisions at scale in regulated environments where incorrect decisions have legal consequences.
 
 Additionally, each new industry template introduces new document types and new field extraction requirements. Template authors may not know whether their `evidence_types.json` field definitions produce accurate extraction until tested against real documents.
 
@@ -1210,13 +1210,13 @@ The Evaluation Framework is a mandatory deployment gate: no ARIA template deploy
 
 **CI integration:** Template changes that include evaluation data trigger evaluation runs in CI. Evaluation failures (accuracy below threshold) fail the PR. This prevents template regressions from reaching production.
 
-**Responsible AI gate:** The evaluation framework is also the Responsible AI gate — it produces the accuracy evidence required for ARIA's TRANSPARENCY_FAQ.md and for government procurement AI transparency requirements.
+**Responsible AI gate:** The evaluation framework is also the Responsible AI gate - it produces the accuracy evidence required for ARIA's TRANSPARENCY_FAQ.md and for government procurement AI transparency requirements.
 
 ### Rationale
 
 Architecture Principle AP-10 ("measurable accuracy before production") reflects a fundamental product responsibility: ARIA's decisions affect real people in regulated contexts (food safety, immigration, healthcare). Deploying a system with unknown or insufficient accuracy is an IP liability and a customer harm risk.
 
-The 85% threshold is calibrated from PAFN production experience — at 85% field extraction accuracy, the cross-document validation and policy evaluation stages catch the remaining ambiguities and route cases to human review appropriately. Below 85%, the rate of incorrect AI decisions rises to unacceptable levels.
+The 85% threshold is calibrated from PAFN production experience - at 85% field extraction accuracy, the cross-document validation and policy evaluation stages catch the remaining ambiguities and route cases to human review appropriately. Below 85%, the rate of incorrect AI decisions rises to unacceptable levels.
 
 ### Alternatives Considered
 
@@ -1224,7 +1224,7 @@ The 85% threshold is calibrated from PAFN production experience — at 85% field
 
 **Post-production accuracy monitoring only:** Monitor extraction accuracy in production and remediate. Rejected because production errors in regulated environments have legal and reputational consequences that cannot be remediated retroactively.
 
-**Fixed 85% threshold for all deployments:** A single threshold for all document types and industries. Partially accepted as the default — but the threshold is configurable per template because some document types (handwritten forms, low-quality scans) may have inherently lower achievable accuracy that is still acceptable for the use case.
+**Fixed 85% threshold for all deployments:** A single threshold for all document types and industries. Partially accepted as the default - but the threshold is configurable per template because some document types (handwritten forms, low-quality scans) may have inherently lower achievable accuracy that is still acceptable for the use case.
 
 ### Consequences
 
@@ -1234,8 +1234,8 @@ The 85% threshold is calibrated from PAFN production experience — at 85% field
 - Evaluation results provide Responsible AI evidence for procurement and regulatory transparency requirements
 
 **Negative / Trade-offs:**
-- Ground truth dataset authoring requires domain expert time and real document samples — this is the most significant onboarding cost for new templates
-- 85% threshold may require iteration on `evidence_types.json` field definitions before a template achieves go-live — this is by design (the gate forces template quality improvement)
+- Ground truth dataset authoring requires domain expert time and real document samples - this is the most significant onboarding cost for new templates
+- 85% threshold may require iteration on `evidence_types.json` field definitions before a template achieves go-live - this is by design (the gate forces template quality improvement)
 - CI evaluation runs add pipeline time (evaluation against 20+ cases may take 5–10 minutes per CI run)
 
 ---
@@ -1258,6 +1258,6 @@ The 85% threshold is calibrated from PAFN production experience — at 85% field
 ---
 
 *End of ARIA ADR Catalog*
-*Version 1.0 · 2026-08-10 · Microsoft Confidential — IP Strategy*
+*Version 1.0 · 2026-08-10 · Microsoft Confidential - IP Strategy*
 *Architecture Governance Lead sign-off required before publishing to partner ecosystem*
 *Next review: when any open decision from 11-Architecture-Input-Pack.md Section 13 is resolved*

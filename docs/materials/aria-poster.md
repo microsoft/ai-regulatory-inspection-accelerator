@@ -1,4 +1,4 @@
-# ARIA — Hackathon Poster Content
+# ARIA - Hackathon Poster Content
 
 **Document:** 23-ARIA-Hackathon-Poster.md
 **Format:** Poster-ready content blocks for PowerPoint / Innovation Studio image generation
@@ -7,20 +7,20 @@
 
 ## 1. Headline
 
-**ARIA — AI Regulatory Inspection Accelerator**
+**ARIA - AI Regulatory Inspection Accelerator**
 
 ---
 
 ## 2. Tagline
 
-**From fragmented evidence to a decision you can defend — in minutes, not months.**
+**From fragmented evidence to a decision you can defend - in minutes, not months.**
 
 ---
 
 ## 3. Problem
 
 > Regulated decisions depend on bundles of documents, not single files.
-> Manual review takes 20–35 minutes per case, is inconsistent across reviewers, and leaves a thin audit trail — a bottleneck that only gets worse as volume grows.
+> Manual review takes 20–35 minutes per case, is inconsistent across reviewers, and leaves a thin audit trail - a bottleneck that only gets worse as volume grows.
 
 **Callout box:** *"One case. Six documents. Twenty minutes. Zero consistency guarantee."*
 
@@ -28,7 +28,7 @@
 
 ## 4. Solution
 
-> ARIA is an AI-powered evidence-to-decision platform that ingests multi-document bundles, reconciles facts across them, applies configurable policy rules, assesses risk, and produces an explainable, auditable decision — with a human in control of every uncertain case.
+> ARIA is an AI-powered evidence-to-decision platform that ingests multi-document bundles, reconciles facts across them, applies configurable policy rules, assesses risk, and produces an explainable, auditable decision - with a human in control of every uncertain case.
 
 ---
 
@@ -55,7 +55,7 @@ Intake Agent → Extraction Agent → Classification Agent → Validation Agent
            ↘ Review Assistant Agent   ↘ Audit Assistant Agent
 ```
 
-**Short caption:** *Ten focused agents, each grounded in structured evidence — not one monolithic prompt.*
+**Short caption:** *Ten focused agents, each grounded in structured evidence - not one monolithic prompt.*
 
 ---
 
@@ -92,7 +92,7 @@ Intake Agent → Extraction Agent → Classification Agent → Validation Agent
 ```
                 Food Safety (PAFN)
                         |
-Financial Compliance — ARIA CORE — Customs Clearance
+Financial Compliance - ARIA CORE - Customs Clearance
                         |
      KYC/AML   Healthcare Compliance   Environmental / Licensing
 ```
@@ -103,7 +103,7 @@ Financial Compliance — ARIA CORE — Customs Clearance
 
 ## 11. PAFN Reference Implementation
 
-> PAFN — an AI-powered food import inspection system for a national food safety authority — is ARIA's first production reference implementation, validating the platform at real-world volume before generalization to other industries.
+> PAFN - an AI-powered food import inspection system for a national food safety authority - is ARIA's first production reference implementation, validating the platform at real-world volume before generalization to other industries.
 
 **Short caption:** *Proven in production. Built to be reused.*
 
@@ -122,11 +122,11 @@ Today: Food Safety validated → Next: Additional industry templates
 
 ## 13. Short Callout Metrics (Poster Corner Blocks)
 
-- **Under 2 minutes** — target case processing time
-- **50–70%** — target LLM token reduction per case
-- **8 rule categories** — deterministic policy evaluation
-- **100%** — decisions with full field-level evidence traceability
-- **6 industries** — architecture supports without platform code changes
+- **Under 2 minutes** - target case processing time
+- **50–70%** - target LLM token reduction per case
+- **8 rule categories** - deterministic policy evaluation
+- **100%** - decisions with full field-level evidence traceability
+- **6 industries** - architecture supports without platform code changes
 
 ---
 
@@ -134,7 +134,7 @@ Today: Food Safety validated → Next: Additional industry templates
 
 ```
 +-----------------------------------------------------------------+
-|  HEADLINE: ARIA — AI Regulatory Inspection Accelerator           |
+|  HEADLINE: ARIA - AI Regulatory Inspection Accelerator           |
 |  TAGLINE: From fragmented evidence to a decision you can defend  |
 +---------------------------+---------------------------------+---+
 | PROBLEM                   | SOLUTION                        |   |
@@ -171,15 +171,15 @@ Left-to-right, top-to-bottom reading order; metrics column runs down the right e
 
 ## Suggested Icons
 
-- Document stack icon — Evidence Intake
-- Magnifying glass over text — Document Intelligence
-- Two overlapping documents with a linking arrow — Cross-Document Validation
-- Checklist/gavel icon — Policy Evaluation
-- Gauge/dial icon — Risk Assessment
-- Chat bubble with checkmark — Human Review
-- Lock/shield icon — Audit and Governance
-- Lightning bolt with a downward arrow — Token Efficiency
-- Network/hub icon — Reusable Templates / Platform
+- Document stack icon - Evidence Intake
+- Magnifying glass over text - Document Intelligence
+- Two overlapping documents with a linking arrow - Cross-Document Validation
+- Checklist/gavel icon - Policy Evaluation
+- Gauge/dial icon - Risk Assessment
+- Chat bubble with checkmark - Human Review
+- Lock/shield icon - Audit and Governance
+- Lightning bolt with a downward arrow - Token Efficiency
+- Network/hub icon - Reusable Templates / Platform
 
 ---
 
@@ -198,9 +198,9 @@ Left-to-right, top-to-bottom reading order; metrics column runs down the right e
 
 ## Suggested Architecture Visual Description
 
-A horizontal five-stage pipeline spans the poster's solution section, rendered as connected rounded panels: **Evidence Intake** (document stack icon, blue) → **Document Intelligence** (magnifying glass icon, purple) → **Cross-Document Validation** (linked documents icon, purple) → **Policy & Risk Evaluation** (checklist + gauge icons, blue/amber split) → **Decision & Human Review** (chat bubble + shield icon, green). Beneath the pipeline, a thin secondary band shows the token-efficiency layer as a horizontal strip labeled "Token Efficiency Layer — Normalize · Chunk · Compress · Cache," visually indicating it runs underneath every stage rather than as a separate step. The reusable-templates hub-and-spoke diagram sits below, visually reinforcing that the same pipeline serves every spoke industry.
+A horizontal five-stage pipeline spans the poster's solution section, rendered as connected rounded panels: **Evidence Intake** (document stack icon, blue) → **Document Intelligence** (magnifying glass icon, purple) → **Cross-Document Validation** (linked documents icon, purple) → **Policy & Risk Evaluation** (checklist + gauge icons, blue/amber split) → **Decision & Human Review** (chat bubble + shield icon, green). Beneath the pipeline, a thin secondary band shows the token-efficiency layer as a horizontal strip labeled "Token Efficiency Layer - Normalize · Chunk · Compress · Cache," visually indicating it runs underneath every stage rather than as a separate step. The reusable-templates hub-and-spoke diagram sits below, visually reinforcing that the same pipeline serves every spoke industry.
 
 ---
 
-*ARIA — AI Regulatory Inspection Accelerator*
-*Microsoft Global Hackathon 2026 — Poster Content*
+*ARIA - AI Regulatory Inspection Accelerator*
+*Microsoft Global Hackathon 2026 - Poster Content*
