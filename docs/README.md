@@ -11,9 +11,9 @@ This folder contains supporting documentation for **ARIA — AI Regulatory Inspe
 
 ## Additional materials
 
-- [ARIA One-Pager](hackathon/aria-onepager.md) — condensed executive summary of the solution.
-- [ARIA Pitch](hackathon/aria-pitch.md) — presentation script and talking points.
-- [ARIA Demo Script](hackathon/aria-demo-script.md) — recordable end-to-end demo walkthrough.
-- [ARIA Poster](hackathon/aria-poster.md) — poster content, layout, and visual guidance.
+- [ARIA One-Pager](materials/aria-onepager.md) — condensed executive summary of the solution.
+- [ARIA Pitch](materials/aria-pitch.md) — presentation script and talking points.
+- [ARIA Demo Script](materials/aria-demo-script.md) — recordable end-to-end demo walkthrough.
+- [ARIA Poster](materials/aria-poster.md) — poster content, layout, and visual guidance.
 
 ---
