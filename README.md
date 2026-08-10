@@ -1,62 +1,34 @@
 # ARIA — AI Regulatory Inspection Accelerator
 
-**A reusable, Azure-native platform that turns fragmented regulatory evidence into explainable, auditable compliance decisions.**
+Process multi-document regulatory and compliance submissions by extracting structured data from every document, reconciling facts across the entire bundle, evaluating configurable policy rules, and producing an explainable, auditable decision. Upload a document bundle — invoices, certificates, declarations, applications, claims — and the solution processes each document through a token-efficient extraction pipeline, then orchestrates cross-document validation, risk scoring, and decision delivery through a multi-agent workflow.
 
-> **Status: Hackathon / IP Incubation.** This repository is a Microsoft Solution Accelerator in active incubation, submitted to Microsoft Global Hackathon 2026. Core platform components are being generalized from a validated production reference implementation. It is not yet certified for production deployment outside that reference implementation — see [Roadmap](#roadmap) for current maturity.
+The core evidence-to-decision engine supports any multi-document, policy-driven review workflow with runtime-configurable rules and confidence scoring. These capabilities apply to numerous use cases including: food safety inspection, customs clearance, KYC/AML validation, healthcare compliance, environmental compliance, licensing and certification, and financial compliance review.
 
----
+<div align="center">
 
-## Short Description
+[**SOLUTION OVERVIEW**](#solution-overview) | [**FEATURES**](#features) | [**GETTING STARTED**](#getting-started) | [**BUSINESS SCENARIO**](#business-scenario) | [**SUPPORTING DOCUMENTATION**](#supporting-documentation)
 
-ARIA ingests multi-document regulatory submissions, reconciles facts across every document in the bundle, evaluates configurable policy rules, assesses risk, and produces an explainable, human-reviewable decision with a complete audit trail — built as a domain-neutral platform that any regulated industry can configure without touching platform code.
+</div>
 
----
-
-## Why ARIA
-
-Most AI document tools stop at extraction: they tell you what a single document says. Regulated decisions rarely rest on a single document — they depend on a bundle of interrelated evidence that must agree with itself and satisfy a policy that changes over time. ARIA is built specifically for that harder problem: reasoning across a document bundle, applying rules that live in configuration rather than code, and producing a decision that can be reconstructed and defended long after it was made.
+> Note: With any AI solution you build using this accelerator, you are responsible for assessing associated risks and complying with applicable laws and standards. See [Responsible AI Transparency FAQ](TRANSPARENCY_FAQ.md).
 
 ---
 
-## Problem Solved
+## Solution overview
 
-Regulated organizations — customs authorities, financial institutions, healthcare payers, environmental agencies, licensing bodies — spend 20 to 35 minutes per case manually cross-referencing documents, applying policy knowledge that varies by reviewer, and producing decisions with a thin audit trail. As volume grows, this becomes the hard ceiling on throughput. ARIA automates the reasoning layer of this workflow while keeping a human in control of every case that genuinely needs judgment.
+This accelerator leverages Azure Document Intelligence, Azure OpenAI Service, Azure Durable Functions, Azure Cosmos DB, and Azure AI Search to process multi-document evidence bundles through a five-stage pipeline:
 
----
+- **Evidence Intake** — Receive multi-document submissions via REST API with immediate acknowledgement (HTTP 202). Validates bundle integrity — checksums, MIME types, document count, and file sizes — before any AI processing begins.
+- **Document Intelligence** — Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
+- **Cross-Document Validation** — The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
+- **Policy & Risk Evaluation** — Compliance rules are loaded from Cosmos DB at runtime — rule changes take effect immediately without redeployment. A weighted risk score determines whether a case is auto-resolved or escalated for human review.
+- **Decision & Human Review** — A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are routed to a grounded, citation-backed review agent before a final decision is recorded.
 
-## Key Capabilities
+Processing, extraction, validation, and decision steps are tracked with status and scored for confidence to automate routine cases and identify as-needed human review.
 
-- Multi-document evidence bundle intake with integrity verification and duplicate detection
-- Configuration-driven field extraction — new document types are added via JSON configuration, not code
-- Cross-document semantic reconciliation and contradiction detection
-- Runtime-configurable policy evaluation across eight deterministic rule categories
-- Weighted risk scoring with historical case pattern calibration
-- Explainable decision recommendation with a complete field-level evidence chain
-- Grounded, citation-backed human review agent with mandatory override rationale capture
-- Immutable audit trail with point-in-time decision reproducibility
-- Token-efficient AI processing designed to minimize LLM cost per case
-- Pluggable connector framework for inbound submission sources and outbound decision delivery
+### Solution architecture
 
----
-
-## Architecture Overview
-
-ARIA processes every submission through a five-stage pipeline orchestrated by Azure Durable Functions:
-
-```
-Evidence Intake → Document Intelligence → Cross-Document Validation
-      → Policy & Risk Evaluation → Decision & Human Review
-```
-
-The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content:
-
-- **Core Platform** — domain-neutral engines and frameworks that carry zero industry vocabulary
-- **Industry Templates** — configuration packages (JSON + Markdown only, no executable code) that adapt the platform to a specific regulated domain
-- **Reference Implementations** — complete, isolated customer deployments built on top of the Core Platform and a template
-
----
-
-## Core Components
+The platform is structured in three tiers so that reusable IP stays cleanly separated from industry- and customer-specific content: a domain-neutral **Core Platform** (the engines described above), **Industry Templates** (configuration packages — JSON and Markdown only, no executable code — that adapt the platform to a specific regulated domain), and **Reference Implementations** (complete, isolated deployments built on the Core Platform and a template). See [ARIA Platform Architecture](docs/architecture/aria-platform-architecture.md) for the full architecture, component design, and Azure reference architecture, and [ARIA ADR Summary](docs/architecture/aria-adr-summary.md) for the governing architecture decisions.
 
 | Component | Role |
 |---|---|
@@ -71,11 +43,9 @@ The platform is structured in three tiers so that reusable IP stays cleanly sepa
 | Connector Framework | Pluggable inbound/outbound integration contract |
 | Template Framework | Industry configuration packaging and lifecycle management |
 
----
+### Agentic architecture
 
-## Multi-Agent Workflow
-
-ARIA's pipeline is implemented as a coordinated set of focused agents, each responsible for one stage of reasoning rather than a single monolithic prompt:
+The pipeline is orchestrated as a coordinated set of focused agents, each responsible for one stage of reasoning rather than a single monolithic prompt:
 
 ```
 Intake Agent → Extraction Agent → Classification Agent → Validation Agent
@@ -85,48 +55,55 @@ Intake Agent → Extraction Agent → Classification Agent → Validation Agent
 
 A background Knowledge Pack Agent keeps each industry template's compressed policy context current whenever rules change, without requiring a redeployment.
 
----
-
-## Token Efficiency Design
-
-ARIA treats AI cost efficiency as a design requirement, not an afterthought. Before any document reaches a language model, it is normalized to clean Markdown, run through structured extraction so the model only fills genuine gaps, and — for large documents — chunked down to the most relevant sections. Policy and rule context is compressed into a compact, per-template Knowledge Pack rather than injecting an entire rule set into every prompt, and human review uses retrieval-augmented context instead of full-case injection. This design is intended to reduce LLM token consumption substantially per case compared with a naive approach that sends raw documents directly into a model.
-
----
-
-## Supported Templates / Use Cases
-
-The Core Platform is designed to support any multi-document, policy-driven decision workflow through configuration alone, including:
-
-- Food Safety Inspection *(first reference implementation — see below)*
-- Customs Clearance
-- Regulatory Compliance
-- Licensing & Certification
-- Environmental Compliance
-- Healthcare Compliance
-- Financial Compliance Reviews
-- KYC / AML Validation
+| Design principle | Detail |
+|---|---|
+| Token efficiency | Documents are normalized to clean Markdown, structured extraction runs first so the model only fills genuine gaps, large documents are chunked to relevant sections, and policy context is compressed into a compact Knowledge Pack instead of injecting a full rule set into every prompt |
+| Deterministic policy evaluation | Rule evaluation is config-driven and deterministic — no LLM call is required to apply a compliance rule |
+| Human-in-the-loop | Low-confidence and high-risk cases are always routed to a grounded review agent; every override requires a documented rationale |
+| Extensibility | Add a new document type, rule, or industry template without modifying platform code |
 
 ---
 
-## PAFN Reference Implementation
+## Features
 
-The first production reference implementation of ARIA is an AI-powered food import inspection system built for a national food safety authority. It validates the platform's core mechanics — configuration-driven extraction, cross-document reconciliation, runtime-configurable policy rules, and auditable decision delivery — at real production volume, processing high daily case counts across bilingual document sets with sub-two-minute decision times. All customer- and industry-specific content from this reference implementation is isolated from the reusable Core Platform, consistent with the three-tier architecture described above.
+### Key features
+
+- **Multi-document bundle intake** — Upload a full evidence bundle in a single submission; the platform validates integrity and stages every document for processing as one unit.
+- **Configuration-driven extraction** — New document types are added via JSON configuration; the extraction prompt is auto-generated from the field schema.
+- **Cross-document semantic reconciliation** — Resolves field-name variations across documents and languages, and detects contradictions across the full bundle.
+- **Runtime-configurable policy engine** — Compliance rules are evaluated deterministically against eight rule categories, loaded from Cosmos DB and effective immediately on change.
+- **Weighted risk scoring** — Configurable risk weight matrix with historical case pattern calibration determines escalation to human review.
+- **Explainable decisions with full evidence chain** — Every decision traces back to the source document, field, and rule that produced it.
+- **Grounded human review** — A citation-backed review agent answers reviewer questions using only submitted case evidence, with mandatory override rationale capture.
+- **Immutable audit trail** — Every model call, rule evaluation, and human action is logged for point-in-time decision reconstruction.
+- **Pluggable connector framework** — Inbound submission sources and outbound decision delivery integrate via a documented connector contract.
 
 ---
 
 ## Getting Started
 
-> This repository is in active incubation. The steps below reflect the intended setup path as platform components are generalized; some modules referenced here are still in progress — see [Roadmap](#roadmap).
-
-1. Clone the repository and review the architecture and ADR documentation under the project's IP strategy folder for full platform context.
-2. Provision Azure prerequisites (Azure OpenAI, Azure Document Intelligence, Cosmos DB, Azure AI Search, Storage, Key Vault) using the provided Terraform modules for a single-tenant deployment.
-3. Configure environment variables for AI service endpoints and Managed Identity, following the zero-secrets configuration pattern.
-4. Install and activate an industry template (starting with the Food Safety template) using the template lifecycle tooling.
+1. Clone the repository and review [ARIA Platform Architecture](docs/architecture/aria-platform-architecture.md) for full platform context.
+2. Provision Azure prerequisites (Azure OpenAI, Azure Document Intelligence, Cosmos DB, Azure AI Search, Storage, Key Vault) using the Terraform modules in `infra/terraform/` for a single-tenant deployment.
+3. Configure environment variables for AI service endpoints and Managed Identity, following the zero-secrets configuration pattern (no connection strings or API keys in code).
+4. Install and activate an industry template (starting with the Food Safety template) using the template lifecycle tooling in `scripts/`.
 5. Submit a sample multi-document case bundle to the intake endpoint and observe the pipeline through to decision delivery.
 
----
+### Prerequisites and costs
 
-## Repository Structure
+Deployment requires an Azure subscription with permissions to create resource groups, resources, and role assignments at the resource group level. Pricing varies by region and usage; most resources use consumption-based pricing tiers. Use the [Azure pricing calculator](https://azure.microsoft.com/en-us/pricing/calculator) to estimate cost for your subscription, and remember to tear down unused resources (`terraform destroy`) to avoid ongoing charges.
+
+| Azure Resource | Role | Pricing |
+|---|---|---|
+| Azure OpenAI Service | Field extraction, cross-document reasoning, decision explanation, and grounded review agent | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
+| Azure AI Document Intelligence | Structured OCR and prebuilt-model extraction | [Pricing](https://azure.microsoft.com/pricing/details/ai-document-intelligence/) |
+| Azure Functions (Durable Functions) | Pipeline orchestration across the five processing stages | [Pricing](https://azure.microsoft.com/pricing/details/functions/) |
+| Azure Cosmos DB | Case records, runtime-configurable rules, verdicts, and audit trail | [Pricing](https://azure.microsoft.com/pricing/details/cosmos-db/) |
+| Azure AI Search | Case history indexing for risk calibration and grounded review retrieval | [Pricing](https://azure.microsoft.com/pricing/details/search/) |
+| Azure API Management | Submission gateway and schema validation | [Pricing](https://azure.microsoft.com/pricing/details/api-management/) |
+| Azure Key Vault | Managed Identity-based secret storage (HMAC signing keys) | [Pricing](https://azure.microsoft.com/pricing/details/key-vault/) |
+| Azure Blob Storage | Raw and normalized document storage | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/) |
+
+### Repository Structure
 
 ```
 src/platform/                          Core Platform — domain-neutral engines (Tier 1)
@@ -176,9 +153,66 @@ Rule changes made in the underlying configuration store take effect immediately 
 
 ---
 
-## Responsible AI Considerations
+## Business scenario
 
-ARIA is designed so that AI never makes a fully autonomous high-stakes decision. Cases with low confidence or elevated risk are automatically routed to human review before a final decision is recorded. The review agent answers exclusively from the submitted case evidence, cites its source for every claim, and is designed to acknowledge when evidence is insufficient rather than speculate. Every override requires a documented rationale, and every model call, rule evaluation, and human action is captured in an immutable audit log to support point-in-time reconstruction of any historical decision. Organizations deploying ARIA in a regulated context should complete their own responsible AI, data protection, and compliance review appropriate to their jurisdiction before production use.
+The included reference scenario demonstrates a food import inspection workflow for a national food safety authority (PAFN). An inspector receives an incoming shipment declaration — an invoice, packing list, certificate of origin, health certificate, and (where applicable) a Halal certificate — that must be reviewed together before the shipment can be released.
+
+Prior to automation, an inspector manually cross-referenced every document: confirming the invoice's net weight matched the packing list, verifying the certificate of origin was valid for the declared HS code, checking certificate expiry against the shipment date, and applying the ministry's current food safety rules — a process taking 20 to 35 minutes per case, with consistency depending on individual inspector experience.
+
+With ARIA, the inspector submits the full document bundle to the platform, which automatically:
+
+1. **Extracts structured data from every document** — invoice values, certificate numbers, country of origin, expiry dates — using config-driven extraction, including Arabic and English bilingual documents.
+2. **Reconciles the bundle** — resolving field-name variations across languages and detecting cross-document inconsistencies (for example, a net weight mismatch between the invoice and packing list, or an expired certificate).
+3. **Evaluates ministry policy rules** loaded at runtime from Cosmos DB — mandatory certificate requirements, HS code restrictions, and cross-document consistency checks — producing a weighted risk score.
+4. **Delivers a decision** — PASS, HOLD, or FAIL — with a complete, field-level evidence chain, escalating HOLD/FAIL cases to a grounded review agent that answers inspector questions with citations back to the specific document and field.
+
+What previously took up to 35 minutes of manual cross-referencing is completed in under two minutes, with a full audit trail available for any subsequent regulatory challenge.
+
+> This scenario is the first production-validated reference implementation of ARIA. The platform itself carries no food-safety-specific logic — the same engine applies to customs clearance, KYC/AML validation, healthcare compliance, environmental compliance, and any other multi-document, policy-driven decision workflow through configuration alone.
+
+---
+
+## Supporting documentation
+
+### Security guidelines
+
+This accelerator uses [Managed Identity](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) for all service-to-service authentication — no connection strings or secrets are stored in application code. Secrets required for external integrations (such as HMAC callback signing keys) are stored in Azure Key Vault.
+
+Additional security considerations for deployments built on this accelerator:
+
+- Enable [Microsoft Defender for Cloud](https://learn.microsoft.com/azure/security-center/defender-for-cloud) to monitor and secure Azure resources
+- Use Private Endpoints for all data and AI services (Cosmos DB, Blob Storage, Azure OpenAI, Document Intelligence, AI Search, Key Vault)
+- Enable [GitHub secret scanning](https://docs.github.com/code-security/secret-scanning/about-secret-scanning) on repositories built from this template
+- Implement authentication and authorization for any reviewer-facing application using Microsoft Entra ID
+
+### Cross references
+
+This accelerator addresses the decision layer above document extraction — cross-document validation, configurable policy reasoning, risk assessment, and auditable decision delivery. For single-document extraction, knowledge mining, and chat-over-documents scenarios, see related Microsoft Solution Accelerators:
+
+| Accelerator | Focus |
+|---|---|
+| [Content Processing Solution Accelerator](https://github.com/microsoft/content-processing-solution-accelerator) | Extract data and apply schemas to unstructured, multi-modal documents |
+| [Document Knowledge Mining Solution Accelerator](https://github.com/microsoft/Document-Knowledge-Mining-Solution-Accelerator) | Extract summaries, entities, and metadata from documents; search and chat over the results |
+
+---
+
+## Provide feedback
+
+Have questions, find a bug, or want to request a feature? [Submit a new issue](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues) on this repo and we'll connect.
+
+## Responsible AI Transparency FAQ
+
+ARIA is designed so that AI never makes a fully autonomous high-stakes decision. Cases with low confidence or elevated risk are automatically routed to human review before a final decision is recorded. The review agent answers exclusively from submitted case evidence, cites its source for every claim, and is designed to acknowledge when evidence is insufficient rather than speculate. Every override requires a documented rationale, and every model call, rule evaluation, and human action is captured in an immutable audit log to support point-in-time reconstruction of any historical decision.
+
+Please refer to [Transparency FAQ](TRANSPARENCY_FAQ.md) for full responsible AI transparency details of this accelerator. Organizations deploying ARIA in a regulated context should complete their own responsible AI, data protection, and compliance review appropriate to their jurisdiction before production use.
+
+## Disclaimers
+
+This accelerator is a solution accelerator and reference implementation, provided to help you build your own AI-powered evidence-to-decision solution on Azure. It is not a finished or certified product. Any deployment based on this accelerator should include your own testing, evaluation, and security review appropriate to your regulatory context before production use.
+
+With any AI solution built using this accelerator, you are responsible for assessing associated risks and complying with applicable laws, industry regulations, and organizational policies. This software is not designed, intended, or made available as a substitute for professional legal, medical, or financial advice, diagnosis, treatment, or judgment.
+
+To the extent this accelerator includes components derived from Microsoft products or services, use of those Microsoft Products and Services remains subject to their applicable Product Terms.
 
 ---
 
@@ -186,7 +220,7 @@ ARIA is designed so that AI never makes a fully autonomous high-stakes decision.
 
 | Stage | Focus |
 |---|---|
-| Current | Core Platform generalization from the validated Food Safety reference implementation; hackathon and IP incubation review |
+| Current | Core Platform generalization from the validated Food Safety reference implementation |
 | Next | Additional industry templates (customs, healthcare, licensing, environmental, financial compliance, KYC/AML) validated independently |
 | Future | Multi-tenant SaaS, Government Cloud, and sovereign/air-gapped deployment topologies; Azure Marketplace packaging |
 
@@ -194,15 +228,10 @@ ARIA is designed so that AI never makes a fully autonomous high-stakes decision.
 
 ## Contributing
 
-This repository is currently in Microsoft-internal incubation. External contribution guidelines will be published as the project moves from hackathon submission toward broader accelerator release. Internal contributors should follow the repository's existing pull request and code review conventions, with particular attention to keeping Core Platform code (`src/platform/`) free of industry- or customer-specific content.
+This project welcomes contributions and suggestions. External contribution guidelines will expand as the project moves toward broader accelerator release. Contributors should follow the repository's pull request and code review conventions, with particular attention to keeping Core Platform code (`src/platform/`) free of industry- or customer-specific content. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
 ## License
 
-*License terms to be finalized prior to public release. See `LICENSE` for current status.*
-
----
-
-*ARIA — AI Regulatory Inspection Accelerator*
-*Microsoft Global Hackathon 2026 Submission · Reusable Solution Accelerator Incubation*
+See [LICENSE](LICENSE) for terms.
