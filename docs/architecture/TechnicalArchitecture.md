@@ -242,7 +242,7 @@ sequenceDiagram
     POL->>POL: Evaluate 8 rule categories (deterministic) + weighted risk score + HOLD determination
     POL->>REC: Findings + risk score + grade + confidence
     REC->>REC: Verdict synthesis + evidence chain + human-in-the-loop escalation (Phase 1, manual queue)
-    Note over REV: Async - triggered on HOLD or reviewer request; built in PAFN reference deployment, not yet generalized
+    Note over REV: Async - triggered on HOLD or reviewer request, built in PAFN reference deployment, not yet generalized
     REC-->>REV: Case routed to human review queue
     REV->>REV: Direct Cosmos DB tool lookups grounded in evidence (retrieval-augmented design proposed in ADR-017, not yet implemented)
 ```
@@ -264,7 +264,7 @@ The Token Efficiency Layer is a cross-cutting design pattern - not a single comp
 | Knowledge Packs | Rule + policy context | 70-85% on policy context | Always |
 | Duplicate detection | Pre-processing | 100% for duplicates | Always |
 | Retrieval-augmented review | Human review | Proposed (ADR-017), not yet implemented - current Chat Agent uses direct Cosmos DB tool lookups | All human review queries |
-| Prompt prefix caching | All LLM calls | 40-50% on prefix tokens | GPT-4.1+ deployments |
+| Prompt prefix caching | All LLM calls | 40-50% on prefix tokens | GPT-5.4 or later |
 | Reference data via tools | Human review | Prevents misuse | Human review |
 | Token monitoring | Ongoing | Enables optimization | Always |
 | **Aggregate estimate** | **All** | **50-70% total** | **Production deployment** |
@@ -374,7 +374,7 @@ Full diagrams for all 4 topologies live in the [Internal Engineering Deep-Refere
 GATEWAY   -> Azure API Management (schema validation, auth, rate limiting)
 NETWORK   -> Site-to-Site VPN from source system to Azure VNet; Private Endpoints on all data/AI services; NSG inbound from APIM only
 COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator + 5 activities (Pre-Validation, DI Extraction, LLM Validation, Rules & Policy, Delivery Agents - Recommendation only, Phase 1; no chat/review agent)
-AI        -> Azure OpenAI (GPT-4.1+/5.x) · Azure Document Intelligence · Cognitive Services (Translator/Vision)
+AI        -> Azure OpenAI (GPT-5.4 or later, whichever is the most token-efficient model available) · Azure Document Intelligence · Cognitive Services (Translator/Vision)
 DATA      -> Cosmos DB (6 containers) · Blob Storage · SQL · Key Vault
 SEARCH    -> Azure AI Search (case-document-index, case-summary-index)
 ANALYTICS -> Power BI · Azure Synapse Analytics
