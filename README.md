@@ -49,8 +49,10 @@ The pipeline is orchestrated as a coordinated set of agents and processing stage
 
 ```
 Intake Stage → Extraction Agent → Validation Agent → Policy Stage → Recommendation Agent
-           ↘ Review Assistant Agent    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
+           ↘ Review Assistant Agent (Phase 2)    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
 ```
+
+**Phase 1 ships Recommendation only** - Intake Stage through Recommendation Agent above. There is no chat agent in Phase 1: the Review Assistant Agent (the chat-based, citation-grounded human reviewer) is a Phase 2 capability, built after Phase 1 is complete.
 
 A background Knowledge Pack Stage keeps each industry template's compressed policy context current whenever rules change, without requiring a redeployment.
 
