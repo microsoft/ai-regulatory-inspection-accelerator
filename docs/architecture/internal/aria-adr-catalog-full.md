@@ -33,7 +33,7 @@
 | ADR-004 | Azure Managed Identity Zero-Secrets Architecture | **Accepted - Proven** | Security / Identity | Document 04 |
 | ADR-005 | LLM Cross-Document Reasoning Pattern | **Accepted - Proven** | AI / Reasoning | Document 04 |
 | ADR-006 | Private Endpoint Network Topology | **Accepted - Proven** | Security / Network | Document 04 |
-| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted - Proven** (tool-calling pattern is real and built as PAFN's SCEN-02 Chat Agent; less tested/validated than the Recommendation Engine) | AI / Agent | Document 04 |
+| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted - Proven** (tool-calling pattern is real and built as PAFN's SCEN-02 Chat Agent; less tested/validated than the Delivery Agent) | AI / Agent | Document 04 |
 | ADR-008 | Async Callback Delivery Pattern | **Accepted - Proven** | Integration / Delivery | Document 04 |
 | ADR-009 | Three-Tier Product Model | **Accepted - Design** | Platform / Architecture | Document 15 |
 | ADR-010 | Domain Neutrality Enforcement via CI | **Accepted - Design** | Platform / Governance | Document 15 |
@@ -366,7 +366,7 @@ However, for custom document types (Halal certificates, environmental impact ass
 
 ### Decision
 
-Activity 2 (Document Intelligence Engine) implements a dual-phase extraction strategy:
+Activity 2 (DI Extraction Agent) implements a dual-phase extraction strategy:
 
 **Phase 1 - Azure DI Structured Extraction:**
 - Azure DI prebuilt model (configurable per document type in `evidence_types.json` via `diModel` field) extracts structured fields
@@ -476,7 +476,7 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 
 ### Context
 
-The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) and the Cross-Document Validation Engine both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
+The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) and the LLM Validation Agent both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
 
 A food safety deployment has ~47 active rules. Loading all 47 rules as JSON context for every LLM call in the human review session is 20,000+ tokens per call - commercially catastrophic at scale.
 
@@ -765,7 +765,7 @@ Simple Cosmos DB queries (keyword or field equality) cannot answer semantic simi
 
 Azure AI Search (Standard tier, semantic ranker enabled) provides all case history indexing and retrieval. Two indexes are maintained:
 
-- **`case-document-index`:** Per-document extracted facts, indexed per case. Proposed for evidence retrieval by the Chat Agent (ADR-017, not yet implemented) and used by the Cross-Document Validation Engine for historical field value lookup.
+- **`case-document-index`:** Per-document extracted facts, indexed per case. Proposed for evidence retrieval by the Chat Agent (ADR-017, not yet implemented) and used by the LLM Validation Agent for historical field value lookup.
 - **`case-summary-index`:** Per-case decision narrative (GPT-generated plain-language summary). Used by the Risk Assessment Engine for historical pattern matching and by the Human Review Agent for precedent search.
 
 Both indexes use hybrid search (vector similarity + BM25 keyword). All vectors use `text-embedding-3-small` for cost-effective semantic encoding.
@@ -812,7 +812,7 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 
 ### Context
 
-Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Recommendation Engine (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
+Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Delivery Agent (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
 
 Real PAFN's `shared/pii_redaction.py` already solves this with a simpler pattern: PII fields are redacted before the Cosmos write boundary, and no un-redacted tier is ever persisted. The pipeline uses full data in memory during processing; only the redacted version is stored. This is proven in production and has a smaller risk surface than storing raw PII anywhere.
 
@@ -824,7 +824,7 @@ A dual-tier write (a second, un-redacted "secured" container for auditors) is a 
 
 **Optional dual-tier extension:** If a specific customer's compliance requirement mandates auditor access to raw PII values (documented and cited here before enabling), the platform may additionally write a second, access-restricted container containing the un-redacted evidence chain. This is a per-template, per-customer opt-in - never a platform-wide default.
 
-The PII field map (which fields in which documents contain PII) is generated during extraction (Activity 2) and stored in the extraction artifacts. The Recommendation Engine uses this map to perform redaction without re-processing the documents.
+The PII field map (which fields in which documents contain PII) is generated during extraction (Activity 2) and stored in the extraction artifacts. The Delivery Agent uses this map to perform redaction without re-processing the documents.
 
 ### Rationale
 
@@ -876,7 +876,7 @@ A bounded-component architecture distributes responsibilities across explicit in
 ARIA implements an 8-component pipeline of Agents and Stages: five sequential components and three that run asynchronously or in the background. Each component is a bounded processing unit responsible for a specific pipeline step. Agents perform LLM-driven reasoning; Stages perform deterministic, rule-based processing. All components communicate through structured output contracts passed as Durable Functions activity inputs.
 
 **Component roster:**
-- **Sequential (5):** Intake Stage (Activity 1) · Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · Validation Agent (Activity 3) · Policy Stage (Activity 4 - includes risk scoring and HOLD determination) · Recommendation Agent (Activity 5)
+- **Sequential (5):** Pre-Validation Agent (Activity 1) · DI Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · LLM Validation Agent (Activity 3) · Rules & Policy Agent (Activity 4 - includes risk scoring and HOLD determination) · Delivery Agent (Activity 5)
 - **Async / background (3):** Chat Agent (async, built in PAFN) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
 
 Each component:
@@ -1150,7 +1150,7 @@ In PAFN production data, approximately 3–5% of submitted documents are duplica
 
 ### Decision
 
-Activity 1 (Evidence Intake Engine) performs duplicate detection before any document is routed to Activity 2 (Document Intelligence Engine).
+Activity 1 (Pre-Validation Agent) performs duplicate detection before any document is routed to Activity 2 (DI Extraction Agent).
 
 **Exact duplicate detection (primary):** SHA-256 hash is computed for each submitted document blob. The hash is compared against all other document hashes in the same submission and against the case's document hash store in Cosmos DB. Exact duplicates are flagged and skipped - they are recorded in the extraction artifacts with `extractionMethod: "skipped_duplicate"` and do not consume AI compute.
 

@@ -423,7 +423,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-01: Evidence Intake Engine
+### C-01: Pre-Validation Agent
 
 **Purpose:** Receives multi-document evidence bundles, validates integrity, stages documents for processing, initializes case records, and triggers the pre-processing pipeline before any AI service is invoked.
 
@@ -457,7 +457,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-02: Document Intelligence Engine
+### C-02: DI Extraction Agent
 
 **Purpose:** Transforms normalized documents into structured, confidence-scored field data using a two-phase extraction strategy: Azure DI structured extraction first (deterministic, low cost), then targeted LLM extraction for uncovered fields only.
 
@@ -683,7 +683,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-09: Cross-Document Validation Engine
+### C-09: LLM Validation Agent
 
 **Purpose:** Detects logical inconsistencies, value contradictions, and missing cross-document dependencies across the entire evidence bundle simultaneously. Operates on the canonical evidence map - not raw documents.
 
@@ -781,7 +781,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-12: Recommendation Engine
+### C-12: Delivery Agent
 
 **Purpose:** Synthesizes the final decision from the risk score and findings, assembles the field-level evidence chain, performs PII redaction at the write boundary, selects top-N impact findings for the summary, and initiates HMAC-signed delivery to the external system.
 
@@ -921,7 +921,7 @@ Each component is specified across six dimensions:
 **Inputs (inbound):** External submission payload (any format - JSON, XML, custom schema)
 **Inputs (outbound):** ARIA-standard decision JSON
 
-**Outputs (inbound):** ARIA-standard submission JSON → passed to Evidence Intake Engine
+**Outputs (inbound):** ARIA-standard submission JSON → passed to Pre-Validation Agent
 **Outputs (outbound):** External-format decision → delivered to external system
 
 **Interface Contract (BaseConnector):**
@@ -986,17 +986,17 @@ def reportStatus(case_id: str, status: str, error: str | None) -> bool
 
 ## Output 5 - Agent Architecture
 
-### 5.1 Agent and Stage Design
+### 5.1 Agent Design
 
-ARIA's pipeline is five sequential stages plus three components that run asynchronously or in the background, each responsible for a bounded set of decisions and producing structured output consumed by the next component. Components share context through structured interfaces - not shared state.
+ARIA's pipeline is five sequential agents plus three components that run asynchronously or in the background, each responsible for a bounded set of decisions and producing structured output consumed by the next component. Components share context through structured interfaces - not shared state.
 
 | Component | Role | Processing Stage | Primary Tool |
 |---|---|---|---|
-| **Intake Stage** | Bundle reception, validation, staging, pre-processing | Activity 1 | Evidence Intake Engine (C-01) |
-| **Extraction Agent** | Document-to-field transformation, field canonicalization, and PII classification | Activity 2 (Phase 1 + 2, post-extraction) | DI Engine (C-02) + DI Service + Reconciliation Engine sub-component |
-| **Validation Agent** | Cross-document consistency and conflict detection | Activity 3 | Cross-Document Validation Engine (C-09) |
-| **Policy Stage** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| **Recommendation Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 5 | Recommendation Engine (C-12) |
+| **Pre-Validation Agent** | Bundle reception, validation, staging, pre-processing | Activity 1 | Pre-Validation Agent (C-01) |
+| **DI Extraction Agent** | Document-to-field transformation, field canonicalization, and PII classification | Activity 2 (Phase 1 + 2, post-extraction) | DI Extraction Agent (C-02) + DI Service + Reconciliation Engine sub-component |
+| **LLM Validation Agent** | Cross-document consistency and conflict detection | Activity 3 | LLM Validation Agent (C-09) |
+| **Rules & Policy Agent** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
+| **Delivery Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 5 | Delivery Agent (C-12) |
 | **Chat Agent** | Evidence Q&A for human reviewers, via direct Cosmos DB tool lookups *(built in PAFN reference deployment; not yet generalized - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-Demand | Audit Framework (C-15) |
 | **Knowledge Pack Stage** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
@@ -1007,11 +1007,11 @@ ARIA's pipeline is five sequential stages plus three components that run asynchr
 sequenceDiagram
     autonumber
     participant KPA as Knowledge Pack Stage
-    participant INT as Intake Stage
-    participant EXT as Extraction Agent
-    participant VAL as Validation Agent
-    participant POL as Policy Stage
-    participant REC as Recommendation Agent
+    participant INT as Pre-Validation Agent
+    participant EXT as DI Extraction Agent
+    participant VAL as LLM Validation Agent
+    participant POL as Rules & Policy Agent
+    participant REC as Delivery Agent
     participant AUD as Audit Log
     participant REV as Chat Agent
 
@@ -1062,12 +1062,12 @@ sequenceDiagram
 
 | From | To | Payload | Format |
 |---|---|---|---|
-| Intake Stage | Extraction Agent | Bundle metadata, normalized doc URLs | Durable Functions activity input JSON |
-| Extraction Agent | Validation Agent | Canonical evidence map + PII map | `{canonicalMap: {fieldName: {value, confidence, sourceDocumentId}}}` |
-| Validation Agent | Policy Stage | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
-| Policy Stage | Recommendation Agent | Findings + risk assessment | `{findings: [{ruleId, category, field, result, ruleETag}], score, grade, holdFlag, confidence, signals[]}` |
-| Recommendation Agent | Audit Log | Complete decision package | `{decision, evidenceChain, tokenMetrics}` |
-| Knowledge Pack Stage | Extraction Agent, Validation Agent, Chat Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
+| Pre-Validation Agent | DI Extraction Agent | Bundle metadata, normalized doc URLs | Durable Functions activity input JSON |
+| DI Extraction Agent | LLM Validation Agent | Canonical evidence map + PII map | `{canonicalMap: {fieldName: {value, confidence, sourceDocumentId}}}` |
+| LLM Validation Agent | Rules & Policy Agent | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
+| Rules & Policy Agent | Delivery Agent | Findings + risk assessment | `{findings: [{ruleId, category, field, result, ruleETag}], score, grade, holdFlag, confidence, signals[]}` |
+| Delivery Agent | Audit Log | Complete decision package | `{decision, evidenceChain, tokenMetrics}` |
+| Knowledge Pack Stage | DI Extraction Agent, LLM Validation Agent, Chat Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
 
 ---
 
@@ -1125,7 +1125,7 @@ The Token Efficiency Layer is a cross-cutting concern implemented as a pipeline 
 
 ### 6.2 Strategy: DOCX to Markdown Conversion
 
-**Where it applies:** Activity 1 (Evidence Intake Engine), before any downstream processing.
+**Where it applies:** Activity 1 (Pre-Validation Agent), before any downstream processing.
 
 **Implementation:**
 ```python
@@ -1156,7 +1156,7 @@ Saving: ~6,000 tokens per bundle (75%)
 
 ### 6.3 Strategy: PDF Normalization
 
-**Where it applies:** Activity 2 (Document Intelligence Engine), after Azure DI OCR and before LLM extraction.
+**Where it applies:** Activity 2 (DI Extraction Agent), after Azure DI OCR and before LLM extraction.
 
 **Implementation:**
 ```python
@@ -1189,7 +1189,7 @@ Saving: 30% on DI output for typical invoice/certificate documents
 
 ### 6.4 Strategy: Structured Pre-Extraction
 
-**Where it applies:** Activity 2 (Document Intelligence Engine), Phase 1 before any LLM call.
+**Where it applies:** Activity 2 (DI Extraction Agent), Phase 1 before any LLM call.
 
 **Design:**
 ```
@@ -1422,13 +1422,13 @@ def _track_tokens(self, **kwargs):
 +===============================================================+
 |  TIER 1 - CORE PLATFORM  (deploy once, serve all industries)  |
 |                                                               |
-|  Evidence Intake Engine                                       |
-|  Document Intelligence Engine (incl. token efficiency layer) |
+|  Pre-Validation Agent                                          |
+|  DI Extraction Agent (incl. token efficiency layer)           |
 |  Data Reconciliation Engine                                   |
-|  Cross-Document Validation Engine                             |
+|  LLM Validation Agent                                          |
 |  Policy Evaluation Engine (framework + 8 rule categories)    |
 |  Risk Assessment Engine (algorithm + HOLD logic)             |
-|  Recommendation Engine                                         |
+|  Delivery Agent                                                |
 |  Chat Agent (grounded agent + override, built in PAFN)         |
 |  Explainability Framework                                     |
 |  Audit Framework (immutable event stream)                     |
