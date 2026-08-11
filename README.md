@@ -30,6 +30,8 @@ Processing, extraction, validation, and decision steps are tracked with status a
 
 The platform is structured in three tiers so it can be deployed across regulated industries without rework: a domain-neutral **Core Platform** (the engines described above) implements extraction, validation, and decisioning logic once; **Industry Templates** (configuration packages - JSON and Markdown only, no executable code) adapt the platform to a specific regulated domain in days, not months; and **Reference Implementations** are complete, isolated deployments built on the Core Platform and a template. See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
 
+![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](docs/images/architecture/reference-architecture.png)
+
 | Component | Role |
 |---|---|
 | Evidence Intake Engine | Bundle validation, integrity checks, format normalization |

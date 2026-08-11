@@ -94,6 +94,8 @@ The objective of the Core Platform is to reuse this same engine, unchanged, acro
 
 **Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below. There is no chat or grounded-review agent in this diagram. The Review Assistant Agent (chat-based, citation-grounded human review) is a Phase 2 capability, built after Phase 1, and is not part of the Agent and Processing Layer shown here.
 
+![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](../images/architecture/reference-architecture.png)
+
 ```mermaid
 flowchart LR
     classDef onpremStyle fill:#5c2d91,color:#fff,stroke:#3a1c5c
@@ -122,7 +124,7 @@ flowchart LR
         A1["Pre-Validation Agent"]:::agentStyle
         A2["DI Extraction Agent"]:::agentStyle
         A3["LLM Validation Agent"]:::agentStyle
-        A4["Post-Validation Agent"]:::agentStyle
+        A4["Rules & Policy Agent"]:::agentStyle
         A5["Delivery Agent"]:::agentStyle
         A1 --> A2 --> A3 --> A4 --> A5
     end
@@ -170,7 +172,7 @@ flowchart LR
 |---|---|---|
 | Customer Portal / Site (Government Agency or Private Entity) | The adopter's own on-prem/cloud system - submits bundles over a Site-to-Site VPN and receives the final verdict back on the same portal; ARIA does not host or replace this system | Customer Portal / Site · SharePoint · SQL |
 | Azure Entry and Orchestration | Accepts the submission, validates it, and starts the Durable Functions orchestration | Blob Storage (Blob SDK, service principal) · Azure API Management · Durable Orchestrator |
-| Agent and Processing Layer (Phase 1 - Recommendation only) | Durable Functions activities, invoked by the orchestrator, that validate, extract, and deliver - no chat or review agent runs here | Pre-Validation Agent · DI Extraction Agent · LLM Validation Agent · Post-Validation Agent · Delivery Agent |
+| Agent and Processing Layer (Phase 1 - Recommendation only) | Durable Functions activities, invoked by the orchestrator, that validate, extract, and deliver - no chat or review agent runs here | Pre-Validation Agent · DI Extraction Agent · LLM Validation Agent · Rules & Policy Agent · Delivery Agent |
 | Azure AI Services | Foundation AI capabilities called by the Agent layer | Azure OpenAI · Azure AI Document Intelligence · Cognitive Services (Translator/Vision) |
 | Data and Integration Layer | Persistent state and the outbound verdict callback | Cosmos DB · Blob Storage · SQL |
 | Azure Platform, Monitoring and Operations | Cross-cutting platform services | Key Vault · Application Insights · Azure Monitor · Entra Authentication |
@@ -371,7 +373,7 @@ Full diagrams for all 4 topologies live in the [Internal Engineering Deep-Refere
 ```
 GATEWAY   -> Azure API Management (schema validation, auth, rate limiting)
 NETWORK   -> Site-to-Site VPN from source system to Azure VNet; Private Endpoints on all data/AI services; NSG inbound from APIM only
-COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator + 5 activities (Pre-Validation, DI Extraction, LLM Validation, Post-Validation, Delivery Agents - Recommendation only, Phase 1; no chat/review agent)
+COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator + 5 activities (Pre-Validation, DI Extraction, LLM Validation, Rules & Policy, Delivery Agents - Recommendation only, Phase 1; no chat/review agent)
 AI        -> Azure OpenAI (GPT-4.1+/5.x) · Azure Document Intelligence · Cognitive Services (Translator/Vision)
 DATA      -> Cosmos DB (6 containers) · Blob Storage · SQL · Key Vault
 SEARCH    -> Azure AI Search (case-document-index, case-summary-index)
