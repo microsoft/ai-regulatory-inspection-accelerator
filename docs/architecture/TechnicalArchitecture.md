@@ -92,7 +92,7 @@ This is the reference topology as built and running for PAFN - no component belo
 
 The objective of the Core Platform is to reuse this same engine, unchanged, across many government and private-sector entities - not to reinvent infrastructure that already works. The only legitimate platform-side additions are genuine efficiency gains (for example, converting Office documents to Markdown before extraction to cut token usage); everything that varies per adopter - document types, rules, vocabulary, connectors - is configuration, never new platform code.
 
-**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below - which already includes human-in-the-loop escalation for low-confidence/high-risk cases via a manual review queue. There is no chat interface in this diagram. The Chat Agent (a conversational interface to that same human reviewer) is built in the PAFN reference deployment (SCEN-02) but is not yet generalized into the Core Platform, not yet validated to the same degree as the Recommendation Agent, and is not part of the Agent and Processing Layer shown here.
+**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below - which already includes human-in-the-loop escalation for low-confidence/high-risk cases via a manual review queue. There is no chat interface in this diagram. The Chat Agent (a conversational interface to that same human reviewer) is built in the PAFN reference deployment (SCEN-02) but is not yet generalized into the Core Platform, not yet validated to the same degree as the Delivery Agent, and is not part of the Agent and Processing Layer shown here.
 
 ![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](../images/architecture/reference-architecture.png)
 
@@ -188,19 +188,19 @@ Full Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact specificatio
 
 | # | Component | Purpose | Token impact |
 |---|---|---|---|
-| C-01 | Evidence Intake Engine | Validates bundle integrity, stages documents, initializes the case record before any AI service runs | High positive - first normalization point |
-| C-02 | Document Intelligence Engine | Two-phase extraction: Azure DI structured extraction first, LLM gap-filling only for uncovered fields | High positive - core optimization component |
+| C-01 | Pre-Validation Agent | Validates bundle integrity, stages documents, initializes the case record before any AI service runs | High positive - first normalization point |
+| C-02 | DI Extraction Agent | Two-phase extraction: Azure DI structured extraction first, LLM gap-filling only for uncovered fields | High positive - core optimization component |
 | C-03 | Metadata Extraction Engine | Extracts format/language/page-count metadata to drive downstream routing decisions | Medium positive - enables other optimizations |
 | C-04 | Document Normalization Engine | Converts every incoming format to clean Markdown before any AI processing | Critical - largest single reduction point |
 | C-05 | Markdown Conversion Service | Office binary (DOCX/XLSX/PPTX) to Markdown conversion sub-component | Critical - first line of defense for Office docs |
 | C-06 | Semantic Chunking Service | Splits large documents into ranked, relevant chunks; only top-K sent to the LLM | High positive - eliminates large-document waste |
 | C-07 | Knowledge Pack Generator | Compresses a template's full rule set into a ~300-token domain summary | High positive - ~20,000 to ~300 tokens |
 | C-08 | Context Assembly Engine | Enforcement layer assembling minimum viable context for every LLM call | Critical enforcer - guardrail for all other strategies |
-| C-09 | Cross-Document Validation Engine | Detects contradictions and missing dependencies across the full evidence bundle | Medium - bounded by Context Assembly Engine |
+| C-09 | LLM Validation Agent | Detects contradictions and missing dependencies across the full evidence bundle | Medium - bounded by Context Assembly Engine |
 | C-10 | Policy Evaluation Engine | Evaluates all active compliance rules from Cosmos DB, deterministically | Zero - no LLM calls, by design |
 | C-11 | Risk Assessment Engine | Computes weighted risk score, grade, and HOLD escalation decision | Minimal - only historical pattern lookup uses embeddings |
-| C-12 | Recommendation Engine | Synthesizes final verdict, assembles evidence chain, delivers via HMAC-signed callback - always includes human-in-the-loop escalation for low-confidence/high-risk cases | Minimal - decision synthesis is algorithmic |
-| C-13 | Human Review Framework (Chat Agent) | Conversational Q&A for reviewers, built in the PAFN reference deployment via direct Cosmos DB tool lookups - not yet generalized into the Core Platform or validated to the same degree as the Recommendation Engine | Retrieval-augmented design proposed (ADR-017) but not yet implemented - current tool calls query Cosmos DB directly |
+| C-12 | Delivery Agent | Synthesizes final verdict, assembles evidence chain, delivers via HMAC-signed callback - always includes human-in-the-loop escalation for low-confidence/high-risk cases | Minimal - decision synthesis is algorithmic |
+| C-13 | Human Review Framework (Chat Agent) | Conversational Q&A for reviewers, built in the PAFN reference deployment via direct Cosmos DB tool lookups - not yet generalized into the Core Platform or validated to the same degree as the Delivery Agent | Retrieval-augmented design proposed (ADR-017) but not yet implemented - current tool calls query Cosmos DB directly |
 | C-14 | Explainability Framework | Generates plain-language, per-finding decision rationale | Low - bounded per-finding context |
 | C-15 | Audit Framework | Immutable, append-only event stream for every decision, LLM call, and human action | Monitoring - tracks tokens, doesn't consume them |
 | C-16 | Connector Framework | Adapts external submission/delivery formats via the `BaseConnector` interface contract | Zero - purely algorithmic transformation |
@@ -210,15 +210,15 @@ Full Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact specificatio
 
 ## 5. Agent Architecture
 
-The pipeline is five sequential stages plus three components that run asynchronously or in the background.
+The pipeline is five sequential agents plus three components that run asynchronously or in the background.
 
 | Component | Role | Activity | Primary component |
 |---|---|---|---|
-| Intake Stage | Bundle reception, validation, staging | Activity 1 | Evidence Intake Engine (C-01) |
-| Extraction Agent | Document-to-field transformation, field canonicalization and PII classification | Activity 2 | Document Intelligence Engine (C-02) |
-| Validation Agent | Cross-document consistency + conflict detection | Activity 3 | Cross-Document Validation Engine (C-09) |
-| Policy Stage | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| Recommendation Agent | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation for low-confidence/high-risk cases already included | Activity 5 | Recommendation Engine (C-12) |
+| Pre-Validation Agent | Bundle reception, validation, staging | Activity 1 | Pre-Validation Agent (C-01) |
+| DI Extraction Agent | Document-to-field transformation, field canonicalization and PII classification | Activity 2 | DI Extraction Agent (C-02) |
+| LLM Validation Agent | Cross-document consistency + conflict detection | Activity 3 | LLM Validation Agent (C-09) |
+| Rules & Policy Agent | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
+| Delivery Agent | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation for low-confidence/high-risk cases already included | Activity 5 | Delivery Agent (C-12) |
 | **Chat Agent** | Evidence Q&A for reviewers - built in the PAFN reference deployment, not yet generalized into the Core Platform *(see Roadmap)* | Async | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-demand | Audit Framework (C-15) |
 | Knowledge Pack Stage | Template knowledge compression + caching | Background | Knowledge Pack Generator (C-07) |
@@ -226,11 +226,11 @@ The pipeline is five sequential stages plus three components that run asynchrono
 ```mermaid
 sequenceDiagram
     autonumber
-    participant INT as Intake Stage
-    participant EXT as Extraction Agent
-    participant VAL as Validation Agent
-    participant POL as Policy Stage
-    participant REC as Recommendation Agent
+    participant INT as Pre-Validation Agent
+    participant EXT as DI Extraction Agent
+    participant VAL as LLM Validation Agent
+    participant POL as Rules & Policy Agent
+    participant REC as Delivery Agent
     participant REV as Chat Agent
 
     INT->>INT: Validate bundle + normalize documents

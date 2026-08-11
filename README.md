@@ -16,30 +16,29 @@ The core evidence-to-decision engine supports any multi-document, policy-driven 
 
 ## Solution overview
 
-This accelerator leverages Azure Document Intelligence, Azure OpenAI Service, Azure Durable Functions, Azure Cosmos DB, and Azure AI Search to process multi-document evidence bundles through a five-stage pipeline:
+This accelerator leverages Azure Document Intelligence, Azure OpenAI Service, Azure Durable Functions, Azure Cosmos DB, and Azure AI Search to process multi-document evidence bundles through a five-agent pipeline:
 
-- **Evidence Intake** - Documents are staged in Blob Storage by the source system's connector (see Connector Framework below - staging mechanism is connector-specific, for example a direct upload integration or a SAS-scoped URL), then a REST API call with immediate acknowledgement (HTTP 202) references them by ID to start processing. Validates bundle integrity - checksums, MIME types, document count, and file sizes - via the Storage SDK before any AI processing begins.
-- **Document Intelligence** - Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
-- **Cross-Document Validation** - The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
-- **Policy & Risk Evaluation** - Compliance rules are loaded from Cosmos DB at runtime - rule changes take effect immediately without redeployment. Findings and extraction confidence determine a risk level that decides whether a case is auto-resolved or escalated for human review.
-- **Recommendation** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are flagged for human review.
+- **Pre-Validation Agent** - Documents are staged in Blob Storage by the source system's connector (see Connector Framework below - staging mechanism is connector-specific, for example a direct upload integration or a SAS-scoped URL), then a REST API call with immediate acknowledgement (HTTP 202) references them by ID to start processing. Validates bundle integrity - checksums, MIME types, document count, and file sizes - via the Storage SDK before any AI processing begins.
+- **DI Extraction Agent** - Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
+- **LLM Validation Agent** - The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
+- **Rules & Policy Agent** - Compliance rules are loaded from Cosmos DB at runtime - rule changes take effect immediately without redeployment. Findings and extraction confidence determine a risk level that decides whether a case is auto-resolved or escalated for human review.
+- **Delivery Agent** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are flagged for human review.
 
 Processing, extraction, validation, and decision steps are tracked with status and scored for confidence to automate routine cases and identify as-needed human review.
 
 ### Solution architecture
 
-The platform is structured in three tiers so it can be deployed across regulated industries without rework: a domain-neutral **Core Platform** (the engines described above) implements extraction, validation, and decisioning logic once; **Industry Templates** (configuration packages - JSON and Markdown only, no executable code) adapt the platform to a specific regulated domain in days, not months; and **Reference Implementations** are complete, isolated deployments built on the Core Platform and a template. See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
+The platform is structured in three tiers so it can be deployed across regulated industries without rework: a domain-neutral **Core Platform** (the agents described above) implements extraction, validation, and decisioning logic once; **Industry Templates** (configuration packages - JSON and Markdown only, no executable code) adapt the platform to a specific regulated domain in days, not months; and **Reference Implementations** are complete, isolated deployments built on the Core Platform and a template. See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
 
 ![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](docs/images/architecture/reference-architecture.png)
 
 | Component | Role |
 |---|---|
-| Evidence Intake Engine | Bundle validation, integrity checks, format normalization |
-| Document Intelligence Engine | Structured + AI-assisted field extraction |
-| Cross-Document Validation Engine | Semantic reconciliation and conflict detection |
-| Policy Evaluation Engine | Deterministic, runtime-configurable rule evaluation |
-| Risk Assessment Engine | Risk-based escalation logic |
-| Recommendation Engine | Verdict synthesis, evidence chain, secure decision delivery, with human-in-the-loop escalation for low-confidence or high-risk cases |
+| Pre-Validation Agent | Bundle validation, integrity checks, format normalization |
+| DI Extraction Agent | Structured + AI-assisted field extraction |
+| LLM Validation Agent | Semantic reconciliation and conflict detection across documents |
+| Rules & Policy Agent | Deterministic, runtime-configurable rule evaluation and risk-based escalation |
+| Delivery Agent | Verdict synthesis, evidence chain, secure decision delivery, with human-in-the-loop escalation for low-confidence or high-risk cases |
 | Human Review Framework (Chat Agent) | Conversational, evidence-grounded interface for the human reviewer *(Phase 2)* |
 | Audit and Explainability Framework | Immutable event logging and plain-language decision rationale |
 | Connector Framework | Pluggable inbound/outbound integration contract |
@@ -47,14 +46,14 @@ The platform is structured in three tiers so it can be deployed across regulated
 
 ### Agentic architecture
 
-The pipeline is orchestrated as a coordinated set of agents and processing stages, each responsible for one part of the reasoning rather than a single monolithic prompt. Five stages run sequentially per case; three additional components run asynchronously or in the background:
+The pipeline is orchestrated as a coordinated set of agents, each responsible for one part of the reasoning rather than a single monolithic prompt. Five agents run sequentially per case; three additional components run asynchronously or in the background:
 
 ```
-Intake Stage → Extraction Agent → Validation Agent → Policy Stage → Recommendation Agent
+Pre-Validation Agent → DI Extraction Agent → LLM Validation Agent → Rules & Policy Agent → Delivery Agent
            ↘ Chat Agent (Phase 2)    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
 ```
 
-**Phase 1 ships Recommendation** - Intake Stage through Recommendation Agent above, with human-in-the-loop review built in: low-confidence and high-risk cases are always routed to a human reviewer. The Chat Agent adds a conversational interface to that same review step and ships in Phase 2 (see Roadmap).
+**Phase 1 ships the full five-agent pipeline** - Pre-Validation Agent through Delivery Agent above, with human-in-the-loop review built in: low-confidence and high-risk cases are always routed to a human reviewer. The Chat Agent adds a conversational interface to that same review step and ships in Phase 2 (see Roadmap).
 
 A background Knowledge Pack Stage is designed to keep each industry template's compressed policy context current whenever rules change, without requiring a redeployment - this component is not yet built (see [Roadmap](#roadmap)).
 
@@ -100,7 +99,7 @@ Deployment requires an Azure subscription with permissions to create resource gr
 |---|---|---|
 | Azure OpenAI Service | Field extraction, cross-document reasoning, decision explanation, and the Chat Agent | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
 | Azure AI Document Intelligence | Structured OCR and prebuilt-model extraction | [Pricing](https://azure.microsoft.com/pricing/details/ai-document-intelligence/) |
-| Azure Functions (Durable Functions) | Pipeline orchestration across the five processing stages | [Pricing](https://azure.microsoft.com/pricing/details/functions/) |
+| Azure Functions (Durable Functions) | Pipeline orchestration across the five agents | [Pricing](https://azure.microsoft.com/pricing/details/functions/) |
 | Azure Cosmos DB | Case records, runtime-configurable rules, verdicts, and audit trail | [Pricing](https://azure.microsoft.com/pricing/details/cosmos-db/) |
 | Azure AI Search | Case history indexing for risk calibration | [Pricing](https://azure.microsoft.com/pricing/details/search/) |
 | Azure API Management | Submission gateway and schema validation | [Pricing](https://azure.microsoft.com/pricing/details/api-management/) |
@@ -111,13 +110,13 @@ Deployment requires an Azure subscription with permissions to create resource gr
 
 ```
 src/platform/                          Core Platform - domain-neutral engines (Tier 1)
-  intake/                              Evidence Intake Engine
-  document_intelligence/               Document Intelligence Engine
+  intake/                              Pre-Validation Agent
+  document_intelligence/               DI Extraction Agent
   reconciliation/                      Cross-document semantic reconciliation
-  cross_document/                      Cross-Document Validation Engine
-  policy/                              Policy Evaluation Engine
-  risk/                                Risk Assessment Engine
-  decision/                            Recommendation Engine
+  cross_document/                      LLM Validation Agent
+  policy/                              Rules & Policy Agent
+  risk/                                Rules & Policy Agent (risk scoring)
+  decision/                            Delivery Agent
   human_review/                        Human Review Framework - Chat Agent (Phase 2 - see Roadmap)
   explainability/                      Explainability Framework
   audit/                               Audit and Lineage Framework
@@ -259,7 +258,7 @@ To the extent this accelerator includes components derived from Microsoft produc
 
 | Stage | Focus |
 |---|---|
-| Current (Phase 1) | Core Platform Recommendation Engine (`src/platform/`) - Evidence Intake through Recommendation, with human-in-the-loop escalation built in - in progress, generalized from the validated Food Safety reference implementation |
+| Current (Phase 1) | Core Platform five-agent pipeline (`src/platform/`) - Pre-Validation through Delivery, with human-in-the-loop escalation built in - in progress, generalized from the validated Food Safety reference implementation |
 | Phase 2 | Chat Agent - built in the PAFN reference deployment, generalizing into the Core Platform - in progress |
 | Next | Additional industry templates (customs, healthcare, licensing, environmental, financial compliance, KYC/AML) validated independently |
 | Future | Multi-tenant SaaS, Government Cloud, and sovereign/air-gapped deployment topologies; Azure Marketplace packaging |
