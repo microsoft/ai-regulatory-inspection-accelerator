@@ -30,6 +30,8 @@ Processing, extraction, validation, and decision steps are tracked with status a
 
 The platform is structured in three tiers so it can be deployed across regulated industries without rework: a domain-neutral **Core Platform** (the engines described above) implements extraction, validation, and decisioning logic once; **Industry Templates** (configuration packages - JSON and Markdown only, no executable code) adapt the platform to a specific regulated domain in days, not months; and **Reference Implementations** are complete, isolated deployments built on the Core Platform and a template. See [Technical Architecture](docs/architecture/TechnicalArchitecture.md) for the full architecture, component design, Azure reference architecture, and governing key decisions.
 
+![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](docs/images/architecture/reference-architecture.png)
+
 | Component | Role |
 |---|---|
 | Evidence Intake Engine | Bundle validation, integrity checks, format normalization |
@@ -49,8 +51,10 @@ The pipeline is orchestrated as a coordinated set of agents and processing stage
 
 ```
 Intake Stage → Extraction Agent → Validation Agent → Policy Stage → Recommendation Agent
-           ↘ Review Assistant Agent    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
+           ↘ Review Assistant Agent (Phase 2)    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
 ```
+
+**Phase 1 ships Recommendation only** - Intake Stage through Recommendation Agent above. There is no chat agent in Phase 1: the Review Assistant Agent (the chat-based, citation-grounded human reviewer) is a Phase 2 capability, built after Phase 1 is complete.
 
 A background Knowledge Pack Stage keeps each industry template's compressed policy context current whenever rules change, without requiring a redeployment.
 
@@ -178,6 +182,21 @@ With ARIA, the inspector submits the full document bundle to the platform, which
 4. **Delivers a decision** - PASS, HOLD, or FAIL - with a complete, field-level evidence chain, escalating HOLD/FAIL cases to a grounded review agent that answers inspector questions with citations back to the specific document and field.
 
 The same Core Platform, unchanged, applies this pattern to customs clearance, KYC/AML validation, healthcare compliance, and other multi-document, policy-driven decision workflows - only the industry template changes.
+
+### Use cases by industry
+
+The objective is to reuse the same AI inspection engine across many government and private-sector entities without reinventing anything that already works - adopting a new industry means authoring a template (13 JSON/Markdown configuration files), never new platform code. The only legitimate platform-side additions are genuine efficiency gains, such as converting Office documents to Markdown before extraction to reduce token usage.
+
+| Industry | Sector | Example adopting entity | Documents reviewed | Decision outcome | Template |
+|---|---|---|---|---|---|
+| Food safety inspection | Government | National food safety or customs ministry (PAFN reference deployment) | Invoice, packing list, certificate of origin, health certificate, Halal certificate | PASS · HOLD · FAIL | `food-safety` |
+| Customs clearance | Government | Customs and border agencies | Commercial invoice, bill of lading, certificate of origin, customs declaration | CLEAR · HOLD · DETAIN | `customs-trade` |
+| Environmental compliance | Government | Environmental protection agencies | Environmental impact assessments, permits, inspection reports | APPROVE · CONDITIONAL · DENY | `environmental` |
+| Licensing and certification | Government or private issuing body | Licensing boards, professional certification bodies | Applications, supporting credentials, prior certifications | APPROVE · PROVISIONAL · DENY | `licensing-cert` |
+| Healthcare compliance | Private (or government payer) | Hospitals, insurers, health plans | Claims, prior authorizations, medical records | AUTHORIZE · PEER REVIEW · DENY | `healthcare-compliance` |
+| Financial compliance (KYC/AML) | Private | Banks, fintechs, financial institutions | Identity documents, beneficial ownership filings, transaction records | APPROVE · EDD · REJECT | `kyc-aml` |
+
+Every row above uses the same Core Platform, the same connector model (third-party system submits over Blob SDK/API, ARIA processes, then calls back to the submitting system's own portal), and the same token-efficiency techniques - only the template's 13 configuration files differ. See [Template Framework](docs/architecture/TechnicalArchitecture.md#7-template-framework) for the full industry template mapping and [Customize: Add a New Industry Template](docs/CustomizeIndustryTemplate.md) to add your own.
 
 ### Business value
 

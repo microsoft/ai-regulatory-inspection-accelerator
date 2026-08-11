@@ -1,7 +1,6 @@
 # ARIA - Technical Architecture
 
 **Status:** Reference architecture - Core Platform implementation not yet started. See [Roadmap](../../README.md#roadmap).
-**Classification:** Microsoft Confidential
 
 > This is the concise architecture reference: diagrams, component tables, and short descriptions. For the full exhaustive specification (per-component Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact breakdowns, every token-efficiency strategy with code samples, all 4 deployment topology diagrams, the full 28-ADR catalog, and full validation evidence), see the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md) and [Internal ADR Catalog](internal/aria-adr-catalog-full.md).
 
@@ -89,100 +88,97 @@ Eleven capability groups, from bundle intake through reporting:
 
 ## 3. Logical Architecture
 
+This is the reference topology as built and running for PAFN - no component below is invented or aspirational; every box maps to a real Azure resource in the production deployment.
+
+The objective of the Core Platform is to reuse this same engine, unchanged, across many government and private-sector entities - not to reinvent infrastructure that already works. The only legitimate platform-side additions are genuine efficiency gains (for example, converting Office documents to Markdown before extraction to cut token usage); everything that varies per adopter - document types, rules, vocabulary, connectors - is configuration, never new platform code.
+
+**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below. There is no chat or grounded-review agent in this diagram. The Review Assistant Agent (chat-based, citation-grounded human review) is a Phase 2 capability, built after Phase 1, and is not part of the Agent and Processing Layer shown here.
+
+![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](../images/architecture/reference-architecture.png)
+
 ```mermaid
-flowchart TB
-    classDef userStyle fill:#0078d4,color:#fff,stroke:#005a9e
-    classDef channelStyle fill:#107c10,color:#fff,stroke:#0b5a0b
-    classDef platformStyle fill:#4b0082,color:#fff,stroke:#2d004f
-    classDef tokenStyle fill:#b9470b,color:#fff,stroke:#7a2f07
-    classDef aiStyle fill:#7719aa,color:#fff,stroke:#4d0f6e
-    classDef knowledgeStyle fill:#004578,color:#fff,stroke:#002d4f
-    classDef dataStyle fill:#5c2d91,color:#fff,stroke:#3a1c5c
-    classDef integStyle fill:#6e6e6e,color:#fff,stroke:#4a4a4a
+flowchart LR
+    classDef onpremStyle fill:#5c2d91,color:#fff,stroke:#3a1c5c
+    classDef entryStyle fill:#0078d4,color:#fff,stroke:#005a9e
+    classDef agentStyle fill:#7719aa,color:#fff,stroke:#4d0f6e
+    classDef aiStyle fill:#b9470b,color:#fff,stroke:#7a2f07
+    classDef dataStyle fill:#107c10,color:#fff,stroke:#0b5a0b
+    classDef opsStyle fill:#6e6e6e,color:#fff,stroke:#4a4a4a
 
-    subgraph UserLayer["User Layer"]
-        direction LR
-        U1["Decision Reviewer"]:::userStyle
-        U2["Policy Manager"]:::userStyle
-        U3["Platform Admin"]:::userStyle
-        U4["Auditor"]:::userStyle
-        U5["External Systems"]:::userStyle
-    end
-
-    subgraph ChannelLayer["Channel Layer"]
-        direction LR
-        CH1["REST API Gateway (APIM)"]:::channelStyle
-        CH2["Review Web App"]:::channelStyle
-        CH3["Admin Console"]:::channelStyle
-        CH4["Audit Export API"]:::channelStyle
-    end
-
-    subgraph PlatformLayer["ARIA Platform Layer"]
+    subgraph OnPrem["Customer Portal / Site - Adopting Government Agency or Private Entity"]
         direction TB
-        PI1["Intake Engine + Token Efficiency Layer"]:::platformStyle
-        PI3["Document Intelligence Engine"]:::platformStyle
-        PI5["Reconciliation + Cross-Doc Validation"]:::platformStyle
-        PI7["Policy + Risk Engines"]:::platformStyle
-        PI9["Decision + Human Review"]:::platformStyle
-        PI11["Audit + Explainability"]:::platformStyle
+        EXT1["Customer Portal / Site"]:::onpremStyle
+        EXT2["SharePoint"]:::onpremStyle
+        EXT3["SQL"]:::onpremStyle
     end
 
-    subgraph AILayer["Azure AI Services"]
+    subgraph Entry["Azure Entry and Orchestration"]
+        direction TB
+        E1["Blob Storage - document upload via Blob SDK, service principal"]:::entryStyle
+        E2["Azure API Management - metadata JSON"]:::entryStyle
+        E3["Durable Orchestrator (InspectorOrchestrator)"]:::entryStyle
+    end
+
+    subgraph Agents["Agent and Processing Layer - Durable Functions activities, same Function App, invoked by the orchestrator - Recommendation only, Phase 1"]
         direction LR
+        A1["Pre-Validation Agent"]:::agentStyle
+        A2["DI Extraction Agent"]:::agentStyle
+        A3["LLM Validation Agent"]:::agentStyle
+        A4["Rules & Policy Agent"]:::agentStyle
+        A5["Delivery Agent"]:::agentStyle
+        A1 --> A2 --> A3 --> A4 --> A5
+    end
+
+    subgraph AI["Azure AI Services"]
+        direction TB
         AI1["Azure OpenAI"]:::aiStyle
-        AI2["Azure Document Intelligence"]:::aiStyle
-        AI3["Azure AI Content Understanding"]:::aiStyle
+        AI2["Azure AI Document Intelligence"]:::aiStyle
+        AI3["Cognitive Services - Translator / Vision"]:::aiStyle
     end
 
-    subgraph KnowledgeLayer["Knowledge Services"]
+    subgraph Data["Data and Integration Layer - Callback / ai-verdict"]
+        direction TB
+        D1["Cosmos DB"]:::dataStyle
+        D2["Blob Storage"]:::dataStyle
+        D3["SQL"]:::dataStyle
+    end
+
+    subgraph Ops["Azure Platform, Monitoring and Operations"]
         direction LR
-        KN1["Azure AI Search"]:::knowledgeStyle
-        KN2["Knowledge Pack Store"]:::knowledgeStyle
-        KN3["Reference Data Store"]:::knowledgeStyle
+        O1["Key Vault"]:::opsStyle
+        O2["Application Insights"]:::opsStyle
+        O3["Azure Monitor"]:::opsStyle
+        O4["Entra Authentication"]:::opsStyle
     end
 
-    subgraph DataLayer["Data Services"]
+    subgraph Analytics["Analytics and Dashboards"]
         direction LR
-        DA1["Cosmos DB"]:::dataStyle
-        DA2["Azure Blob Storage"]:::dataStyle
-        DA3["Azure Key Vault"]:::dataStyle
+        AN1["Power BI"]:::opsStyle
+        AN2["Azure Synapse Analytics"]:::opsStyle
     end
 
-    subgraph IntegLayer["Integration Services"]
-        direction LR
-        IN1["Connector Framework"]:::integStyle
-        IN2["Cosmos Change Feed"]:::integStyle
-        IN3["HMAC Callback Delivery"]:::integStyle
-    end
-
-    U1 & U2 & U3 & U4 --> CH2 & CH3 & CH4
-    U5 --> CH1
-    CH1 --> PI1
-    CH2 --> PI9
-    CH3 --> PI7
-    CH4 --> PI11
-    PI1 --> PI3 --> PI5 --> PI7 --> PI9 --> PI11
-    PI3 --> AI1 & AI2 & AI3
-    PI5 --> KN1
-    PI9 --> KN1
-    PI7 --> KN3
-    PI1 --> DA2
-    PI9 --> DA1
-    DA3 --> PI9
-    PI9 --> IN3 --> EXT["External Systems"]:::integStyle
-    DA1 --> IN2 --> KN1
-    IN1 --> PI1
+    OnPrem -- "Site-to-Site VPN: document upload + metadata JSON" --> Entry
+    Entry -- "orchestrator to activities" --> Agents
+    Agents --> AI
+    AI --> Data
+    Data -- "callback / ai-verdict JSON" --> OnPrem
+    Ops --- Entry
+    Ops --- Agents
+    Analytics --- AI
+    Analytics --- Data
 ```
 
 | Layer | Role | Key components |
 |---|---|---|
-| User Layer | Human and system actors | 5 persona types; External Systems treated as first-class actors |
-| Channel Layer | Access points with auth + schema enforcement | APIM gateway · Review Web App (Entra ID) · Admin Console · Audit Export |
-| ARIA Platform Layer | All domain-neutral processing logic | 12 engines and frameworks across 6 functional groups |
-| Azure AI Services | Foundation AI capabilities | Azure OpenAI · Azure DI (OCR) · Azure AI Content Understanding |
-| Knowledge Services | Context retrieval and reference data | Azure AI Search · Knowledge Pack Store · Reference Data Store |
-| Data Services | Persistent state and secrets | Cosmos DB (6 containers) · Blob Storage · Key Vault |
-| Integration Services | External system connectivity | Connector Framework · Change Feed · HMAC Callback |
+| Customer Portal / Site (Government Agency or Private Entity) | The adopter's own on-prem/cloud system - submits bundles over a Site-to-Site VPN and receives the final verdict back on the same portal; ARIA does not host or replace this system | Customer Portal / Site · SharePoint · SQL |
+| Azure Entry and Orchestration | Accepts the submission, validates it, and starts the Durable Functions orchestration | Blob Storage (Blob SDK, service principal) · Azure API Management · Durable Orchestrator |
+| Agent and Processing Layer (Phase 1 - Recommendation only) | Durable Functions activities, invoked by the orchestrator, that validate, extract, and deliver - no chat or review agent runs here | Pre-Validation Agent · DI Extraction Agent · LLM Validation Agent · Rules & Policy Agent · Delivery Agent |
+| Azure AI Services | Foundation AI capabilities called by the Agent layer | Azure OpenAI · Azure AI Document Intelligence · Cognitive Services (Translator/Vision) |
+| Data and Integration Layer | Persistent state and the outbound verdict callback | Cosmos DB · Blob Storage · SQL |
+| Azure Platform, Monitoring and Operations | Cross-cutting platform services | Key Vault · Application Insights · Azure Monitor · Entra Authentication |
+| Analytics and Dashboards | Reporting and downstream analytics over processed cases | Power BI · Azure Synapse Analytics |
+
+The generalized Core Platform (Section 4 onward) implements this same topology in domain-neutral terms - the layer names above are the concrete, as-built PAFN mapping; the component names in Section 4 are the reusable, industry-agnostic equivalents.
 
 ---
 
@@ -356,14 +352,16 @@ Full pattern diagrams live in the [Internal Engineering Deep-Reference](internal
 +===============================================================+
 |  Single Tenant (reference topology) - Customer Subscription   |
 |  Application Landing Zone: APIM -> Functions (Durable, 5 Act.) |
-|  AI Landing Zone: Azure OpenAI, Azure DI, AI Search             |
-|                   Cosmos DB, Blob Storage, Key Vault           |
+|  AI Landing Zone: Azure OpenAI, Azure DI, Cognitive Services    |
+|                   Cosmos DB, Blob Storage, SQL, Key Vault       |
 |  User-Assigned Managed Identity · Private Endpoints everywhere |
 +===============================================================+
-        |                                    |
-        v                                    v
-  External System Callback           Reviewer Web Application
-  (HMAC-signed)                      (Entra ID Auth)
+        |                                    ^
+        v                                    |
+  Site-to-Site VPN (inbound)         External System Callback
+  from source system                 (HMAC-signed ai-verdict,
+                                      delivered to the source
+                                      system's own portal)
 ```
 
 Full diagrams for all 4 topologies live in the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md#output-10---deployment-architecture-full-detail-all-4-topologies).
@@ -374,12 +372,13 @@ Full diagrams for all 4 topologies live in the [Internal Engineering Deep-Refere
 
 ```
 GATEWAY   -> Azure API Management (schema validation, auth, rate limiting)
-COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator, 5 activities
-AI        -> Azure OpenAI (GPT-4.1+/5.x) · Azure Document Intelligence · AI Content Understanding
-DATA      -> Cosmos DB (6 containers) · Blob Storage · Key Vault
+NETWORK   -> Site-to-Site VPN from source system to Azure VNet; Private Endpoints on all data/AI services; NSG inbound from APIM only
+COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator + 5 activities (Pre-Validation, DI Extraction, LLM Validation, Rules & Policy, Delivery Agents - Recommendation only, Phase 1; no chat/review agent)
+AI        -> Azure OpenAI (GPT-4.1+/5.x) · Azure Document Intelligence · Cognitive Services (Translator/Vision)
+DATA      -> Cosmos DB (6 containers) · Blob Storage · SQL · Key Vault
 SEARCH    -> Azure AI Search (case-document-index, case-summary-index)
-NETWORK   -> VNet with Private Endpoints on all data/AI services; NSG inbound from APIM only
-IDENTITY  -> User-Assigned Managed Identity (RBAC across all services)
+ANALYTICS -> Power BI · Azure Synapse Analytics
+IDENTITY  -> User-Assigned Managed Identity (RBAC across all services) · Entra ID authentication
 OBSERVE   -> Application Insights · Azure Monitor · Log Analytics
 ```
 
