@@ -11,7 +11,7 @@
 **Date:** 2026-08-10
 **Status:** Reference architecture - Core Platform implementation not yet started
 **Primary Input:** 11-Architecture-Input-Pack.md (read first; do not open source documents)
-**Classification:** Microsoft Confidential
+**Scope:** Internal engineering deep-reference - not required reading for adopters
 **Audience:** Engineering only (deep implementation reference - see [TechnicalArchitecture.md](../TechnicalArchitecture.md) for the concise version)
 
 ---
@@ -290,7 +290,7 @@ flowchart TB
     subgraph ChannelLayer["Channel Layer"]
         direction LR
         CH1["REST API Gateway<br/>(APIM + Schema Validation)"]:::channelStyle
-        CH2["Review Web App<br/>(FastAPI · Entra ID Auth)"]:::channelStyle
+        CH2["Reviewer Access - Phase 2<br/>(via the adopter's own Employee-Facing Web Portal)"]:::channelStyle
         CH3["Admin Console<br/>(Template · Rule Mgmt)"]:::channelStyle
         CH4["Audit Export API<br/>(Read-Only · Auditor)"]:::channelStyle
     end
@@ -327,7 +327,7 @@ flowchart TB
         direction LR
         AI1["Azure OpenAI<br/>(GPT-4.x/5.x · Vision)"]:::aiStyle
         AI2["Azure Document Intelligence<br/>(prebuilt-layout · prebuilt-invoice)"]:::aiStyle
-        AI3["Azure AI Content Understanding<br/>(Multimodal)"]:::aiStyle
+        AI3["Cognitive Services<br/>(Translator / Vision)"]:::aiStyle
     end
 
     subgraph KnowledgeLayer["Knowledge Services"]
@@ -400,9 +400,9 @@ flowchart TB
 | Layer | Role | Key Components |
 |---|---|---|
 | **User Layer** | Human and system actors interacting with ARIA | 5 persona types; External Systems treated as first-class actors |
-| **Channel Layer** | Access points with authentication and schema enforcement | APIM gateway (schema validation) · Review Web App (Entra ID) · Admin Console · Audit Export |
+| **Channel Layer** | Access points with authentication and schema enforcement | APIM gateway (schema validation) · Reviewer access via the adopter's own portal (Phase 2) · Admin Console · Audit Export |
 | **ARIA Platform Layer** | All domain-neutral processing logic | 12 engines and frameworks across 6 functional groups |
-| **Azure AI Services** | Foundation AI capabilities | Azure OpenAI (reasoning, extraction, NLG) · Azure DI (OCR) · Azure AI Content Understanding (multimodal) |
+| **Azure AI Services** | Foundation AI capabilities | Azure OpenAI (reasoning, extraction, NLG) · Azure DI (OCR) · Cognitive Services (Translator/Vision) |
 | **Knowledge Services** | Context retrieval and reference data | Azure AI Search (hybrid retrieval) · Knowledge Pack Store · Reference Data Store |
 | **Data Services** | Persistent state and secrets | Cosmos DB (6 containers) · Blob Storage · Key Vault |
 | **Integration Services** | External system connectivity | Connector Framework · Change Feed (event-driven indexing) · HMAC Callback |
@@ -2091,9 +2091,8 @@ For classified government, defense, and critical infrastructure with zero public
 |  |  Custom models: configurable per deployment  |                                |
 |  +---------------------------------------------+                                |
 |  +---------------------------------------------+                                |
-|  |  Azure AI Content Understanding (optional)   |                                |
-|  |  Multimodal document analysis                |                                |
-|  |  Diagram + chart interpretation              |                                |
+|  |  Cognitive Services (Translator / Vision)    |                                |
+|  |  Bilingual document translation, quality scan |                                |
 |  +---------------------------------------------+                                |
 |                   |                                                              |
 |  DATA TIER        v                                                              |
@@ -2282,15 +2281,14 @@ All optimizations are architectural decisions designed into platform components 
 **Architecture suitability for each audience:**
 - **Engineering:** Component specifications (Output 4) · Agent interaction diagram (Output 5) · Data architecture ERD (Output 8)
 - **Leadership:** Executive summary (Output 1) · Business capability map (Output 2) · Validation proofs (Output 12)
-- **Hackathon submission:** Token efficiency architecture (Output 6) · Agent and Stage architecture (Output 5) · Azure reference architecture (Output 11)
-- **IP Governance review:** Three-tier reusability model (Output 7) · Final validation (Output 12) · PAFN mapping (Section 6 of Input Pack)
+- **Architecture governance review:** Three-tier reusability model (Output 7) · Final validation (Output 12) · PAFN mapping (Section 6 of Input Pack)
 
 **Verdict: ARIA meets the bar for a Microsoft Solution Accelerator with Azure Marketplace listing, GSI partner ecosystem delivery, and cross-industry IP claim. Architecture is complete, enforced, and production-validated. ✓**
 
 ---
 
 *End of ARIA Platform Architecture Document*
-*Version 1.0 · 2026-08-10 · Microsoft Confidential - IP Strategy*
+*Version 1.0 · 2026-08-10*
 *Primary Input: 11-Architecture-Input-Pack.md*
-*Audience: Engineering · Leadership · Hackathon · IP Governance*
+*Audience: Engineering · Leadership · Architecture Governance*
 *12 outputs delivered. 5 architectural proofs validated.*

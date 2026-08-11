@@ -11,7 +11,7 @@
 **Governance Role:** Architecture Governance Lead and ADR Reviewer
 **Primary Source:** 15-ARIA-Platform-Architecture.md
 **Supporting Sources:** 11-Architecture-Input-Pack.md · 04-Architecture-Decision-Records.md
-**Classification:** Microsoft Confidential
+**Scope:** Internal engineering and architecture governance reference - not required reading for adopters
 **Audience:** Engineering only (deep governance reference - see [TechnicalArchitecture.md](../TechnicalArchitecture.md#key-decisions) for the short summary)
 
 > This catalog supersedes and extends 04-Architecture-Decision-Records.md.
@@ -1262,6 +1262,6 @@ The 85% threshold is calibrated from PAFN production experience - at 85% field e
 ---
 
 *End of ARIA ADR Catalog*
-*Version 1.0 · 2026-08-10 · Microsoft Confidential - IP Strategy*
+*Version 1.0 · 2026-08-10*
 *Architecture Governance Lead sign-off required before publishing to partner ecosystem*
 *Next review: when any open decision from 11-Architecture-Input-Pack.md Section 13 is resolved*

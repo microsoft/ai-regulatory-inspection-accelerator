@@ -179,6 +179,21 @@ With ARIA, the inspector submits the full document bundle to the platform, which
 
 The same Core Platform, unchanged, applies this pattern to customs clearance, KYC/AML validation, healthcare compliance, and other multi-document, policy-driven decision workflows - only the industry template changes.
 
+### Use cases by industry
+
+The objective is to reuse the same AI inspection engine across many government and private-sector entities without reinventing anything that already works - adopting a new industry means authoring a template (13 JSON/Markdown configuration files), never new platform code. The only legitimate platform-side additions are genuine efficiency gains, such as converting Office documents to Markdown before extraction to reduce token usage.
+
+| Industry | Sector | Example adopting entity | Documents reviewed | Decision outcome | Template |
+|---|---|---|---|---|---|
+| Food safety inspection | Government | National food safety or customs ministry (PAFN reference deployment) | Invoice, packing list, certificate of origin, health certificate, Halal certificate | PASS · HOLD · FAIL | `food-safety` |
+| Customs clearance | Government | Customs and border agencies | Commercial invoice, bill of lading, certificate of origin, customs declaration | CLEAR · HOLD · DETAIN | `customs-trade` |
+| Environmental compliance | Government | Environmental protection agencies | Environmental impact assessments, permits, inspection reports | APPROVE · CONDITIONAL · DENY | `environmental` |
+| Licensing and certification | Government or private issuing body | Licensing boards, professional certification bodies | Applications, supporting credentials, prior certifications | APPROVE · PROVISIONAL · DENY | `licensing-cert` |
+| Healthcare compliance | Private (or government payer) | Hospitals, insurers, health plans | Claims, prior authorizations, medical records | AUTHORIZE · PEER REVIEW · DENY | `healthcare-compliance` |
+| Financial compliance (KYC/AML) | Private | Banks, fintechs, financial institutions | Identity documents, beneficial ownership filings, transaction records | APPROVE · EDD · REJECT | `kyc-aml` |
+
+Every row above uses the same Core Platform, the same connector model (third-party system submits over Blob SDK/API, ARIA processes, then calls back to the submitting system's own portal), and the same token-efficiency techniques - only the template's 13 configuration files differ. See [Template Framework](docs/architecture/TechnicalArchitecture.md#7-template-framework) for the full industry template mapping and [Customize: Add a New Industry Template](docs/CustomizeIndustryTemplate.md) to add your own.
+
 ### Business value
 
 - **Faster decisions** - Cross-referencing that took 20-35 minutes per case in the PAFN reference deployment is completed in under two minutes, with a full audit trail retained for any subsequent regulatory challenge.
