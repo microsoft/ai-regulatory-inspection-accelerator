@@ -33,7 +33,7 @@
 | ADR-004 | Azure Managed Identity Zero-Secrets Architecture | **Accepted - Proven** | Security / Identity | Document 04 |
 | ADR-005 | LLM Cross-Document Reasoning Pattern | **Accepted - Proven** | AI / Reasoning | Document 04 |
 | ADR-006 | Private Endpoint Network Topology | **Accepted - Proven** | Security / Network | Document 04 |
-| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted - Proven** | AI / Agent | Document 04 |
+| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted - Proven** (tool-calling pattern is real and built as PAFN's SCEN-02 Chat Agent; less tested/validated than the Recommendation Engine) | AI / Agent | Document 04 |
 | ADR-008 | Async Callback Delivery Pattern | **Accepted - Proven** | Integration / Delivery | Document 04 |
 | ADR-009 | Three-Tier Product Model | **Accepted - Design** | Platform / Architecture | Document 15 |
 | ADR-010 | Domain Neutrality Enforcement via CI | **Accepted - Design** | Platform / Governance | Document 15 |
@@ -43,7 +43,7 @@
 | ADR-014 | Semantic Chunking for Large Document Processing | **Accepted - Design** | AI / Context Management | Document 15 |
 | ADR-015 | Knowledge Pack Strategy for Domain Context Compression | **Accepted - Design** | AI / Context Management | Document 15 |
 | ADR-016 | Context Assembly Engine Pattern | **Accepted - Design** | AI / Context Management | Document 15 |
-| ADR-017 | Retrieval-Augmented Human Review | **Accepted - Design** | AI / Human Review | Document 15 |
+| ADR-017 | Retrieval-Augmented Human Review | **Proposed** (PAFN's real chat engine uses direct Cosmos DB tool lookups, not Azure AI Search retrieval - this design is not implemented) | AI / Human Review | Document 15 |
 | ADR-018 | Azure OpenAI Prompt Prefix Caching | **Accepted - Design** | AI / Cost | Document 15 |
 | ADR-019 | Azure API Management as Submission Gateway | **Accepted - Proven** | Integration / Gateway | Document 15 |
 | ADR-020 | Azure AI Search for Semantic Case History Retrieval | **Accepted - Proven** | Platform / Search | Document 15 |
@@ -94,8 +94,8 @@ Status reflects maturity, not just approval - three tiers distinguish decisions 
 | Status | Count | Notes |
 |---|---|---|
 | **Accepted - Proven** | 14 | Matches something real PAFN already does today (ADR-001 through 008, 012, 013, 019, 020, 027, 028) |
-| **Accepted - Design** | 13 | Architecturally decided, sound reasoning, not yet built or measured (ADR-009, 010, 011, 014-018, 021-025) |
-| **Proposed** | 1 | No path to validation without a real deployment (ADR-026) |
+| **Accepted - Design** | 12 | Architecturally decided, sound reasoning, not yet built or measured (ADR-009, 010, 011, 014-016, 018, 021-025) |
+| **Proposed** | 2 | No path to validation without further work (ADR-017: PAFN's real Chat Agent does not use this retrieval design; ADR-026: no path to validation without a real deployment) |
 | Deprecated | 0 | No decisions deprecated |
 | Superseded | 0 | No decisions superseded |
 
@@ -476,7 +476,7 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 
 ### Context
 
-The Human Review Framework (ADR-007) and the Cross-Document Validation Engine both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
+The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) and the Cross-Document Validation Engine both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
 
 A food safety deployment has ~47 active rules. Loading all 47 rules as JSON context for every LLM call in the human review session is 20,000+ tokens per call - commercially catastrophic at scale.
 
@@ -584,20 +584,20 @@ The per-call token budget acts as a circuit breaker: if the assembled context ex
 ## ADR-017: Retrieval-Augmented Human Review
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (not confirmed as built this way in PAFN's chat engine)
+**Status:** Proposed - PAFN's real Chat Agent (SCEN-02) uses direct Cosmos DB tool lookups (`get_case_verdict`, `get_extracted_fields`, `get_finding_evidence`, `get_rule_definition`), not Azure AI Search retrieval-augmented generation. This ADR describes a design under consideration, not the as-built system - open question, to be revisited.
 **Category:** AI / Human Review
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.7 (Retrieval-Augmented Human Review)
 
 ### Context
 
-The Human Review Framework (ADR-007) provides a conversational agent for reviewers. Naive implementation would inject the full case record into the LLM context for every reviewer query - giving the LLM complete visibility but consuming 10,000+ tokens per query. For a reviewer session with 20 queries on a complex case (typical for HOLD/FAIL decisions), this is 200,000+ tokens per session.
+The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) provides a conversational agent for reviewers. Naive implementation would inject the full case record into the LLM context for every reviewer query - giving the LLM complete visibility but consuming 10,000+ tokens per query. For a reviewer session with 20 queries on a complex case (typical for HOLD/FAIL decisions), this is 200,000+ tokens per session.
 
 A reviewer asking "Why was the weight flagged?" needs the 2–3 most relevant findings, not the entire case record. The LLM does not need all 10,000 tokens of context to answer accurately - it needs the right 1,500 tokens.
 
 ### Decision
 
-The Human Review Framework implements **retrieval-augmented generation (RAG)** for every reviewer query:
+**Note:** This retrieval-augmented design is proposed, not yet implemented - PAFN's real Chat Agent answers reviewer queries via direct Cosmos DB tool lookups instead. The Chat Agent would implement **retrieval-augmented generation (RAG)** for every reviewer query if this design is adopted:
 
 1. The reviewer's query is embedded using text-embedding-3-small
 2. Azure AI Search performs hybrid vector + keyword retrieval against the case's indexed evidence (using `caseId` as filter)
@@ -765,7 +765,7 @@ Simple Cosmos DB queries (keyword or field equality) cannot answer semantic simi
 
 Azure AI Search (Standard tier, semantic ranker enabled) provides all case history indexing and retrieval. Two indexes are maintained:
 
-- **`case-document-index`:** Per-document extracted facts, indexed per case. Used by the Human Review Agent for evidence retrieval (ADR-017) and by the Cross-Document Validation Engine for historical field value lookup.
+- **`case-document-index`:** Per-document extracted facts, indexed per case. Proposed for evidence retrieval by the Chat Agent (ADR-017, not yet implemented) and used by the Cross-Document Validation Engine for historical field value lookup.
 - **`case-summary-index`:** Per-case decision narrative (GPT-generated plain-language summary). Used by the Risk Assessment Engine for historical pattern matching and by the Human Review Agent for precedent search.
 
 Both indexes use hybrid search (vector similarity + BM25 keyword). All vectors use `text-embedding-3-small` for cost-effective semantic encoding.
@@ -812,7 +812,7 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 
 ### Context
 
-Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Decision Recommendation Engine (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
+Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Recommendation Engine (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
 
 Real PAFN's `shared/pii_redaction.py` already solves this with a simpler pattern: PII fields are redacted before the Cosmos write boundary, and no un-redacted tier is ever persisted. The pipeline uses full data in memory during processing; only the redacted version is stored. This is proven in production and has a smaller risk surface than storing raw PII anywhere.
 
@@ -824,7 +824,7 @@ A dual-tier write (a second, un-redacted "secured" container for auditors) is a 
 
 **Optional dual-tier extension:** If a specific customer's compliance requirement mandates auditor access to raw PII values (documented and cited here before enabling), the platform may additionally write a second, access-restricted container containing the un-redacted evidence chain. This is a per-template, per-customer opt-in - never a platform-wide default.
 
-The PII field map (which fields in which documents contain PII) is generated during extraction (Activity 2) and stored in the extraction artifacts. The Decision Recommendation Engine uses this map to perform redaction without re-processing the documents.
+The PII field map (which fields in which documents contain PII) is generated during extraction (Activity 2) and stored in the extraction artifacts. The Recommendation Engine uses this map to perform redaction without re-processing the documents.
 
 ### Rationale
 
@@ -877,7 +877,7 @@ ARIA implements an 8-component pipeline of Agents and Stages: five sequential co
 
 **Component roster:**
 - **Sequential (5):** Intake Stage (Activity 1) · Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · Validation Agent (Activity 3) · Policy Stage (Activity 4 - includes risk scoring and HOLD determination) · Recommendation Agent (Activity 5)
-- **Async / background (3):** Review Assistant Agent (async, Phase 2) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
+- **Async / background (3):** Chat Agent (async, built in PAFN) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
 
 Each component:
 - Has a single, well-defined responsibility
@@ -1248,7 +1248,7 @@ The 85% threshold is calibrated from PAFN production experience - at 85% field e
 
 **Total ADRs in catalog:** 28
 **Date range:** ADR-001 through ADR-008 (2026-08-07) · ADR-009 through ADR-028 (2026-08-10)
-**Status breakdown:** 14 Accepted - Proven · 13 Accepted - Design · 1 Proposed
+**Status breakdown:** 14 Accepted - Proven · 12 Accepted - Design · 2 Proposed
 
 **Decisions by impact area:**
 - **Token efficiency:** ADR-011 · ADR-012 · ADR-013 · ADR-014 · ADR-015 · ADR-016 · ADR-017 · ADR-018 · ADR-027 (9 decisions)

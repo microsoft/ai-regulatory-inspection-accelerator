@@ -21,8 +21,8 @@ This accelerator leverages Azure Document Intelligence, Azure OpenAI Service, Az
 - **Evidence Intake** - Documents are staged in Blob Storage by the source system's connector (see Connector Framework below - staging mechanism is connector-specific, for example a direct upload integration or a SAS-scoped URL), then a REST API call with immediate acknowledgement (HTTP 202) references them by ID to start processing. Validates bundle integrity - checksums, MIME types, document count, and file sizes - via the Storage SDK before any AI processing begins.
 - **Document Intelligence** - Each document is assessed for quality, processed through Azure Document Intelligence, and extracted into structured fields using auto-generated prompts derived from a JSON field schema. Adding a new document type requires only a configuration entry, not a code change.
 - **Cross-Document Validation** - The platform reasons across all documents in the bundle simultaneously: resolving semantic field-name variations, detecting cross-document inconsistencies, and assembling a unified evidence map.
-- **Policy & Risk Evaluation** - Compliance rules are loaded from Cosmos DB at runtime - rule changes take effect immediately without redeployment. A weighted risk score determines whether a case is auto-resolved or escalated for human review.
-- **Decision Recommendation** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are flagged for human review.
+- **Policy & Risk Evaluation** - Compliance rules are loaded from Cosmos DB at runtime - rule changes take effect immediately without redeployment. Findings and extraction confidence determine a risk level that decides whether a case is auto-resolved or escalated for human review.
+- **Recommendation** - A structured, explainable decision is delivered with a complete field-level evidence chain. Cases requiring judgment are flagged for human review.
 
 Processing, extraction, validation, and decision steps are tracked with status and scored for confidence to automate routine cases and identify as-needed human review.
 
@@ -38,9 +38,9 @@ The platform is structured in three tiers so it can be deployed across regulated
 | Document Intelligence Engine | Structured + AI-assisted field extraction |
 | Cross-Document Validation Engine | Semantic reconciliation and conflict detection |
 | Policy Evaluation Engine | Deterministic, runtime-configurable rule evaluation |
-| Risk Assessment Engine | Weighted risk scoring and escalation logic |
-| Decision Recommendation Engine | Verdict synthesis, evidence chain, secure decision delivery |
-| Human Review Framework | Grounded, citation-backed reviewer agent and override workflow *(Phase 2)* |
+| Risk Assessment Engine | Risk-based escalation logic |
+| Recommendation Engine | Verdict synthesis, evidence chain, secure decision delivery, with human-in-the-loop escalation for low-confidence or high-risk cases |
+| Human Review Framework (Chat Agent) | Conversational, evidence-grounded interface for the human reviewer *(Phase 2)* |
 | Audit and Explainability Framework | Immutable event logging and plain-language decision rationale |
 | Connector Framework | Pluggable inbound/outbound integration contract |
 | Template Framework | Industry configuration packaging and lifecycle management |
@@ -51,18 +51,18 @@ The pipeline is orchestrated as a coordinated set of agents and processing stage
 
 ```
 Intake Stage → Extraction Agent → Validation Agent → Policy Stage → Recommendation Agent
-           ↘ Review Assistant Agent (Phase 2)    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
+           ↘ Chat Agent (Phase 2)    ↘ Audit Assistant Agent    ↘ Knowledge Pack Stage
 ```
 
-**Phase 1 ships Recommendation only** - Intake Stage through Recommendation Agent above. There is no chat agent in Phase 1: the Review Assistant Agent (the chat-based, citation-grounded human reviewer) is a Phase 2 capability, built after Phase 1 is complete.
+**Phase 1 ships Recommendation** - Intake Stage through Recommendation Agent above, with human-in-the-loop review built in: low-confidence and high-risk cases are always routed to a human reviewer. The Chat Agent adds a conversational interface to that same review step and ships in Phase 2 (see Roadmap).
 
-A background Knowledge Pack Stage keeps each industry template's compressed policy context current whenever rules change, without requiring a redeployment.
+A background Knowledge Pack Stage is designed to keep each industry template's compressed policy context current whenever rules change, without requiring a redeployment - this component is not yet built (see [Roadmap](#roadmap)).
 
 | Design principle | Detail |
 |---|---|
-| Token efficiency | Documents are normalized to clean Markdown, structured extraction runs first so the model only fills genuine gaps, large documents are chunked to relevant sections, and policy context is compressed into a compact Knowledge Pack instead of injecting a full rule set into every prompt |
+| Token efficiency | Documents are normalized to clean Markdown and structured extraction runs first so the model only fills genuine gaps - both proven in the PAFN reference deployment; large documents are designed to be chunked to relevant sections and policy context compressed into a compact Knowledge Pack instead of a full rule set per prompt - both planned, not yet built |
 | Deterministic policy evaluation | Rule evaluation is config-driven and deterministic - no LLM call is required to apply a compliance rule |
-| Human-in-the-loop | Low-confidence and high-risk cases are always routed to a grounded review agent; every override requires a documented rationale |
+| Human-in-the-loop | Low-confidence and high-risk cases are always routed to a human reviewer; every override requires a documented rationale. The Chat Agent adds a conversational interface to that review step *(Phase 2)* |
 | Extensibility | Add a new document type, rule, or industry template without modifying platform code |
 
 ---
@@ -75,9 +75,10 @@ A background Knowledge Pack Stage keeps each industry template's compressed poli
 - **Configuration-driven extraction** - New document types are added via JSON configuration; the extraction prompt is auto-generated from the field schema.
 - **Cross-document semantic reconciliation** - Resolves field-name variations across documents and languages, and detects contradictions across the full bundle.
 - **Runtime-configurable policy engine** - Compliance rules are evaluated deterministically against eight rule categories, loaded from Cosmos DB and effective immediately on change.
-- **Weighted risk scoring** - Configurable risk weight matrix with historical case pattern calibration determines escalation to human review.
+- **Risk-based escalation** - Findings and extraction confidence determine a High/Medium/Low risk level that routes cases to human review; a configurable weighted risk matrix with historical case-pattern calibration is a planned enhancement, not yet built in the PAFN reference deployment.
 - **Explainable decisions with full evidence chain** - Every decision traces back to the source document, field, and rule that produced it.
-- **Grounded human review** *(Phase 2)* - A citation-backed review agent answers reviewer questions using only submitted case evidence, with mandatory override rationale capture.
+- **Human-in-the-loop by default (Phase 1)** - Low-confidence or high-risk cases are automatically queued for human review before any decision is finalized; no fully autonomous high-stakes decision is made.
+- **Chat Agent for human review** *(Phase 2)* - A conversational agent lets reviewers ask questions about case evidence, grounded in the submitted case, with mandatory override rationale capture.
 - **Immutable audit trail** - Every model call, rule evaluation, and human action is logged for point-in-time decision reconstruction.
 - **Pluggable connector framework** - Inbound submission sources and outbound decision delivery integrate via a documented connector contract.
 
@@ -97,11 +98,11 @@ Deployment requires an Azure subscription with permissions to create resource gr
 
 | Azure Resource | Role | Pricing |
 |---|---|---|
-| Azure OpenAI Service | Field extraction, cross-document reasoning, decision explanation, and grounded review agent | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
+| Azure OpenAI Service | Field extraction, cross-document reasoning, decision explanation, and the Chat Agent | [Pricing](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/) |
 | Azure AI Document Intelligence | Structured OCR and prebuilt-model extraction | [Pricing](https://azure.microsoft.com/pricing/details/ai-document-intelligence/) |
 | Azure Functions (Durable Functions) | Pipeline orchestration across the five processing stages | [Pricing](https://azure.microsoft.com/pricing/details/functions/) |
 | Azure Cosmos DB | Case records, runtime-configurable rules, verdicts, and audit trail | [Pricing](https://azure.microsoft.com/pricing/details/cosmos-db/) |
-| Azure AI Search | Case history indexing for risk calibration and grounded review retrieval | [Pricing](https://azure.microsoft.com/pricing/details/search/) |
+| Azure AI Search | Case history indexing for risk calibration | [Pricing](https://azure.microsoft.com/pricing/details/search/) |
 | Azure API Management | Submission gateway and schema validation | [Pricing](https://azure.microsoft.com/pricing/details/api-management/) |
 | Azure Key Vault | Managed Identity-based secret storage (HMAC signing keys) | [Pricing](https://azure.microsoft.com/pricing/details/key-vault/) |
 | Azure Blob Storage | Raw and normalized document storage | [Pricing](https://azure.microsoft.com/pricing/details/storage/blobs/) |
@@ -116,8 +117,8 @@ src/platform/                          Core Platform - domain-neutral engines (T
   cross_document/                      Cross-Document Validation Engine
   policy/                              Policy Evaluation Engine
   risk/                                Risk Assessment Engine
-  decision/                            Decision Recommendation Engine
-  human_review/                        Human Review Framework (Phase 2 - see Roadmap)
+  decision/                            Recommendation Engine
+  human_review/                        Human Review Framework - Chat Agent (Phase 2 - see Roadmap)
   explainability/                      Explainability Framework
   audit/                               Audit and Lineage Framework
   reporting/                           Reporting Framework (observability, token cost, cache hit rate)
@@ -178,8 +179,8 @@ With ARIA, the inspector submits the full document bundle to the platform, which
 
 1. **Extracts structured data from every document** - invoice values, certificate numbers, country of origin, expiry dates - using config-driven extraction, including Arabic and English bilingual documents.
 2. **Reconciles the bundle** - resolving field-name variations across languages and detecting cross-document inconsistencies (for example, a net weight mismatch between the invoice and packing list, or an expired certificate).
-3. **Evaluates ministry policy rules** loaded at runtime from Cosmos DB - mandatory certificate requirements, HS code restrictions, and cross-document consistency checks - producing a weighted risk score.
-4. **Delivers a decision** - PASS, HOLD, or FAIL - with a complete, field-level evidence chain, escalating HOLD/FAIL cases to a grounded review agent that answers inspector questions with citations back to the specific document and field.
+3. **Evaluates ministry policy rules** loaded at runtime from Cosmos DB - mandatory certificate requirements, HS code restrictions, and cross-document consistency checks - producing a risk level from the findings and extraction confidence.
+4. **Delivers a decision** - PASS, HOLD, or FAIL - with a complete, field-level evidence chain, escalating HOLD/FAIL cases to human review. The Chat Agent lets reviewers ask evidence questions conversationally.
 
 The same Core Platform, unchanged, applies this pattern to customs clearance, KYC/AML validation, healthcare compliance, and other multi-document, policy-driven decision workflows - only the industry template changes.
 
@@ -204,9 +205,9 @@ Every row above uses the same Core Platform, the same connector model (third-par
 - **Lower cost to expand into new regulated domains** - A new industry is a template - 13 JSON/Markdown configuration files - not a new codebase or a new deployment of platform engineering effort.
 - **Consistent, defensible outcomes** - Every decision traces back to the source document, field, and rule that produced it, reducing variance between reviewers and strengthening audit response.
 - **Rules that keep pace with policy change** - Compliance rules take effect immediately from configuration changes, without a redeployment cycle.
-- **Human accountability retained** - Low-confidence or high-risk cases are always escalated to a grounded reviewer; every override requires a documented rationale, and no high-stakes decision is made fully autonomously.
+- **Human accountability retained** - Low-confidence or high-risk cases are always escalated to a human reviewer; every override requires a documented rationale, and no high-stakes decision is made fully autonomously.
 
-> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described above. Core Platform engine code (`src/platform/`) is under active implementation, generalized from the validated PAFN reference deployment - see [Roadmap](#roadmap). Human Review (the grounded review agent) is a Phase 2 capability, still in progress. Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
+> **Implementation status:** This repository currently ships the reference architecture, ADRs, connector contract, and configuration schema described above. Core Platform engine code (`src/platform/`) is under active implementation, generalized from the validated PAFN reference deployment - see [Roadmap](#roadmap). Track progress or contribute via [Issues](https://github.com/microsoft/dstoolkit-document-inspection-agent/issues).
 
 ---
 
@@ -240,7 +241,7 @@ Have questions, find a bug, or want to request a feature? [Submit a new issue](h
 
 ## Responsible AI Transparency FAQ
 
-ARIA is designed so that AI never makes a fully autonomous high-stakes decision. Cases with low confidence or elevated risk are automatically routed to human review before a final decision is recorded. The review agent answers exclusively from submitted case evidence, cites its source for every claim, and is designed to acknowledge when evidence is insufficient rather than speculate. Every override requires a documented rationale, and every model call, rule evaluation, and human action is captured in an immutable audit log to support point-in-time reconstruction of any historical decision.
+ARIA is designed so that AI never makes a fully autonomous high-stakes decision. Cases with low confidence or elevated risk are automatically routed to human review before a final decision is recorded. The Chat Agent answers reviewer questions using only submitted case evidence, never general knowledge. Every override requires a documented rationale, and every model call, rule evaluation, and human action is captured in an immutable audit log to support point-in-time reconstruction of any historical decision.
 
 Please refer to [Transparency FAQ](TRANSPARENCY_FAQ.md) for full responsible AI transparency details of this accelerator. Organizations deploying ARIA in a regulated context should complete their own responsible AI, data protection, and compliance review appropriate to their jurisdiction before production use.
 
@@ -258,8 +259,8 @@ To the extent this accelerator includes components derived from Microsoft produc
 
 | Stage | Focus |
 |---|---|
-| Current (Phase 1) | Core Platform recommendation engine (`src/platform/`) - Evidence Intake through Decision Recommendation - in progress, generalized from the validated Food Safety reference implementation |
-| Phase 2 | Human Review Framework (grounded review agent) - in progress |
+| Current (Phase 1) | Core Platform Recommendation Engine (`src/platform/`) - Evidence Intake through Recommendation, with human-in-the-loop escalation built in - in progress, generalized from the validated Food Safety reference implementation |
+| Phase 2 | Chat Agent - built in the PAFN reference deployment, generalizing into the Core Platform - in progress |
 | Next | Additional industry templates (customs, healthcare, licensing, environmental, financial compliance, KYC/AML) validated independently |
 | Future | Multi-tenant SaaS, Government Cloud, and sovereign/air-gapped deployment topologies; Azure Marketplace packaging |
 
