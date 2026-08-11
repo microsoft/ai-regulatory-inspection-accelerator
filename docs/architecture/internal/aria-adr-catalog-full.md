@@ -243,7 +243,7 @@ The banned-word list is intentionally configurable because new industries introd
 
 Azure OpenAI input and output tokens are the dominant variable cost in every ARIA deployment. An unoptimized implementation that sends raw documents to LLMs produces a cost profile that scales poorly: more documents, more pages, more complexity → quadratically higher LLM costs. For a government customer processing 10,000 cases/day with 5 documents per case, this becomes a commercially critical concern.
 
-Early PAFN prototypes sent full document OCR output directly to GPT-4 for field extraction. Token consumption was approximately 5–8× what a structured approach would require. At scale, this cost profile would make ARIA economically non-viable in price-sensitive markets.
+Early PAFN prototypes sent full document OCR output directly to the LLM for field extraction. Token consumption was approximately 5–8× what a structured approach would require. At scale, this cost profile would make ARIA economically non-viable in price-sensitive markets.
 
 Token efficiency must be an architectural property, not an operational practice. If it is left to individual developers to "try to use fewer tokens," the property will not hold across the codebase over time.
 
@@ -360,7 +360,7 @@ Normalized Markdown is stored in Blob Storage, enabling reuse if the same docume
 
 ### Context
 
-For many regulated document types (invoices, receipts, identity documents), Azure Document Intelligence prebuilt models already extract structured fields with high accuracy and at lower cost than LLM extraction. Sending the entire document to GPT-4 to re-extract fields that Azure DI has already extracted is pure token waste with no accuracy benefit.
+For many regulated document types (invoices, receipts, identity documents), Azure Document Intelligence prebuilt models already extract structured fields with high accuracy and at lower cost than LLM extraction. Sending the entire document to the LLM to re-extract fields that Azure DI has already extracted is pure token waste with no accuracy benefit.
 
 However, for custom document types (Halal certificates, environmental impact assessments, specialist medical reports), Azure DI prebuilt models do not cover all required fields. LLM extraction is needed for the uncovered fields.
 
@@ -647,7 +647,7 @@ The mandatory citation requirement (source document, page, field value) ensures 
 
 ### Context
 
-LLM extraction prompts have a static prefix (system prompt + field list template) and a variable suffix (document content). The static prefix is identical across all cases of the same document type. Azure OpenAI (GPT-4.1+) supports prompt prefix caching: if the prompt prefix (≥ 1,024 tokens) is identical to a recent call, the cached prefix tokens are charged at 50% of the standard input token price.
+LLM extraction prompts have a static prefix (system prompt + field list template) and a variable suffix (document content). The static prefix is identical across all cases of the same document type. Azure OpenAI (GPT-5.4 or later) supports prompt prefix caching: if the prompt prefix (≥ 1,024 tokens) is identical to a recent call, the cached prefix tokens are charged at 50% of the standard input token price.
 
 Without deliberate prompt structuring, prompts may place variable content before the static prefix, disabling cache eligibility.
 
@@ -671,7 +671,7 @@ On template activation, a cache warm-up call is performed per document type to p
 
 ### Rationale
 
-Prompt prefix caching is a zero-code-change cost reduction once prompts are structured correctly. For a deployment processing 1,000 cases/day × 5 documents × 800 cached template tokens = 4M cached template tokens/day → ~2M tokens/day saved at 50% cache pricing. At $0.01 per 1K input tokens (GPT-4.1 pricing), this represents ~$20/day or ~$7,300/year in savings per 1,000-case/day deployment.
+Prompt prefix caching is a zero-code-change cost reduction once prompts are structured correctly. For a deployment processing 1,000 cases/day × 5 documents × 800 cached template tokens = 4M cached template tokens/day → ~2M tokens/day saved at 50% cache pricing. At $0.01 per 1K input tokens (illustrative pricing for GPT-5.4), this represents ~$20/day or ~$7,300/year in savings per 1,000-case/day deployment.
 
 ### Alternatives Considered
 
@@ -1128,7 +1128,7 @@ The two-endpoint substitution pattern works because ARIA's AI service clients ar
 - Government cloud and sovereign customers can use the same Terraform modules with different parameter values
 
 **Negative / Trade-offs:**
-- Local LLM models may not have feature parity with Azure OpenAI (GPT-5.x capabilities) - sovereign deployments may have lower extraction accuracy
+- Local LLM models may not have feature parity with Azure OpenAI (GPT-5.4 or later capabilities) - sovereign deployments may have lower extraction accuracy
 - Local Azure DI may not support all prebuilt models available in cloud
 - Sovereign infrastructure (Azure Stack Hub) is the customer's responsibility - ARIA provides the configuration, not the sovereign infrastructure
 

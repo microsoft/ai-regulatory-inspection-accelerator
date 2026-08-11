@@ -325,7 +325,7 @@ flowchart TB
 
     subgraph AILayer["Azure AI Services"]
         direction LR
-        AI1["Azure OpenAI<br/>(GPT-4.x/5.x · Vision)"]:::aiStyle
+        AI1["Azure OpenAI<br/>(GPT-5.4 · Vision)"]:::aiStyle
         AI2["Azure Document Intelligence<br/>(prebuilt-layout · prebuilt-invoice)"]:::aiStyle
         AI3["Cognitive Services<br/>(Translator / Vision)"]:::aiStyle
     end
@@ -1050,7 +1050,7 @@ sequenceDiagram
     AUD->>AUD: Immutable event stream append
     AUD->>AUD: Token usage capture (prompt + completion + cached)
 
-    Note over REV: Async - triggered on HOLD or reviewer request (built in PAFN; not yet generalized)
+    Note over REV: Async - triggered on HOLD or reviewer request (built in PAFN, not yet generalized)
     REC-->>REV: Case routed to human review queue
     REV->>REV: Retrieve top-3 evidence chunks (AI Search)
     REV->>REV: Assemble context (chunks + Knowledge Pack ≤ 1,800 tokens)
@@ -1201,7 +1201,7 @@ Phase 1 - Azure DI Structured Extraction:
 
 Phase 2 - Selective LLM Gap-Filling:
   input:  evidence_types.json field list MINUS Phase 1 covered fields
-  tool:   Azure OpenAI (GPT-4.x)
+  tool:   Azure OpenAI (GPT-5.4 or later)
   output: {field: {value, confidence}} for uncovered fields only
   cost:   LLM tokens for uncovered fields only (~40% of full extraction)
 ```
@@ -1317,7 +1317,7 @@ Session saving: 194,400 tokens (84%)
 
 **Where it applies:** Activities 2 and 3 - all LLM extraction and reasoning calls.
 
-**Azure OpenAI prompt caching:** Available on GPT-4.1+ and GPT-5.x. Cached tokens cost 50% of standard input token price. Minimum cacheable prefix: 1,024 tokens.
+**Azure OpenAI prompt caching:** Available on GPT-5.4 and later (the platform is designed to run on whichever later, most token-efficient model Azure OpenAI supports). Cached tokens cost 50% of standard input token price. Minimum cacheable prefix: 1,024 tokens.
 
 **Prompt structure for maximum cache benefit:**
 ```
@@ -1407,7 +1407,7 @@ def _track_tokens(self, **kwargs):
 | Knowledge Packs | Rule + policy context | 70–85% on policy context | Always |
 | Duplicate detection | Pre-processing | 100% for duplicates | Always |
 | Retrieval-augmented review | Human review | 80–90% per query | All human review queries |
-| Prompt prefix caching | All LLM calls | 40–50% on prefix tokens | GPT-4.1+ deployments |
+| Prompt prefix caching | All LLM calls | 40–50% on prefix tokens | GPT-5.4 or later |
 | Reference data via tools | Human review | Prevents misuse | Human review |
 | Token monitoring | Ongoing | Enables optimization | Always |
 | **Aggregate estimate** | **All** | **50–70% total** | **Production deployment** |
@@ -1850,7 +1850,7 @@ For government, regulated enterprise, and full data sovereignty requirements.
 |  :                                                    :   |
 |  :  +-----------+  +-----------+  +---------------+  :   |
 |  :  | Azure OAI |  | Azure DI  |  | Azure AI      |  :   |
-|  :  | (GPT-5.x) |  | (OCR)     |  | Search        |  :   |
+|  :  | (GPT-5.4+) |  | (OCR)     |  | Search        |  :   |
 |  :  +-----------+  +-----------+  +---------------+  :   |
 |  :  +-----------+  +-----------+  +---------------+  :   |
 |  :  | Cosmos DB |  | Blob      |  | Key Vault      |  :   |
@@ -1982,7 +1982,7 @@ For FedRAMP High, IL4, and sovereign government requirements.
 - All resources in Azure Government Cloud regions only
 - Azure Policy FedRAMP High blueprint applied
 - HSM-backed Key Vault for FIPS 140-2 compliance
-- Model availability constraint: verify GPT-4.x availability in Azure Government before deployment
+- Model availability constraint: verify GPT-5.4 (or the latest, most cost-efficient Azure OpenAI model available) is offered in Azure Government before deployment
 - Same Terraform modules with `AZURE_ENVIRONMENT=AzureUSGovernment` parameter
 
 ---
@@ -2077,11 +2077,11 @@ For classified government, defense, and critical infrastructure with zero public
 |  AI SERVICES TIER v                                                              |
 |  +---------------------------------------------+                                |
 |  |  Azure OpenAI Service                        |                                |
-|  |  Models: GPT-4.1 / GPT-5.x                  |                                |
+|  |  Models: GPT-5.4 (or later, most efficient)|                                |
 |  |  Vision capability (document quality check)  |                                |
 |  |  text-embedding-3-small (AI Search indexing) |                                |
 |  |  temperature=0.0, seed=42 (audit reprod.)    |                                |
-|  |  Prompt caching enabled (GPT-4.1+)           |                                |
+|  |  Prompt caching enabled (GPT-5.4)            |                                |
 |  +---------------------------------------------+                                |
 |  +---------------------------------------------+                                |
 |  |  Azure Document Intelligence                 |                                |
