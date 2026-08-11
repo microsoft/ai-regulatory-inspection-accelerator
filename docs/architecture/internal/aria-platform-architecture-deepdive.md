@@ -54,7 +54,7 @@ ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
 | **AP-03** | **Decision traceability as a first-class concern** | Every decision traceable to field → document → rule → ETag. Point-in-time reproducibility always. |
 | **AP-04** | **Security by architecture, not configuration** | Managed Identity, private endpoints, PII redaction at write boundary - foundational, not optional. |
 | **AP-05** | **Token efficiency by design** | Structured pre-processing before every LLM call. LLM receives minimum structured information, not raw documents. |
-| **AP-06** | **Human override, always** | No fully autonomous decisions. Human review framework is first-class, not an add-on. |
+| **AP-06** | **Human override, always** | No fully autonomous decisions. Human-in-the-loop escalation is first-class (manual queue, Phase 1); the Chat Agent, built in PAFN's reference deployment, adds a conversational interface to that same review step - not an add-on capability, though not yet generalized into the Core Platform. |
 | **AP-07** | **Durable, resumable orchestration** | Durable Functions checkpoint-based state persistence. Zero case loss on host restart. |
 | **AP-08** | **Runtime configurability** | Rules, thresholds, vocabularies, and risk weights take effect immediately - no deployment cycle. |
 | **AP-09** | **Isolation of reference implementations** | All customer-specific code lives in `reference-implementations/`. Platform code is provably clean. |
@@ -315,7 +315,7 @@ flowchart TB
         end
         subgraph DecisionGroup["Decision and Review"]
             PI9["Decision Engine<br/>(Verdict · Evidence Chain)"]:::platformStyle
-            PI10["Human Review Framework<br/>(Grounded Agent · Override)"]:::platformStyle
+            PI10["Chat Agent<br/>(Built in PAFN · Grounded Agent · Override)"]:::platformStyle
         end
         subgraph GovernGroup["Governance and Audit"]
             PI11["Audit Framework<br/>(Immutable · ETag · Lineage)"]:::platformStyle
@@ -781,7 +781,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-12: Decision Recommendation Engine
+### C-12: Recommendation Engine
 
 **Purpose:** Synthesizes the final decision from the risk score and findings, assembles the field-level evidence chain, performs PII redaction at the write boundary, selects top-N impact findings for the summary, and initiates HMAC-signed delivery to the external system.
 
@@ -817,7 +817,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-13: Human Review Framework
+### C-13: Human Review Framework - Chat Agent (built in PAFN's SCEN-02 reference deployment; not yet generalized into the Core Platform)
 
 **Purpose:** Provides a grounded, evidence-citing conversational AI interface for human reviewers. The agent answers questions using only case evidence retrieved from Azure AI Search - never from general knowledge. Supports override workflow with mandatory rationale capture.
 
@@ -996,8 +996,8 @@ ARIA's pipeline is five sequential stages plus three components that run asynchr
 | **Extraction Agent** | Document-to-field transformation, field canonicalization, and PII classification | Activity 2 (Phase 1 + 2, post-extraction) | DI Engine (C-02) + DI Service + Reconciliation Engine sub-component |
 | **Validation Agent** | Cross-document consistency and conflict detection | Activity 3 | Cross-Document Validation Engine (C-09) |
 | **Policy Stage** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| **Recommendation Agent** | Verdict synthesis, evidence chain, delivery | Activity 5 | Decision Recommendation Engine (C-12) |
-| **Review Assistant Agent** | Grounded evidence Q&A for human reviewers *(Phase 2 - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
+| **Recommendation Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 5 | Recommendation Engine (C-12) |
+| **Chat Agent** | Evidence Q&A for human reviewers, via direct Cosmos DB tool lookups *(built in PAFN reference deployment; not yet generalized - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-Demand | Audit Framework (C-15) |
 | **Knowledge Pack Stage** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
 
@@ -1013,7 +1013,7 @@ sequenceDiagram
     participant POL as Policy Stage
     participant REC as Recommendation Agent
     participant AUD as Audit Log
-    participant REV as Review Assistant Agent
+    participant REV as Chat Agent
 
     Note over KPA: Runs on template activation / rule change
     KPA->>KPA: Compress rules + aliases + vocab → Knowledge Pack
@@ -1050,7 +1050,7 @@ sequenceDiagram
     AUD->>AUD: Immutable event stream append
     AUD->>AUD: Token usage capture (prompt + completion + cached)
 
-    Note over REV: Async - triggered on HOLD or reviewer request (Phase 2)
+    Note over REV: Async - triggered on HOLD or reviewer request (built in PAFN; not yet generalized)
     REC-->>REV: Case routed to human review queue
     REV->>REV: Retrieve top-3 evidence chunks (AI Search)
     REV->>REV: Assemble context (chunks + Knowledge Pack ≤ 1,800 tokens)
@@ -1067,7 +1067,7 @@ sequenceDiagram
 | Validation Agent | Policy Stage | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
 | Policy Stage | Recommendation Agent | Findings + risk assessment | `{findings: [{ruleId, category, field, result, ruleETag}], score, grade, holdFlag, confidence, signals[]}` |
 | Recommendation Agent | Audit Log | Complete decision package | `{decision, evidenceChain, tokenMetrics}` |
-| Knowledge Pack Stage | Extraction Agent, Validation Agent, Review Assistant Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
+| Knowledge Pack Stage | Extraction Agent, Validation Agent, Chat Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
 
 ---
 
@@ -1249,7 +1249,7 @@ Effective saving: ~16,800 tokens (70%) for large document extraction
 
 ### 6.6 Strategy: Knowledge Packs
 
-**Where it applies:** Activities 3, 4, and Human Review Framework.
+**Where it applies:** Activities 3, 4, and the Chat Agent (built in PAFN, not yet generalized).
 
 **Knowledge Pack JSON schema:**
 ```json
@@ -1281,7 +1281,7 @@ Effective saving: ~16,800 tokens (70%) for large document extraction
 
 ### 6.7 Strategy: Retrieval-Augmented Human Review
 
-**Where it applies:** Human Review Framework (C-13) - every reviewer query.
+**Where it applies:** Chat Agent (C-13) - every reviewer query. Note: PAFN's real Chat Agent uses direct Cosmos DB tool lookups, not this retrieval-augmented design (ADR-017 is proposed, not implemented).
 
 **Without retrieval (anti-pattern):**
 ```
@@ -1334,7 +1334,7 @@ Session saving: 194,400 tokens (84%)
 
 ### 6.9 Strategy: Reference Data via Tool Calls (Not Context)
 
-**Where it applies:** Human Review Framework - domain reference data queries.
+**Where it applies:** Chat Agent - domain reference data queries. Note: not yet implemented this way in PAFN's real Chat Agent (direct Cosmos DB tool lookups today).
 
 **Anti-pattern (never do this):**
 ```python
@@ -1428,8 +1428,8 @@ def _track_tokens(self, **kwargs):
 |  Cross-Document Validation Engine                             |
 |  Policy Evaluation Engine (framework + 8 rule categories)    |
 |  Risk Assessment Engine (algorithm + HOLD logic)             |
-|  Decision Recommendation Engine                               |
-|  Human Review Framework (grounded agent + override)          |
+|  Recommendation Engine                                         |
+|  Chat Agent (grounded agent + override, built in PAFN)         |
 |  Explainability Framework                                     |
 |  Audit Framework (immutable event stream)                     |
 |  Connector Framework (SDK + built-in connectors)             |

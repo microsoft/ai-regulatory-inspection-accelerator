@@ -92,7 +92,7 @@ This is the reference topology as built and running for PAFN - no component belo
 
 The objective of the Core Platform is to reuse this same engine, unchanged, across many government and private-sector entities - not to reinvent infrastructure that already works. The only legitimate platform-side additions are genuine efficiency gains (for example, converting Office documents to Markdown before extraction to cut token usage); everything that varies per adopter - document types, rules, vocabulary, connectors - is configuration, never new platform code.
 
-**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below. There is no chat or grounded-review agent in this diagram. The Review Assistant Agent (chat-based, citation-grounded human review) is a Phase 2 capability, built after Phase 1, and is not part of the Agent and Processing Layer shown here.
+**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below - which already includes human-in-the-loop escalation for low-confidence/high-risk cases via a manual review queue. There is no chat interface in this diagram. The Chat Agent (a conversational interface to that same human reviewer) is built in the PAFN reference deployment (SCEN-02) but is not yet generalized into the Core Platform, not yet validated to the same degree as the Recommendation Agent, and is not part of the Agent and Processing Layer shown here.
 
 ![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](../images/architecture/reference-architecture.png)
 
@@ -199,8 +199,8 @@ Full Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact specificatio
 | C-09 | Cross-Document Validation Engine | Detects contradictions and missing dependencies across the full evidence bundle | Medium - bounded by Context Assembly Engine |
 | C-10 | Policy Evaluation Engine | Evaluates all active compliance rules from Cosmos DB, deterministically | Zero - no LLM calls, by design |
 | C-11 | Risk Assessment Engine | Computes weighted risk score, grade, and HOLD escalation decision | Minimal - only historical pattern lookup uses embeddings |
-| C-12 | Decision Recommendation Engine | Synthesizes final verdict, assembles evidence chain, delivers via HMAC-signed callback | Minimal - decision synthesis is algorithmic |
-| C-13 | Human Review Framework | Grounded, citation-backed Q&A agent for reviewers; supports override with rationale | High positive via retrieval-augmentation (80-90% per query) |
+| C-12 | Recommendation Engine | Synthesizes final verdict, assembles evidence chain, delivers via HMAC-signed callback - always includes human-in-the-loop escalation for low-confidence/high-risk cases | Minimal - decision synthesis is algorithmic |
+| C-13 | Human Review Framework (Chat Agent) | Conversational Q&A for reviewers, built in the PAFN reference deployment via direct Cosmos DB tool lookups - not yet generalized into the Core Platform or validated to the same degree as the Recommendation Engine | Retrieval-augmented design proposed (ADR-017) but not yet implemented - current tool calls query Cosmos DB directly |
 | C-14 | Explainability Framework | Generates plain-language, per-finding decision rationale | Low - bounded per-finding context |
 | C-15 | Audit Framework | Immutable, append-only event stream for every decision, LLM call, and human action | Monitoring - tracks tokens, doesn't consume them |
 | C-16 | Connector Framework | Adapts external submission/delivery formats via the `BaseConnector` interface contract | Zero - purely algorithmic transformation |
@@ -218,8 +218,8 @@ The pipeline is five sequential stages plus three components that run asynchrono
 | Extraction Agent | Document-to-field transformation, field canonicalization and PII classification | Activity 2 | Document Intelligence Engine (C-02) |
 | Validation Agent | Cross-document consistency + conflict detection | Activity 3 | Cross-Document Validation Engine (C-09) |
 | Policy Stage | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| Recommendation Agent | Verdict synthesis, evidence chain, delivery | Activity 5 | Decision Recommendation Engine (C-12) |
-| **Review Assistant Agent** | Grounded evidence Q&A for reviewers *(Phase 2 - see Roadmap)* | Async | Human Review Framework (C-13) |
+| Recommendation Agent | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation for low-confidence/high-risk cases already included | Activity 5 | Recommendation Engine (C-12) |
+| **Chat Agent** | Evidence Q&A for reviewers - built in the PAFN reference deployment, not yet generalized into the Core Platform *(see Roadmap)* | Async | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-demand | Audit Framework (C-15) |
 | Knowledge Pack Stage | Template knowledge compression + caching | Background | Knowledge Pack Generator (C-07) |
 
@@ -231,7 +231,7 @@ sequenceDiagram
     participant VAL as Validation Agent
     participant POL as Policy Stage
     participant REC as Recommendation Agent
-    participant REV as Review Assistant Agent
+    participant REV as Chat Agent
 
     INT->>INT: Validate bundle + normalize documents
     INT->>EXT: Staged bundle
@@ -241,10 +241,10 @@ sequenceDiagram
     VAL->>POL: Validated evidence map + conflicts
     POL->>POL: Evaluate 8 rule categories (deterministic) + weighted risk score + HOLD determination
     POL->>REC: Findings + risk score + grade + confidence
-    REC->>REC: Verdict synthesis + evidence chain
-    Note over REV: Async - triggered on HOLD or reviewer request (Phase 2)
+    REC->>REC: Verdict synthesis + evidence chain + human-in-the-loop escalation (Phase 1, manual queue)
+    Note over REV: Async - triggered on HOLD or reviewer request; built in PAFN reference deployment, not yet generalized
     REC-->>REV: Case routed to human review queue
-    REV->>REV: Retrieval-augmented Q&A grounded in evidence
+    REV->>REV: Direct Cosmos DB tool lookups grounded in evidence (retrieval-augmented design proposed in ADR-017, not yet implemented)
 ```
 
 Full communication contracts (payload schemas between each component) live in the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md#53-agent-communication-contracts).
@@ -263,7 +263,7 @@ The Token Efficiency Layer is a cross-cutting design pattern - not a single comp
 | Semantic chunking | LLM extraction | 60-80% for large docs | Documents > 10 pages |
 | Knowledge Packs | Rule + policy context | 70-85% on policy context | Always |
 | Duplicate detection | Pre-processing | 100% for duplicates | Always |
-| Retrieval-augmented review | Human review | 80-90% per query | All human review queries |
+| Retrieval-augmented review | Human review | Proposed (ADR-017), not yet implemented - current Chat Agent uses direct Cosmos DB tool lookups | All human review queries |
 | Prompt prefix caching | All LLM calls | 40-50% on prefix tokens | GPT-4.1+ deployments |
 | Reference data via tools | Human review | Prevents misuse | Human review |
 | Token monitoring | Ongoing | Enables optimization | Always |
