@@ -1,0 +1,106 @@
+name: Infra
+
+# Single "Infra" pipeline for provisioning Azure infrastructure via Terraform.
+# Two jobs:
+#   - bootstrap:     the Terraform state storage account (infra/bootstrap)
+#   - deploy-infra:  the platform resources (infra/infra)
+# Kept as one workflow so future app/service deployment pipelines are
+# clearly separate from infrastructure provisioning.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: "Which stack to run"
+        required: true
+        type: choice
+        options: [bootstrap, infra]
+        default: infra
+      action:
+        description: "Terraform action"
+        required: true
+        type: choice
+        options: [plan, apply]
+        default: plan
+
+permissions:
+  id-token: write # required for OIDC login to Azure
+  contents: read
+
+env:
+  TF_VERSION: "1.9.0"
+  # OIDC federated credential - no client secret stored anywhere.
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_USE_OIDC: true
+
+jobs:
+  bootstrap:
+    name: "Bootstrap: tfstate storage account"
+    if: github.event_name != 'workflow_dispatch' || inputs.stack == 'bootstrap'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/bootstrap
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Apply
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        run: terraform apply -input=false -auto-approve tfplan
+
+  deploy-infra:
+    name: "Deploy: platform infra"
+    if: github.event_name != 'workflow_dispatch' || inputs.stack == 'infra'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform Apply
+        if: github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
+        run: terraform apply -input=false -auto-approve tfplan

@@ -354,6 +354,20 @@ paket-files/
 **/__pycache__/
 *.pyc
 
+# Terraform
+# Note: .terraform.lock.hcl is intentionally NOT ignored - commit it for
+# reproducible provider versions.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.example.tfvars
+
 # Cake - Uncomment if you are using it
 #tools/**
 #!tools/packages.config
