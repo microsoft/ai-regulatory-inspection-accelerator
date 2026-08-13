@@ -15,3 +15,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Connector SDK base contract
 - PAFN Food Inspection reference implementation (Kuwait)
 - Terraform IaC: 5 modules (app-landing-zone, ai-landing-zone, network, monitoring, identity)
+- Core Platform pipeline orchestrator (`src/platform/orchestration/pipeline.py`) - decorator-free,
+  unit-testable Durable Functions orchestrator sequencing Pre-Validation, DI Extraction,
+  Rules & Policy, and Delivery agents, ported and generalized from PAFN
+- Core Platform submission guard (`src/platform/orchestration/submission.py`) - pure idempotency/
+  restart-resume decision logic, decoupled from Azure Functions HTTP and Durable Functions client types
+- Core Platform pre-validation checks (`src/platform/intake/pre_validation.py`) - structural,
+  metadata-only submission validation (document count, duplicate detection, MIME type, missing
+  checksum, attachment type consistency, empty items), ported and generalized from PAFN
+- Core Platform field normalization (`src/platform/document_intelligence/field_normalization.py`) -
+  Arabic/BiDi numeral and date normalization, currency extraction, config-driven field-alias
+  resolution and canonicalization (with an injectable LLM semantic-resolver hook), and
+  issue-date + validity-period expiry computation, ported and generalized from PAFN
+- Core Platform quality assessment (`src/platform/document_intelligence/quality_assessment.py`) -
+  pre-OCR image quality threshold decision logic with an injectable vision-model callback,
+  ported and generalized from PAFN
