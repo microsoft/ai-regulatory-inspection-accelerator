@@ -988,15 +988,15 @@ def reportStatus(case_id: str, status: str, error: str | None) -> bool
 
 ### 5.1 Agent Design
 
-ARIA's pipeline is five sequential agents plus three components that run asynchronously or in the background, each responsible for a bounded set of decisions and producing structured output consumed by the next component. Components share context through structured interfaces - not shared state.
+ARIA's pipeline is five sequential agents sequenced across four Durable Functions activities, plus three components that run asynchronously or in the background, each responsible for a bounded set of decisions and producing structured output consumed by the next component. Components share context through structured interfaces - not shared state. LLM Validation Agent and Rules & Policy Agent both run inside Activity 3, in sequence, rather than as two separate Durable activities - this matches PAFN's real production Function App, which registers exactly four activity triggers.
 
 | Component | Role | Processing Stage | Primary Tool |
 |---|---|---|---|
 | **Pre-Validation Agent** | Bundle reception, validation, staging, pre-processing | Activity 1 | Pre-Validation Agent (C-01) |
 | **DI Extraction Agent** | Document-to-field transformation, field canonicalization, and PII classification | Activity 2 (Phase 1 + 2, post-extraction) | DI Extraction Agent (C-02) + DI Service + Reconciliation Engine sub-component |
-| **LLM Validation Agent** | Cross-document consistency and conflict detection | Activity 3 | LLM Validation Agent (C-09) |
-| **Rules & Policy Agent** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| **Delivery Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 5 | Delivery Agent (C-12) |
+| **LLM Validation Agent** | Cross-document consistency and conflict detection | Activity 3 (step 1) | LLM Validation Agent (C-09) |
+| **Rules & Policy Agent** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 3 (step 2) | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
+| **Delivery Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 4 | Delivery Agent (C-12) |
 | **Chat Agent** | Evidence Q&A for human reviewers, via direct Cosmos DB tool lookups *(built in PAFN reference deployment; not yet generalized - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-Demand | Audit Framework (C-15) |
 | **Knowledge Pack Stage** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
@@ -1837,7 +1837,7 @@ For government, regulated enterprise, and full data sovereignty requirements.
 |  :  |  Azure APIM    |    |  Azure Functions             | : |
 |  :  |  (Submission   |───>|  (Flex Consumption)          | : |
 |  :  |   Gateway)     |    |  Durable Orchestrator        | : |
-|  :  +----------------+    |  5 Activities                | : |
+|  :  +----------------+    |  4 Activities                | : |
 |  :                        +------------------------------+ : |
 |  :  +----------------------------------------+           : |
 |  :  |  Azure Virtual Network                 |           : |
@@ -2062,9 +2062,9 @@ For classified government, defense, and critical infrastructure with zero public
 |  |  |  Durable Orchestrator                    ||  ← Azure Storage (task hub)  |
 |  |  |  Activity 1: Evidence Intake             ||                               |
 |  |  |  Activity 2: Document Intelligence       ||  ← Azure OpenAI              |
-|  |  |  Activity 3: Evidence Reconciliation     ||  ← Azure OpenAI              |
-|  |  |  Activity 4: Policy + Risk Evaluation    ||  ← Cosmos DB (rules)         |
-|  |  |  Activity 5: Decision + Delivery         ||  ← Key Vault (HMAC)          |
+|  |  |  Activity 3: Evidence Reconciliation +   ||  ← Azure OpenAI              |
+|  |  |             Policy + Risk Evaluation      ||  ← Cosmos DB (rules)         |
+|  |  |  Activity 4: Decision + Delivery          ||  ← Key Vault (HMAC)          |
 |  |  +------------------------------------------+|                               |
 |  |  |  Change Feed Trigger Functions           ||  ← Cosmos DB Change Feed     |
 |  |  |  - Case Document Indexer                 ||  → Azure AI Search            |
