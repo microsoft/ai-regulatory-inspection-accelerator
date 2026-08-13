@@ -123,10 +123,9 @@ flowchart LR
         direction LR
         A1["Pre-Validation Agent"]:::agentStyle
         A2["DI Extraction Agent"]:::agentStyle
-        A3["LLM Validation Agent"]:::agentStyle
-        A4["Rules & Policy Agent"]:::agentStyle
-        A5["Delivery Agent"]:::agentStyle
-        A1 --> A2 --> A3 --> A4 --> A5
+        A3["Rules & Policy Agent - includes LLM Validation reasoning"]:::agentStyle
+        A4["Delivery Agent"]:::agentStyle
+        A1 --> A2 --> A3 --> A4
     end
 
     subgraph AI["Azure AI Services"]
@@ -172,7 +171,7 @@ flowchart LR
 |---|---|---|
 | Customer Portal / Site (Government Agency or Private Entity) | The adopter's own on-prem/cloud system - submits bundles over a Site-to-Site VPN and receives the final verdict back on the same portal; ARIA does not host or replace this system | Customer Portal / Site · SharePoint · SQL |
 | Azure Entry and Orchestration | Accepts the submission, validates it, and starts the Durable Functions orchestration | Blob Storage (Blob SDK, service principal) · Azure API Management · Durable Orchestrator |
-| Agent and Processing Layer (Phase 1 - Recommendation only) | Durable Functions activities, invoked by the orchestrator, that validate, extract, and deliver - no chat or review agent runs here | Pre-Validation Agent · DI Extraction Agent · LLM Validation Agent · Rules & Policy Agent · Delivery Agent |
+| Agent and Processing Layer (Phase 1 - Recommendation only) | Durable Functions activities, invoked by the orchestrator, that validate, extract, and deliver - no chat or review agent runs here | Pre-Validation Agent · DI Extraction Agent · Rules & Policy Agent (includes LLM Validation reasoning) · Delivery Agent |
 | Azure AI Services | Foundation AI capabilities called by the Agent layer | Azure OpenAI · Azure AI Document Intelligence · Cognitive Services (Translator/Vision) |
 | Data and Integration Layer | Persistent state and the outbound verdict callback | Cosmos DB · Blob Storage · SQL |
 | Azure Platform, Monitoring and Operations | Cross-cutting platform services | Key Vault · Application Insights · Azure Monitor · Entra Authentication |
@@ -210,15 +209,15 @@ Full Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact specificatio
 
 ## 5. Agent Architecture
 
-The pipeline is five sequential agents plus three components that run asynchronously or in the background.
+The pipeline is four sequential Durable Functions activities plus three components that run asynchronously or in the background. Five named Agents map onto those four activities: LLM Validation Agent is a distinct logical processing step, but it executes as the first step inside the Rules & Policy activity rather than as its own separate Durable activity (this matches PAFN's real production Function App, which registers exactly four activity triggers).
 
 | Component | Role | Activity | Primary component |
 |---|---|---|---|
 | Pre-Validation Agent | Bundle reception, validation, staging | Activity 1 | Pre-Validation Agent (C-01) |
 | DI Extraction Agent | Document-to-field transformation, field canonicalization and PII classification | Activity 2 | DI Extraction Agent (C-02) |
-| LLM Validation Agent | Cross-document consistency + conflict detection | Activity 3 | LLM Validation Agent (C-09) |
-| Rules & Policy Agent | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| Delivery Agent | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation for low-confidence/high-risk cases already included | Activity 5 | Delivery Agent (C-12) |
+| LLM Validation Agent | Cross-document consistency + conflict detection - runs as the first step within Activity 3, not a separate activity | Activity 3 (step 1) | LLM Validation Agent (C-09) |
+| Rules & Policy Agent | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 3 (step 2) | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
+| Delivery Agent | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation for low-confidence/high-risk cases already included | Activity 4 | Delivery Agent (C-12) |
 | **Chat Agent** | Evidence Q&A for reviewers - built in the PAFN reference deployment, not yet generalized into the Core Platform *(see Roadmap)* | Async | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-demand | Audit Framework (C-15) |
 | Knowledge Pack Stage | Template knowledge compression + caching | Background | Knowledge Pack Generator (C-07) |
@@ -236,7 +235,9 @@ sequenceDiagram
     INT->>INT: Validate bundle + normalize documents
     INT->>EXT: Staged bundle
     EXT->>EXT: Phase 1 DI extraction + Phase 2 LLM gap-fill + canonicalization
-    EXT->>VAL: Extracted fields (canonicalized)
+    EXT->>POL: Extracted fields (canonicalized)
+    Note over VAL,POL: Both run inside Activity 3 (Rules & Policy activity) - LLM Validation first, then Rules & Policy
+    POL->>VAL: Extracted fields (canonicalized)
     VAL->>VAL: Cross-document consistency check
     VAL->>POL: Validated evidence map + conflicts
     POL->>POL: Evaluate 8 rule categories (deterministic) + weighted risk score + HOLD determination
@@ -373,7 +374,7 @@ Full diagrams for all 4 topologies live in the [Internal Engineering Deep-Refere
 ```
 GATEWAY   -> Azure API Management (schema validation, auth, rate limiting)
 NETWORK   -> Site-to-Site VPN from source system to Azure VNet; Private Endpoints on all data/AI services; NSG inbound from APIM only
-COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator + 5 activities (Pre-Validation, DI Extraction, LLM Validation, Rules & Policy, Delivery Agents - Recommendation only, Phase 1; no chat/review agent)
+COMPUTE   -> Azure Functions (Flex Consumption) - Durable Orchestrator + 4 activities (Pre-Validation, DI Extraction, Rules & Policy - includes LLM Validation reasoning, Delivery Agents - Recommendation only, Phase 1; no chat/review agent)
 AI        -> Azure OpenAI (GPT-5.4 or later, whichever is the most token-efficient model available) · Azure Document Intelligence · Cognitive Services (Translator/Vision)
 DATA      -> Cosmos DB (6 containers) · Blob Storage · SQL · Key Vault
 SEARCH    -> Azure AI Search (case-document-index, case-summary-index)

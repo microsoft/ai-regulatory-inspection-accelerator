@@ -107,7 +107,7 @@ These ADRs are documented in full in 04-Architecture-Decision-Records.md. Summar
 
 | ADR | One-Line Summary |
 |---|---|
-| ADR-001 | Five-activity sequential pipeline orchestrated by Azure Durable Functions; checkpoint-based state persistence; no external workflow engine |
+| ADR-001 | Four-activity sequential pipeline orchestrated by Azure Durable Functions (LLM Validation reasoning runs as a step inside the Rules & Policy activity, not as a separate Durable activity); checkpoint-based state persistence; no external workflow engine |
 | ADR-002 | All document type definitions in `evidence_types.json`; extraction prompt auto-generated from field list; zero code for new document types |
 | ADR-003 | Cosmos DB NoSQL for runtime rules (no restart on change), case lifecycle, artifacts, verdicts, audit, and feedback; Change Feed for indexing |
 | ADR-004 | All service-to-service access via User-Assigned Managed Identity + RBAC; no connection strings or API keys anywhere; secrets in Key Vault |
@@ -873,10 +873,10 @@ A bounded-component architecture distributes responsibilities across explicit in
 
 ### Decision
 
-ARIA implements an 8-component pipeline of Agents and Stages: five sequential components and three that run asynchronously or in the background. Each component is a bounded processing unit responsible for a specific pipeline step. Agents perform LLM-driven reasoning; Stages perform deterministic, rule-based processing. All components communicate through structured output contracts passed as Durable Functions activity inputs.
+ARIA implements an 8-component pipeline of Agents and Stages: five Agent/Stage components sequenced across four Durable Functions activities, plus three that run asynchronously or in the background. Each component is a bounded processing unit responsible for a specific pipeline step. Agents perform LLM-driven reasoning; Stages perform deterministic, rule-based processing. All components communicate through structured output contracts passed as Durable Functions activity inputs.
 
 **Component roster:**
-- **Sequential (5):** Pre-Validation Agent (Activity 1) · DI Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · LLM Validation Agent (Activity 3) · Rules & Policy Agent (Activity 4 - includes risk scoring and HOLD determination) · Delivery Agent (Activity 5)
+- **Sequential (5 components / 4 activities):** Pre-Validation Agent (Activity 1) · DI Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · LLM Validation Agent (Activity 3, step 1) · Rules & Policy Agent (Activity 3, step 2 - includes risk scoring and HOLD determination) · Delivery Agent (Activity 4)
 - **Async / background (3):** Chat Agent (async, built in PAFN) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
 
 Each component:
