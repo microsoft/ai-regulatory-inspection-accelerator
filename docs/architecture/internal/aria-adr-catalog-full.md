@@ -107,7 +107,7 @@ These ADRs are documented in full in 04-Architecture-Decision-Records.md. Summar
 
 | ADR | One-Line Summary |
 |---|---|
-| ADR-001 | Four-activity sequential pipeline orchestrated by Azure Durable Functions (LLM Validation reasoning runs as a step inside the Rules & Policy activity, not as a separate Durable activity); checkpoint-based state persistence; no external workflow engine |
+| ADR-001 | Five-activity sequential pipeline orchestrated by Azure Durable Functions, with separate Reasoning and Rules & Policy activities; checkpoint-based state persistence; no external workflow engine |
 | ADR-002 | All document type definitions in `evidence_types.json`; extraction prompt auto-generated from field list; zero code for new document types |
 | ADR-003 | Cosmos DB NoSQL for runtime rules (no restart on change), case lifecycle, artifacts, verdicts, audit, and feedback; Change Feed for indexing |
 | ADR-004 | All service-to-service access via User-Assigned Managed Identity + RBAC; no connection strings or API keys anywhere; secrets in Key Vault |
@@ -476,7 +476,7 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 
 ### Context
 
-The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) and the LLM Validation Agent both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
+The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) and the Reasoning Agent both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
 
 A food safety deployment has ~47 active rules. Loading all 47 rules as JSON context for every LLM call in the human review session is 20,000+ tokens per call - commercially catastrophic at scale.
 
@@ -765,7 +765,7 @@ Simple Cosmos DB queries (keyword or field equality) cannot answer semantic simi
 
 Azure AI Search (Standard tier, semantic ranker enabled) provides all case history indexing and retrieval. Two indexes are maintained:
 
-- **`case-document-index`:** Per-document extracted facts, indexed per case. Proposed for evidence retrieval by the Chat Agent (ADR-017, not yet implemented) and used by the LLM Validation Agent for historical field value lookup.
+- **`case-document-index`:** Per-document extracted facts, indexed per case. Proposed for evidence retrieval by the Chat Agent (ADR-017, not yet implemented) and used by the Reasoning Agent for historical field value lookup.
 - **`case-summary-index`:** Per-case decision narrative (GPT-generated plain-language summary). Used by the Risk Assessment Engine for historical pattern matching and by the Human Review Agent for precedent search.
 
 Both indexes use hybrid search (vector similarity + BM25 keyword). All vectors use `text-embedding-3-small` for cost-effective semantic encoding.
@@ -876,7 +876,7 @@ A bounded-component architecture distributes responsibilities across explicit in
 ARIA implements an 8-component pipeline of Agents and Stages: five Agent/Stage components sequenced across four Durable Functions activities, plus three that run asynchronously or in the background. Each component is a bounded processing unit responsible for a specific pipeline step. Agents perform LLM-driven reasoning; Stages perform deterministic, rule-based processing. All components communicate through structured output contracts passed as Durable Functions activity inputs.
 
 **Component roster:**
-- **Sequential (5 components / 4 activities):** Pre-Validation Agent (Activity 1) · DI Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · LLM Validation Agent (Activity 3, step 1) · Rules & Policy Agent (Activity 3, step 2 - includes risk scoring and HOLD determination) · Delivery Agent (Activity 4)
+- **Sequential (5 components / 5 activities):** Pre-Validation Agent (Activity 1) · DI Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · Reasoning Agent (Activity 3) · Rules & Policy Agent (Activity 4 - includes risk scoring and HOLD determination) · Delivery Agent (Activity 5)
 - **Async / background (3):** Chat Agent (async, built in PAFN) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
 
 Each component:
