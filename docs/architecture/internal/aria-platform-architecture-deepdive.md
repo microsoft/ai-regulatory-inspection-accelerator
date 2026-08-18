@@ -683,7 +683,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-09: LLM Validation Agent
+### C-09: Reasoning Agent
 
 **Purpose:** Detects logical inconsistencies, value contradictions, and missing cross-document dependencies across the entire evidence bundle simultaneously. Operates on the canonical evidence map - not raw documents.
 
@@ -988,15 +988,15 @@ def reportStatus(case_id: str, status: str, error: str | None) -> bool
 
 ### 5.1 Agent Design
 
-ARIA's pipeline is five sequential agents sequenced across four Durable Functions activities, plus three components that run asynchronously or in the background, each responsible for a bounded set of decisions and producing structured output consumed by the next component. Components share context through structured interfaces - not shared state. LLM Validation Agent and Rules & Policy Agent both run inside Activity 3, in sequence, rather than as two separate Durable activities - this matches PAFN's real production Function App, which registers exactly four activity triggers.
+ARIA's pipeline is five sequential agents sequenced across five Durable Functions activities, plus three components that run asynchronously or in the background. Each agent owns a bounded decision and produces structured output for the next activity. Components share context through structured interfaces, not shared state. The Reasoning Agent and Rules & Policy Agent run as separate activities so probabilistic reasoning and deterministic policy evaluation remain independently testable, retryable, observable, and auditable.
 
 | Component | Role | Processing Stage | Primary Tool |
 |---|---|---|---|
 | **Pre-Validation Agent** | Bundle reception, validation, staging, pre-processing | Activity 1 | Pre-Validation Agent (C-01) |
 | **DI Extraction Agent** | Document-to-field transformation, field canonicalization, and PII classification | Activity 2 (Phase 1 + 2, post-extraction) | DI Extraction Agent (C-02) + DI Service + Reconciliation Engine sub-component |
-| **LLM Validation Agent** | Cross-document consistency and conflict detection | Activity 3 (step 1) | LLM Validation Agent (C-09) |
-| **Rules & Policy Agent** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 3 (step 2) | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
-| **Delivery Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 4 | Delivery Agent (C-12) |
+| **Reasoning Agent** | Cross-document consistency and conflict detection | Activity 3 | Reasoning Agent (C-09) |
+| **Rules & Policy Agent** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
+| **Delivery Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 5 | Delivery Agent (C-12) |
 | **Chat Agent** | Evidence Q&A for human reviewers, via direct Cosmos DB tool lookups *(built in PAFN reference deployment; not yet generalized - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-Demand | Audit Framework (C-15) |
 | **Knowledge Pack Stage** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
@@ -1009,7 +1009,7 @@ sequenceDiagram
     participant KPA as Knowledge Pack Stage
     participant INT as Pre-Validation Agent
     participant EXT as DI Extraction Agent
-    participant VAL as LLM Validation Agent
+    participant VAL as Reasoning Agent
     participant POL as Rules & Policy Agent
     participant REC as Delivery Agent
     participant AUD as Audit Log
@@ -1063,11 +1063,11 @@ sequenceDiagram
 | From | To | Payload | Format |
 |---|---|---|---|
 | Pre-Validation Agent | DI Extraction Agent | Bundle metadata, normalized doc URLs | Durable Functions activity input JSON |
-| DI Extraction Agent | LLM Validation Agent | Canonical evidence map + PII map | `{canonicalMap: {fieldName: {value, confidence, sourceDocumentId}}}` |
-| LLM Validation Agent | Rules & Policy Agent | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
+| DI Extraction Agent | Reasoning Agent | Canonical evidence map + PII map | `{canonicalMap: {fieldName: {value, confidence, sourceDocumentId}}}` |
+| Reasoning Agent | Rules & Policy Agent | Validated evidence map + conflicts | `{evidenceMap, conflicts[]}` |
 | Rules & Policy Agent | Delivery Agent | Findings + risk assessment | `{findings: [{ruleId, category, field, result, ruleETag}], score, grade, holdFlag, confidence, signals[]}` |
 | Delivery Agent | Audit Log | Complete decision package | `{decision, evidenceChain, tokenMetrics}` |
-| Knowledge Pack Stage | DI Extraction Agent, LLM Validation Agent, Chat Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
+| Knowledge Pack Stage | DI Extraction Agent, Reasoning Agent, Chat Agent | Compressed domain context | `{caseType, rules[], aliases, vocabulary}` (Blob URL) |
 
 ---
 
@@ -1425,7 +1425,7 @@ def _track_tokens(self, **kwargs):
 |  Pre-Validation Agent                                          |
 |  DI Extraction Agent (incl. token efficiency layer)           |
 |  Data Reconciliation Engine                                   |
-|  LLM Validation Agent                                          |
+|  Reasoning Agent                                               |
 |  Policy Evaluation Engine (framework + 8 rule categories)    |
 |  Risk Assessment Engine (algorithm + HOLD logic)             |
 |  Delivery Agent                                                |
@@ -1837,7 +1837,7 @@ For government, regulated enterprise, and full data sovereignty requirements.
 |  :  |  Azure APIM    |    |  Azure Functions             | : |
 |  :  |  (Submission   |───>|  (Flex Consumption)          | : |
 |  :  |   Gateway)     |    |  Durable Orchestrator        | : |
-|  :  +----------------+    |  4 Activities                | : |
+|  :  +----------------+    |  5 Activities                | : |
 |  :                        +------------------------------+ : |
 |  :  +----------------------------------------+           : |
 |  :  |  Azure Virtual Network                 |           : |
