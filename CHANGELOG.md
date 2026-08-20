@@ -30,3 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Core Platform quality assessment (`src/platform/document_intelligence/quality_assessment.py`) -
   pre-OCR image quality threshold decision logic with an injectable vision-model callback,
   ported and generalized from PAFN
+- Core Platform token-tracking AI client (`src/platform/shared/ai_client.py`) - centralized,
+  provider-injected completion wrapper capturing prompt, completion, total, and cached tokens
+  with per-case, per-tenant, per-activity attribution and safe success/failure telemetry
