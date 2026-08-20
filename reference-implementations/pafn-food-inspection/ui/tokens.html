@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ARIA internal AI token and cost analytics dashboard">
+  <title>ARIA Token Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <div><strong>ARIA</strong><span>AI Operations</span></div>
+    </div>
+    <div class="scope-label"><span></span> Internal operations</div>
+    <a class="back-link" href="index.html">← Inspection demo</a>
+  </header>
+
+  <main class="dashboard-shell">
+    <section class="dashboard-heading">
+      <div>
+        <span class="eyebrow">Cost and efficiency governance</span>
+        <h1>Token analytics</h1>
+        <p>Usage attribution across cases, activities and models. Prompts and evidence are never displayed.</p>
+      </div>
+      <div class="filters" aria-label="Dashboard filters">
+        <label>Period<select id="periodFilter"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="1">Today</option></select></label>
+        <label>Tenant<select id="tenantFilter"><option value="all">All tenants</option><option value="pafn">PAFN food inspection</option><option value="customs">Customs template</option></select></label>
+        <button id="exportButton" type="button">Export CSV</button>
+      </div>
+    </section>
+
+    <section class="kpi-grid" aria-label="Key performance indicators">
+      <article class="kpi"><span>Total tokens</span><strong id="totalTokens">—</strong><small id="tokenTrend">—</small></article>
+      <article class="kpi"><span>Estimated cost</span><strong id="totalCost">—</strong><small>Configured model rates</small></article>
+      <article class="kpi"><span>Average per case</span><strong id="avgTokens">—</strong><small id="caseCount">—</small></article>
+      <article class="kpi accent"><span>Cache hit rate</span><strong id="cacheRate">—</strong><small id="cachedTokens">—</small></article>
+    </section>
+
+    <section class="analytics-grid">
+      <article class="panel usage-panel">
+        <div class="panel-title"><div><span class="eyebrow">Consumption trend</span><h2>Daily token usage</h2></div><div class="legend"><span class="prompt-dot"></span>Input <span class="output-dot"></span>Output <span class="cache-dot"></span>Cached</div></div>
+        <div id="usageChart" class="usage-chart" aria-label="Daily token usage bar chart"></div>
+      </article>
+
+      <article class="panel activity-panel">
+        <div class="panel-title"><div><span class="eyebrow">Pipeline attribution</span><h2>Usage by activity</h2></div></div>
+        <div id="activityList" class="activity-list"></div>
+      </article>
+
+      <article class="panel efficiency-panel">
+        <div class="panel-title"><div><span class="eyebrow">Optimization signal</span><h2>Efficiency profile</h2></div></div>
+        <div class="efficiency-score"><div id="efficiencyRing"><strong id="efficiencyValue">—</strong><span>efficient</span></div></div>
+        <dl class="efficiency-facts">
+          <div><dt>Cached input</dt><dd id="cacheFact">—</dd></div>
+          <div><dt>Output ratio</dt><dd id="outputRatio">—</dd></div>
+          <div><dt>Highest consumer</dt><dd id="highestActivity">—</dd></div>
+        </dl>
+      </article>
+
+      <article class="panel anomaly-panel">
+        <div class="panel-title"><div><span class="eyebrow">Attention</span><h2>Usage anomalies</h2></div><span id="anomalyCount" class="panel-count">0</span></div>
+        <div id="anomalyList" class="anomaly-list"></div>
+      </article>
+    </section>
+
+    <section class="panel cases-panel">
+      <div class="panel-title"><div><span class="eyebrow">Traceable spend</span><h2>Case usage</h2></div><div class="table-tools"><input id="caseSearch" type="search" placeholder="Search case or activity"><span id="visibleRows"></span></div></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Case</th><th>Tenant</th><th>Primary activity</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Total</th><th>Est. cost</th><th>Latency</th></tr></thead>
+          <tbody id="caseRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer><span>Telemetry metadata only</span><span>No prompts · No responses · No document content</span></footer>
+  </main>
+  <script src="tokens.js"></script>
+</body>
+</html>

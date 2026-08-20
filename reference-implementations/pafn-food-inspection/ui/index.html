@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive ARIA food inspection demonstration">
+  <title>ARIA Inspection Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <div>
+        <strong>ARIA</strong>
+        <span>Inspection Workbench</span>
+      </div>
+    </div>
+    <div class="case-meta">
+      <span class="environment">DEMO</span>
+      <span id="caseId">Case —</span>
+      <span id="caseStatus" class="status-dot">Ready</span>
+    </div>
+    <div class="header-actions">
+      <a class="header-link" href="tokens.html">Token analytics</a>
+      <button id="resetButton" class="icon-button" type="button" title="Reset case" aria-label="Reset case">↻</button>
+    </div>
+  </header>
+
+  <main class="workbench">
+    <aside class="intake-panel" aria-labelledby="documentsHeading">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">Evidence bundle</span>
+          <h1 id="documentsHeading">Documents</h1>
+        </div>
+        <span id="documentCount" class="count-badge">0</span>
+      </div>
+
+      <label id="dropZone" class="drop-zone" for="fileInput">
+        <span class="upload-symbol" aria-hidden="true">↑</span>
+        <strong>Drop inspection files</strong>
+        <span>PDF, PNG, JPG or TIFF</span>
+        <input id="fileInput" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" multiple>
+      </label>
+
+      <div class="demo-row">
+        <span>Need a reliable walkthrough?</span>
+        <button id="sampleButton" class="text-button" type="button">Load sample case</button>
+      </div>
+
+      <div id="documentList" class="document-list" aria-live="polite"></div>
+
+      <div class="intake-footer">
+        <div class="privacy-note">
+          <span aria-hidden="true">⌁</span>
+          <span>Files stay in this browser</span>
+        </div>
+        <button id="analyzeButton" class="primary-button" type="button" disabled>
+          <span>Run inspection</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    </aside>
+
+    <section class="document-stage" aria-labelledby="viewerHeading">
+      <div class="viewer-toolbar">
+        <div>
+          <span class="eyebrow">Evidence viewer</span>
+          <h2 id="viewerHeading">Select a document</h2>
+        </div>
+        <div class="viewer-actions" aria-label="Viewer controls">
+          <button id="zoomOut" class="icon-button" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomIn" class="icon-button" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+
+      <div id="viewer" class="viewer-empty">
+        <div class="empty-visual" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <h3>Evidence appears here</h3>
+        <p>Upload a bundle or load the sample case to begin.</p>
+      </div>
+
+      <div id="processingStrip" class="processing-strip" hidden>
+        <div class="processing-copy">
+          <span id="processingLabel">Preparing evidence</span>
+          <strong id="processingDetail">Validating bundle integrity</strong>
+        </div>
+        <div class="progress-track"><span id="progressBar"></span></div>
+        <span id="progressPercent">0%</span>
+      </div>
+    </section>
+
+    <aside class="decision-panel" aria-labelledby="recommendationHeading">
+      <div class="panel-heading decision-heading">
+        <div>
+          <span class="eyebrow">AI recommendation</span>
+          <h2 id="recommendationHeading">Awaiting evidence</h2>
+        </div>
+        <span id="riskBadge" class="risk-badge neutral">—</span>
+      </div>
+
+      <div id="decisionEmpty" class="decision-empty">
+        <div class="decision-glyph" aria-hidden="true">◇</div>
+        <p>Run an inspection to generate an explainable recommendation.</p>
+      </div>
+
+      <div id="decisionContent" hidden>
+        <section class="verdict-block">
+          <span class="label">Recommendation</span>
+          <div class="verdict-line">
+            <span id="verdictIcon" class="verdict-icon" aria-hidden="true">!</span>
+            <strong id="verdictText">Hold for review</strong>
+          </div>
+          <p id="verdictSummary"></p>
+        </section>
+
+        <section class="confidence-block">
+          <div class="metric-row"><span>Confidence</span><strong id="confidenceValue">—</strong></div>
+          <div class="confidence-track"><span id="confidenceBar"></span></div>
+        </section>
+
+        <section class="findings-section">
+          <div class="section-title">
+            <h3>Key findings</h3>
+            <span id="findingCount">0</span>
+          </div>
+          <div id="findingsList" class="findings-list"></div>
+        </section>
+
+        <section class="trace-section">
+          <h3>Decision trace</h3>
+          <ol id="traceList" class="trace-list"></ol>
+        </section>
+
+        <div class="human-review-note">
+          <span aria-hidden="true">◎</span>
+          <p><strong>Inspector remains in control.</strong> This recommendation does not finalize the case.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
