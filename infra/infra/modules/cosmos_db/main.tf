@@ -20,6 +20,13 @@ resource "azurerm_cosmosdb_account" "main" {
     failover_priority = 0
   }
 
+  # Serverless: billed per-request instead of provisioned/autoscale RU/s -
+  # no fixed hourly cost, ideal for dev/test workloads. Containers below must
+  # not set throughput/autoscale_settings when this capability is enabled.
+  capabilities {
+    name = "EnableServerless"
+  }
+
   public_network_access_enabled = true
 
   tags = var.tags
@@ -29,7 +36,6 @@ resource "azurerm_cosmosdb_sql_database" "main" {
   name                = var.database_name
   resource_group_name = var.resource_group_name
   account_name        = azurerm_cosmosdb_account.main.name
-  throughput          = 400
 }
 
 # NOTE: The "Function App -> Cosmos DB Built-in Data Contributor" role
@@ -48,10 +54,6 @@ resource "azurerm_cosmosdb_sql_container" "inspections" {
   database_name         = azurerm_cosmosdb_sql_database.main.name
   partition_key_paths   = ["/requestId"]
   partition_key_version = 2
-
-  autoscale_settings {
-    max_throughput = 4000
-  }
 }
 
 # ── inbound-requests ─────────────────────────────────────────────────────────
@@ -63,10 +65,6 @@ resource "azurerm_cosmosdb_sql_container" "inbound_requests" {
   database_name         = azurerm_cosmosdb_sql_database.main.name
   partition_key_paths   = ["/requestId"]
   partition_key_version = 2
-
-  autoscale_settings {
-    max_throughput = 4000
-  }
 }
 
 # ── extraction-artifacts ─────────────────────────────────────────────────────
@@ -78,10 +76,6 @@ resource "azurerm_cosmosdb_sql_container" "extraction_artifacts" {
   database_name         = azurerm_cosmosdb_sql_database.main.name
   partition_key_paths   = ["/requestId"]
   partition_key_version = 2
-
-  autoscale_settings {
-    max_throughput = 4000
-  }
 }
 
 # ── rules ─────────────────────────────────────────────────────────────────────
@@ -93,10 +87,6 @@ resource "azurerm_cosmosdb_sql_container" "rules" {
   database_name         = azurerm_cosmosdb_sql_database.main.name
   partition_key_paths   = ["/category"]
   partition_key_version = 2
-
-  autoscale_settings {
-    max_throughput = 4000
-  }
 }
 
 # ── inspector-feedback ────────────────────────────────────────────────────────
@@ -108,10 +98,6 @@ resource "azurerm_cosmosdb_sql_container" "inspector_feedback" {
   database_name         = azurerm_cosmosdb_sql_database.main.name
   partition_key_paths   = ["/requestId"]
   partition_key_version = 2
-
-  autoscale_settings {
-    max_throughput = 4000
-  }
 }
 
 # ── callback-log ──────────────────────────────────────────────────────────────
@@ -125,10 +111,6 @@ resource "azurerm_cosmosdb_sql_container" "callback_log" {
   partition_key_paths   = ["/requestId"]
   partition_key_version = 2
   default_ttl           = 7776000 # 90 days
-
-  autoscale_settings {
-    max_throughput = 4000
-  }
 }
 
 # ── conversations ─────────────────────────────────────────────────────────────

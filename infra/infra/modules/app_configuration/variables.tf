@@ -16,7 +16,7 @@ variable "app_configuration_name" {
 variable "sku" {
   description = "SKU of the App Configuration store"
   type        = string
-  default     = "standard"
+  default     = "free"
 }
 
 variable "tags" {

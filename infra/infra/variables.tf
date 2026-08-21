@@ -75,9 +75,9 @@ variable "search_service_name" {
 }
 
 variable "search_sku" {
-  description = "SKU of the Azure AI Search service"
+  description = "SKU of the Azure AI Search service (must be 'basic' or higher - semantic ranker used by the indexes requires it; 'free' does not support semantic search)"
   type        = string
-  default     = "standard"
+  default     = "basic"
 }
 
 # ============================================================================
@@ -183,9 +183,9 @@ variable "apim_publisher_email" {
 }
 
 variable "apim_sku_name" {
-  description = "SKU of the API Management service. Format: {tier}_{capacity}."
+  description = "SKU of the API Management service. Format: {tier}_{capacity}. Consumption_0 is pay-per-call with no fixed hourly cost."
   type        = string
-  default     = "Developer_1"
+  default     = "Consumption_0"
 }
 
 # ============================================================================
@@ -200,7 +200,7 @@ variable "webapp_service_plan_name" {
 variable "webapp_sku_name" {
   description = "SKU of the chat UI web app's App Service Plan"
   type        = string
-  default     = "B1"
+  default     = "F1"
 }
 
 variable "webapp_name" {

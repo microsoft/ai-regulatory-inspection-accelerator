@@ -23,6 +23,10 @@ resource "azurerm_linux_web_app" "chat" {
   https_only = true
 
   site_config {
+    # Free (F1) tier does not support Always On - explicitly disabled so
+    # this works on F1 as well as any paid tier the sku is changed to.
+    always_on = false
+
     application_stack {
       python_version = var.python_version
     }

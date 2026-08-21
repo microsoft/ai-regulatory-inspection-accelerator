@@ -16,7 +16,7 @@ variable "search_service_name" {
 variable "sku" {
   description = "SKU of the Azure AI Search service (must be 'basic' or higher for semantic ranker)"
   type        = string
-  default     = "standard"
+  default     = "basic"
 }
 
 variable "tags" {
