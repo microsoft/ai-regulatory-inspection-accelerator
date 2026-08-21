@@ -24,19 +24,6 @@ locals {
     "      </allowed-headers>",
     "    </cors>",
   ]) : ""
-
-  _chat_policy_xml = join("\n", [
-    "<policies>",
-    "  <inbound>",
-    "    <base />",
-    local._cors_xml,
-    "    <set-backend-service backend-id=\"${azurerm_api_management_backend.inspector_pipeline_chat.name}\" />",
-    "  </inbound>",
-    "  <backend><base /></backend>",
-    "  <outbound><base /></outbound>",
-    "  <on-error><base /></on-error>",
-    "</policies>",
-  ])
 }
 
 resource "azurerm_api_management" "apim" {
@@ -216,106 +203,7 @@ XML
 }
 
 # ============================================================================
-# Chat Agent API — /chat
-# ============================================================================
-resource "azurerm_api_management_backend" "inspector_pipeline_chat" {
-  name                = "inspector-pipeline-chat-backend"
-  resource_group_name = var.resource_group_name
-  api_management_name = azurerm_api_management.apim.name
-  protocol            = "http"
-  url                 = "https://${var.pipeline_function_app_hostname}/api/chat"
-
-  credentials {
-    header = {
-      "x-functions-key" = "{{inspector-pipeline-function-key}}"
-    }
-  }
-
-  depends_on = [azurerm_api_management_named_value.function_key]
-}
-
-resource "azurerm_api_management_api" "chat" {
-  name                = "chat-api"
-  resource_group_name = var.resource_group_name
-  api_management_name = azurerm_api_management.apim.name
-  revision            = "1"
-  display_name        = "ARIA Inspector Chat Agent API"
-  path                = "chat"
-  protocols           = ["https"]
-
-  subscription_required = true
-  subscription_key_parameter_names {
-    header = "Ocp-Apim-Subscription-Key"
-    query  = "subscription-key"
-  }
-}
-
-resource "azurerm_api_management_api_operation" "chat_post_message" {
-  operation_id        = "chat-post-message"
-  api_name            = azurerm_api_management_api.chat.name
-  api_management_name = azurerm_api_management.apim.name
-  resource_group_name = var.resource_group_name
-  display_name        = "Send Chat Message"
-  method              = "POST"
-  url_template        = "/{requestId}/message"
-
-  template_parameter {
-    name     = "requestId"
-    required = true
-    type     = "string"
-  }
-}
-
-resource "azurerm_api_management_api_operation" "chat_get_history" {
-  operation_id        = "chat-get-history"
-  api_name            = azurerm_api_management_api.chat.name
-  api_management_name = azurerm_api_management.apim.name
-  resource_group_name = var.resource_group_name
-  display_name        = "Get Conversation History"
-  method              = "GET"
-  url_template        = "/{requestId}/history"
-
-  template_parameter {
-    name     = "requestId"
-    required = true
-    type     = "string"
-  }
-}
-
-resource "azurerm_api_management_api_operation" "chat_get_evidence" {
-  operation_id        = "chat-get-evidence"
-  api_name            = azurerm_api_management_api.chat.name
-  api_management_name = azurerm_api_management.apim.name
-  resource_group_name = var.resource_group_name
-  display_name        = "Get Finding Evidence"
-  method              = "GET"
-  url_template        = "/{requestId}/evidence/{findingCode}"
-
-  template_parameter {
-    name     = "requestId"
-    required = true
-    type     = "string"
-  }
-
-  template_parameter {
-    name     = "findingCode"
-    required = true
-    type     = "string"
-  }
-}
-
-resource "azurerm_api_management_api_policy" "chat" {
-  api_name            = azurerm_api_management_api.chat.name
-  api_management_name = azurerm_api_management.apim.name
-  resource_group_name = var.resource_group_name
-
-  xml_content = local._chat_policy_xml
-
-  depends_on = [azurerm_api_management_api_operation.chat_post_message]
-}
-
-# ============================================================================
-# Product — groups inspector + chat APIs under one subscription
+# Product — groups inspector API under one subscription
 # ============================================================================
 resource "azurerm_api_management_product" "inspector" {
   product_id            = "inspection-agent"
@@ -331,13 +219,6 @@ resource "azurerm_api_management_product" "inspector" {
 resource "azurerm_api_management_product_api" "inspector" {
   product_id          = azurerm_api_management_product.inspector.product_id
   api_name            = azurerm_api_management_api.inspector.name
-  api_management_name = azurerm_api_management.apim.name
-  resource_group_name = var.resource_group_name
-}
-
-resource "azurerm_api_management_product_api" "chat" {
-  product_id          = azurerm_api_management_product.inspector.product_id
-  api_name            = azurerm_api_management_api.chat.name
   api_management_name = azurerm_api_management.apim.name
   resource_group_name = var.resource_group_name
 }
