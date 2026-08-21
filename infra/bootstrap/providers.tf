@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.90"
     }
+    azapi = {
+      source  = "azure/azapi"
+      version = "~> 1.13"
+    }
   }
 
   # No remote backend here on purpose: this stack creates the storage account
@@ -17,7 +21,7 @@ terraform {
 provider "azurerm" {
   features {}
 
-  # Authenticates via GitHub Actions OIDC federated credential (no client
-  # secret). See .github/workflows/infra.yml.
-  use_oidc = true
+  # Authentication is supplied through ARM environment variables.
 }
+
+provider "azapi" {}

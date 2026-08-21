@@ -1,10 +1,7 @@
 # Bootstrap stack: creates the storage account that holds Terraform state
 # for every other stack in this repo (infra, and later app/service stacks).
 #
-# Networking is left open (public network access enabled) on purpose - this
-# is a general-purpose accelerator, not a locked-down reference deployment.
-# Add network_rules / private endpoints yourself if your environment requires
-# them.
+# Public network access is disabled to comply with the subscription policy.
 
 resource "azurerm_resource_group" "tfstate" {
   name     = var.resource_group_name
@@ -13,38 +10,56 @@ resource "azurerm_resource_group" "tfstate" {
   tags = var.tags
 }
 
-resource "azurerm_storage_account" "tfstate" {
-  name                = var.storage_account_name
-  resource_group_name = azurerm_resource_group.tfstate.name
-  location            = azurerm_resource_group.tfstate.location
+resource "azapi_resource" "tfstate" {
+  type      = "Microsoft.Storage/storageAccounts@2023-05-01"
+  name      = var.storage_account_name
+  parent_id = azurerm_resource_group.tfstate.id
+  location  = azurerm_resource_group.tfstate.location
+  tags      = var.tags
 
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  min_tls_version          = "TLS1_2"
-
-  # Kept open for simplicity - see note above.
-  public_network_access_enabled = true
-
-  # Access via Azure AD (OIDC identity), not storage account keys.
-  shared_access_key_enabled = false
-
-  blob_properties {
-    versioning_enabled = true
-
-    delete_retention_policy {
-      days = 7
+  body = jsonencode({
+    kind = "StorageV2"
+    sku = {
+      name = "Standard_LRS"
     }
-
-    container_delete_retention_policy {
-      days = 7
+    properties = {
+      allowBlobPublicAccess    = false
+      allowSharedKeyAccess     = false
+      minimumTlsVersion        = "TLS1_2"
+      publicNetworkAccess      = "Disabled"
+      supportsHttpsTrafficOnly = true
     }
-  }
-
-  tags = var.tags
+  })
 }
 
-resource "azurerm_storage_container" "tfstate" {
-  name                  = var.container_name
-  storage_account_name  = azurerm_storage_account.tfstate.name
-  container_access_type = "private"
+resource "azapi_resource" "blob_service" {
+  type      = "Microsoft.Storage/storageAccounts/blobServices@2023-05-01"
+  name      = "default"
+  parent_id = azapi_resource.tfstate.id
+
+  body = jsonencode({
+    properties = {
+      isVersioningEnabled = true
+      deleteRetentionPolicy = {
+        enabled = true
+        days    = 7
+      }
+      containerDeleteRetentionPolicy = {
+        enabled = true
+        days    = 7
+      }
+    }
+  })
+}
+
+resource "azapi_resource" "tfstate_container" {
+  type      = "Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01"
+  name      = var.container_name
+  parent_id = azapi_resource.blob_service.id
+
+  body = jsonencode({
+    properties = {
+      publicAccess = "None"
+    }
+  })
 }
