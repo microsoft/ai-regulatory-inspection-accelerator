@@ -23,7 +23,7 @@ resource "azapi_resource" "ai_services" {
   parent_id                 = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}"
   schema_validation_enabled = false
 
-  body = jsonencode({
+  body = {
     kind = "AIServices"
     properties = {
       customSubDomainName = var.ai_services_name
@@ -38,7 +38,7 @@ resource "azapi_resource" "ai_services" {
     identity = {
       type = "SystemAssigned"
     }
-  })
+  }
 
   response_export_values = ["identity", "properties"]
 
@@ -105,7 +105,7 @@ resource "azurerm_cosmosdb_sql_role_assignment" "ai_services_cosmos_contributor"
   resource_group_name = var.resource_group_name
   account_name        = element(split("/", var.cosmos_account_id), length(split("/", var.cosmos_account_id)) - 1)
   role_definition_id  = "${var.cosmos_account_id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002"
-  principal_id        = jsondecode(azapi_resource.ai_services.output).identity.principalId
+  principal_id        = azapi_resource.ai_services.output.identity.principalId
   scope               = var.cosmos_account_id
 }
 

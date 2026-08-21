@@ -65,6 +65,12 @@ variable "cosmos_database_name" {
   default     = "inspector-db"
 }
 
+variable "cosmos_location" {
+  description = "Azure region for Cosmos DB. Kept separate to accommodate regional capacity."
+  type        = string
+  default     = "westus3"
+}
+
 # ============================================================================
 # Azure AI Search
 # ============================================================================
@@ -194,7 +200,7 @@ variable "apim_sku_name" {
 variable "webapp_service_plan_name" {
   description = "Name of the App Service Plan for the chat UI web app"
   type        = string
-  default     = "plan-aria-chat"
+  default     = "plan-aria-chat-wus3"
 }
 
 variable "webapp_sku_name" {
@@ -209,3 +215,8 @@ variable "webapp_name" {
   default     = "app-aria-chat"
 }
 
+variable "webapp_location" {
+  description = "Azure region for the chat UI web app. Kept separate to accommodate App Service quota."
+  type        = string
+  default     = "westus3"
+}

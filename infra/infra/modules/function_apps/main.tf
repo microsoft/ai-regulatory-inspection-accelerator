@@ -188,7 +188,11 @@ resource "azurerm_function_app_flex_consumption" "pipeline" {
   tags = var.tags
 
   lifecycle {
-    ignore_changes = [tags]
+    ignore_changes = [
+      tags,
+      app_settings["APPINSIGHTS_INSTRUMENTATIONKEY"],
+      app_settings["AzureWebJobsStorage"],
+    ]
   }
 }
 

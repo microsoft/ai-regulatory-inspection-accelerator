@@ -5,12 +5,12 @@ output "ai_services_id" {
 
 output "ai_services_endpoint" {
   description = "Endpoint URL for AI Services"
-  value       = jsondecode(azapi_resource.ai_services.output).properties.endpoint
+  value       = azapi_resource.ai_services.output.properties.endpoint
 }
 
 output "ai_services_principal_id" {
   description = "Principal ID of the AI Services managed identity"
-  value       = jsondecode(azapi_resource.ai_services.output).identity.principalId
+  value       = azapi_resource.ai_services.output.identity.principalId
 }
 
 output "openai_id" {

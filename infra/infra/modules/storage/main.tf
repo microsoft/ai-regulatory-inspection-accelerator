@@ -29,11 +29,6 @@ resource "azurerm_storage_account" "main" {
   https_traffic_only_enabled        = true
   infrastructure_encryption_enabled = true
 
-  network_rules {
-    default_action = "Allow"
-    bypass         = ["AzureServices"]
-  }
-
   blob_properties {
     versioning_enabled       = true
     change_feed_enabled      = true

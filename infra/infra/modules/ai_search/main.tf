@@ -19,26 +19,9 @@ resource "azurerm_search_service" "main" {
 
   public_network_access_enabled = true
   local_authentication_enabled  = true # aadOrApiKey - required for azapi_data_plane_resource index management
+  authentication_failure_mode   = "http403"
 
   tags = var.tags
-}
-
-# Ensure AAD (token-based) auth is usable alongside the API key (default is
-# apiKeyOnly, which rejects AAD bearer tokens - azapi_data_plane_resource
-# authenticates with AAD tokens).
-resource "azapi_update_resource" "search_enable_aad_auth" {
-  type        = "Microsoft.Search/searchServices@2023-11-01"
-  resource_id = azurerm_search_service.main.id
-
-  body = {
-    properties = {
-      authOptions = {
-        aadOrApiKey = {
-          aadAuthFailureMode = "http403"
-        }
-      }
-    }
-  }
 }
 
 locals {
@@ -68,7 +51,7 @@ resource "azapi_data_plane_resource" "search_index_case_summaries" {
   name      = "case-summaries"
   parent_id = "${var.search_service_name}.search.windows.net"
 
-  depends_on = [azapi_update_resource.search_enable_aad_auth]
+  depends_on = [azurerm_search_service.main]
 
   body = {
     fields = [
@@ -123,7 +106,7 @@ resource "azapi_data_plane_resource" "search_index_document_fields" {
   name      = "document-fields"
   parent_id = "${var.search_service_name}.search.windows.net"
 
-  depends_on = [azapi_update_resource.search_enable_aad_auth]
+  depends_on = [azurerm_search_service.main]
 
   body = {
     fields = [
@@ -178,7 +161,7 @@ resource "azapi_data_plane_resource" "search_index_inspector_feedback" {
   name      = "inspector-feedback"
   parent_id = "${var.search_service_name}.search.windows.net"
 
-  depends_on = [azapi_update_resource.search_enable_aad_auth]
+  depends_on = [azurerm_search_service.main]
 
   body = {
     fields = [

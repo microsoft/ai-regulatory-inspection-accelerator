@@ -8,7 +8,7 @@ terraform {
     }
     azapi = {
       source  = "azure/azapi"
-      version = "~> 1.13"
+      version = "~> 2.12"
     }
   }
 
@@ -27,14 +27,10 @@ terraform {
 provider "azurerm" {
   features {}
 
-  # Authenticates via GitHub Actions OIDC federated credential (no client
-  # secret). See .github/workflows/infra.yml.
-  use_oidc = true
+  # Authentication is selected through ARM environment variables:
+  # GitHub Actions uses OIDC, while local runs use Azure CLI credentials.
 }
 
 provider "azapi" {
-  # Used for the AI Services (multi-service) account and AI Search index
-  # data-plane resources - authenticates via the same OIDC federated
-  # credential as azurerm.
-  use_oidc = true
+  # Uses the same ARM environment authentication as azurerm.
 }

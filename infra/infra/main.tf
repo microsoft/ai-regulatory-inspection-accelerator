@@ -57,7 +57,7 @@ module "cosmos_db" {
   source = "./modules/cosmos_db"
 
   resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  location            = var.cosmos_location
   cosmos_account_name = var.cosmos_account_name
   database_name       = var.cosmos_database_name
   tags                = var.tags
@@ -182,7 +182,7 @@ module "webapp" {
   source = "./modules/webapp"
 
   resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  location            = var.webapp_location
 
   service_plan_name = var.webapp_service_plan_name
   sku_name          = var.webapp_sku_name
@@ -197,4 +197,3 @@ module "webapp" {
 
   tags = var.tags
 }
-
