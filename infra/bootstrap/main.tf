@@ -1,7 +1,8 @@
 # Bootstrap stack: creates the storage account that holds Terraform state
 # for every other stack in this repo (infra, and later app/service stacks).
 #
-# Public network access is disabled to comply with the subscription policy.
+# The public endpoint is enabled so GitHub-hosted runners can access state.
+# The container remains private and requires Microsoft Entra authentication.
 
 resource "azurerm_resource_group" "tfstate" {
   name     = var.resource_group_name
@@ -26,7 +27,7 @@ resource "azapi_resource" "tfstate" {
       allowBlobPublicAccess    = false
       allowSharedKeyAccess     = false
       minimumTlsVersion        = "TLS1_2"
-      publicNetworkAccess      = "Disabled"
+      publicNetworkAccess      = "Enabled"
       supportsHttpsTrafficOnly = true
     }
   })

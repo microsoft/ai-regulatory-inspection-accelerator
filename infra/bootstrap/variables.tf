@@ -13,7 +13,7 @@ variable "location" {
 variable "storage_account_name" {
   description = "Globally-unique storage account name (lowercase letters/numbers only, max 24 chars). Rename this if it's already taken - storage account names are unique across all of Azure, not just your subscription."
   type        = string
-  default     = "stariatfstateinfra"
+  default     = "stariatfstate40f8a183"
 }
 
 variable "container_name" {

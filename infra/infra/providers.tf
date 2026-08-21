@@ -17,7 +17,7 @@ terraform {
   # anything in the bootstrap stack.
   backend "azurerm" {
     resource_group_name  = "rg-aria-tfstate-infra"
-    storage_account_name = "stariatfstateinfra"
+    storage_account_name = "stariatfstate40f8a183"
     container_name       = "tfstate"
     key                  = "infra.tfstate"
     use_azuread_auth     = true
