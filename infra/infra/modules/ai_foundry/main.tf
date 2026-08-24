@@ -67,9 +67,9 @@ resource "azurerm_monitor_diagnostic_setting" "openai" {
   target_resource_id         = azurerm_cognitive_account.openai.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
 
-  # enabled_metric {
-  #   category = "AllMetrics"
-  # }
+  enabled_metric {
+    category = "AllMetrics"
+  }
 }
 
 resource "azurerm_cognitive_account" "document_intelligence" {
@@ -94,9 +94,9 @@ resource "azurerm_monitor_diagnostic_setting" "document_intelligence" {
   target_resource_id         = azurerm_cognitive_account.document_intelligence.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
 
-  # enabled_metric {
-  #   category = "AllMetrics"
-  # }
+  enabled_metric {
+    category = "AllMetrics"
+  }
 }
 
 # Grant AI Services (multi-service account) access to Cosmos DB.
