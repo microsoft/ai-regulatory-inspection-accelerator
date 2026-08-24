@@ -2,10 +2,14 @@
 Unit tests for src/platform/document_intelligence/quality_assessment.py.
 """
 
+import json
+from unittest.mock import MagicMock
+
 from src.platform.document_intelligence.quality_assessment import (
     DEFAULT_QUALITY_SCORE_THRESHOLD,
     QualityCheckResult,
     assess_quality,
+    check_image_quality,
     evaluate_quality_response,
 )
 
@@ -66,3 +70,48 @@ class TestAssessQuality:
 
         result = assess_quality(fake_vision_check, b"bytes", "scan.png", threshold=0.5)
         assert result.passed is True
+
+
+class TestCheckImageQuality:
+    def test_applies_template_threshold_instead_of_model_boolean(self):
+        client = MagicMock()
+        response = type("Response", (), {
+            "choices": [type("Choice", (), {
+                "message": type("Message", (), {
+                    "content": json.dumps({
+                        "passed": True,
+                        "quality_score": 0.65,
+                        "issues": ["Low Contrast"],
+                    })
+                })()
+            })()]
+        })()
+        client.chat.completions.create.return_value = response
+
+        result = check_image_quality(
+            client,
+            b"image-bytes",
+            "document.png",
+            threshold=0.7,
+            retry_delay_sec=0,
+        )
+
+        assert result.passed is False
+        assert result.quality_score == 0.65
+
+    def test_provider_failure_remains_a_soft_check(self):
+        client = MagicMock()
+        client.chat.completions.create.side_effect = RuntimeError("unavailable")
+
+        result = check_image_quality(
+            client,
+            b"image-bytes",
+            "document.png",
+            threshold=0.8,
+            max_retries=2,
+            retry_delay_sec=0,
+        )
+
+        assert result.passed is True
+        assert result.quality_score == 0.8
+        assert client.chat.completions.create.call_count == 2

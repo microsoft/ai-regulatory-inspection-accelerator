@@ -49,10 +49,15 @@ from azure.ai.documentintelligence.models import (
 from azure.storage.blob.aio import BlobServiceClient
 from openai import AzureOpenAI
 
+from src.platform.document_intelligence.content_normalization import (
+    ContentNormalizationOptions,
+    normalize_markdown,
+)
 from src.platform.document_intelligence.di_normalization import (
     canonicalize_fields_for_doc_type,
     normalize_all_fields,
 )
+from src.platform.document_intelligence.quality_assessment import check_image_quality
 from src.platform.document_intelligence.schemas import (
     DocumentInput,
     DocumentIntelligenceResult,
@@ -197,9 +202,11 @@ def _build_metadata_extraction_prompt(doc_type: str, loader: TemplateLoader) -> 
                 }}}}
   ]"""
 
-    return f"""You are a bilingual (Arabic / English) document analysis expert.
-You extract structured metadata from customs, trade, and food-safety documents
-used by Kuwait Customs / PAFN (Public Authority for Food and Nutrition).
+    return f"""You are an Arabic and English bilingual document analysis expert.
+You extract structured metadata from regulated documents according to the
+active industry template. You have strong command of Modern Standard Arabic,
+common regional dialectal wording, Arabic phonetics and transliterations
+(including Arabizi), and Arabic-English code-switching.
 
 The document type is already known: **{display_name}**
 {doc_notes_section}
@@ -232,12 +239,15 @@ Rules:
     omit it entirely or set its confidence to 0.0.
 - Base all extracted values strictly on the visible document content.
     Never guess or infer values that are not explicitly shown in the text.
-- If the document is in a language you cannot read, transliterate faithfully
-    but do not fabricate translations or values.
 - This document may contain mixed Arabic (RTL) and English (LTR) text.
     When extracting field values, be aware that Arabic text reads right-to-left.
     Numeric values, dates, and English words embedded in Arabic text retain
     left-to-right order. Reconstruct the natural reading order accordingly.
+- Preserve Arabic and English values verbatim unless a requested field requires
+    normalization. Do not translate, anglicize, or replace dialectal wording.
+- Interpret phonetic spellings and transliterations only when the intended text
+    is unambiguous from visible context. Otherwise preserve the source text,
+    lower the confidence, and do not guess.
 {line_item_section}
 ═══════════════════════════════════════════════════════════════
 TABLE AND KEY-VALUE EXTRACTION
@@ -323,7 +333,12 @@ async def run_document_intelligence(
         logger.error("Document Intelligence failed for %s: %s", file_name, exc)
         return DocumentIntelligenceResult()
 
-    markdown_content = _add_bidi_marks(result.content or "")
+    normalization_config = loader.get_normalization_config(doc_type)
+    markdown_content, content_report = normalize_markdown(
+        result.content or "",
+        ContentNormalizationOptions.from_dict(normalization_config.get("content")),
+    )
+    markdown_content = _add_bidi_marks(markdown_content)
     page_count = len(result.pages) if result.pages else 0
 
     languages: list[str] = []
@@ -355,8 +370,9 @@ async def run_document_intelligence(
 
     logger.info(
         "DI analysis finished | file=%s | model=%s | pages=%d | chars=%d | "
-        "ocrConf=%.4f | languages=%s | handwriting=%s | signatures=%s",
+        "tokenReduction=%.1f%% | ocrConf=%.4f | languages=%s | handwriting=%s | signatures=%s",
         file_name, model_id, page_count, len(markdown_content),
+        content_report.token_reduction_ratio * 100,
         ocr_confidence, languages, has_handwriting, has_signatures,
     )
 
@@ -611,6 +627,7 @@ async def run(
         # Resolve field lists from template — replaces document_type_fields.json
         allowed_fields = loader.get_fields(doc_type)
         line_item_fields = loader.get_line_item_fields(doc_type)
+        normalization_config = loader.get_normalization_config(doc_type)
 
         async with semaphore:
             try:
@@ -624,12 +641,10 @@ async def run(
                 )
 
                 # ── Step 0: Image Quality Check ───────────────────────────────
-                # Import quality check from the shared quality_assessment module
-                from shared.image_quality import check_image_quality  # PAFN shim
-
                 quality_check_result = await asyncio.to_thread(
                     check_image_quality,
                     openai_client, blob_data, file_name,
+                    threshold=loader.get_quality_threshold(doc_type),
                     deployment=AZURE_OPENAI_DEPLOYMENT,
                     max_retries=max_retries,
                     retry_delay_sec=retry_delay_sec,
@@ -756,6 +771,7 @@ async def run(
                     metadata, doc_type, openai_client,
                     allowed_fields=allowed_fields,
                     line_item_fields=line_item_fields,
+                    normalization_config=normalization_config,
                     deployment=AZURE_OPENAI_DEPLOYMENT,
                 )
 
@@ -774,6 +790,7 @@ async def run(
                     normalize_all_fields,
                     openai_client, fields, line_items, doc_type, file_name,
                     allowed_fields=allowed_fields,
+                    normalization_config=normalization_config,
                     deployment=AZURE_OPENAI_DEPLOYMENT,
                     max_retries=max_retries,
                     retry_delay_sec=retry_delay_sec,

@@ -1,0 +1,83 @@
+{
+  "$schema": "../_schema/normalization.schema.json",
+  "defaults": {
+    "quality_threshold": 0.75,
+    "content": {
+      "strip_selection_marks": true,
+      "collapse_blank_lines": true,
+      "collapse_page_separators": true,
+      "remove_repeated_headers": true,
+      "repeated_line_min_pages": 2,
+      "repeated_line_max_length": 120
+    },
+    "date_fields": [
+      "issue_date", "expiry_date", "invoice_date", "production_date",
+      "slaughter_date", "packing_date", "inspection_date",
+      "certificate_validity_date", "license_issue_date", "license_expiry_date",
+      "renewal_date", "date_of_departure", "certificate_issue_date",
+      "certificate_expiry_date", "license_start_date",
+      "authorization_effective_date", "payment_date", "receipt_date",
+      "release_date", "entered_date", "actual_arrival_date"
+    ],
+    "numeric_fields": [
+      "gross_weight", "net_weight", "weight", "quantity",
+      "quantity_or_weight", "total_net_weight", "total_gross_weight",
+      "gross_weight_total", "net_weight_total", "invoice_total_amount",
+      "unit_price", "line_amount", "vat_amount", "excise_tax",
+      "freight_amount", "number_of_packages", "item_qty"
+    ],
+    "issue_date_fields": ["issue_date", "certificate_issue_date", "license_issue_date"],
+    "expiry_field": "expiry_date",
+    "strip_trailing_date_suffix_fields": ["invoice_number"],
+    "unwrap_bracket_fields": ["certificate_number"],
+    "country_fields": ["country_of_origin"],
+    "known_countries": [
+      "Australia", "New Zealand", "India", "Pakistan", "Kenya", "Brazil",
+      "United States", "USA", "UK", "United Kingdom", "China", "Japan",
+      "Thailand", "Indonesia", "Malaysia", "Philippines", "Vietnam",
+      "Saudi Arabia", "UAE", "Kuwait", "Qatar", "Bahrain", "Oman",
+      "Egypt", "Turkey", "Jordan", "Lebanon", "Syria", "Iraq", "Iran",
+      "France", "Germany", "Italy", "Spain", "Netherlands", "Belgium"
+    ],
+    "currency_codes": [
+      "USD", "AUD", "EUR", "GBP", "JPY", "CAD", "CHF", "CNY", "HKD",
+      "NZD", "SEK", "KRW", "SGD", "NOK", "MXN", "INR",
+      "AED", "SAR", "KWD", "BHD", "OMR", "QAR"
+    ],
+    "currency_field": "currency",
+    "currency_source_fields": ["invoice_amount", "invoice_total_amount"],
+    "standalone_value_fields": ["company_name", "invoice_number"],
+    "equivalent_field_groups": [
+      ["expiry_date", "expiration_date", "certificate_validity_date"]
+    ],
+    "field_aliases": {
+      "certificate_number": ["certificate no", "certificate number", "cert no", "cert number", "no", "编号"],
+      "issue_date": ["issue date", "date of issue", "date issued", "签证日期", "发货日期", "date of despatch"],
+      "expiry_date": ["expiry date", "expiration date", "valid until"],
+      "issuing_authority": ["issuing authority", "authority", "entry-exit inspection", "检验检疫"],
+      "country_of_origin": ["country of origin", "origin country", "原产国"],
+      "country_of_destination": ["country of destination", "destination", "到达国家", "country and place of destination"],
+      "exporter_name": ["exporter", "consignor", "name and address of consignor", "发货人名称"],
+      "exporter_address": ["exporter address", "consignor address", "发货人地址"],
+      "consignee_name": ["consignee", "name and address of consignee", "收货人名称"],
+      "consignee_address": ["consignee address", "收货人地址"],
+      "goods_description": ["description of goods", "goods description", "品名"],
+      "quantity": ["quantity", "quantity declared", "报检数量", "数量"],
+      "gross_weight": ["gross weight", "weight", "报检重量", "重量", "gross weight (total)", "gross weight total", "total gross weight"],
+      "net_weight": ["net weight", "net weight (total)", "net weight total", "total net weight"],
+      "gross_weight_total": ["gross weight total", "total gross weight", "gross weight (total)"],
+      "net_weight_total": ["net weight total", "total net weight", "net weight (total)"],
+      "declaration_number": ["dec no", "declaration number", "رقم البيان"],
+      "declaration_date": ["dec date", "declaration date", "تاريخ البيان"],
+      "declaration_type": ["dec type", "declaration type", "نوع البيان"],
+      "delivery_order_number": ["delivery order no", "delivery order number", "رقم إذن التسليم"],
+      "tin_number": ["tin no", "tin number", "الرقم الضريبي", "الرقم الضريبى"],
+      "total_net_weight": ["net weight", "total net weight", "net weight total", "net weight (total)", "الوزن الصافي"],
+      "total_gross_weight": ["gross weight", "total gross weight", "gross weight total", "gross weight (total)", "الوزن القائم"],
+      "total_number_of_packages": ["no of packages", "number of packages", "total packages", "عدد الطرود"],
+      "port_of_discharge": ["port of discharge", "ميناء التفريغ"],
+      "port_of_loading": ["port of loading", "ميناء الشحن"]
+    }
+  },
+  "document_types": {}
+}

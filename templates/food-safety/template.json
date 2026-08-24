@@ -17,6 +17,7 @@
   "targetIndustries": ["food-safety", "food-import", "regulatory-inspection"],
   "requiredArtifacts": {
     "evidenceTypes": true,
+    "normalization": true,
     "rules": true,
     "referenceData": true,
     "submissionSchema": true,

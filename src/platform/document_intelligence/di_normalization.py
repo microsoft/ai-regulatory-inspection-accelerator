@@ -5,31 +5,20 @@ Core Platform — Document Intelligence — DI Field Normalization
 LLM-backed field canonicalization and normalization on top of the
 rule-based functions in ``field_normalization.py``.
 
-Both files are intentionally present and serve distinct layers:
-  - ``field_normalization.py`` — pure, generic, no I/O, no LLM, no hardcoded
-    domain vocabulary. All primitives (Arabic numeral/date conversion, alias
-    maps, canonicalization, rule-based normalization) are config-driven and
-    have no food-safety assumptions.
-  - ``di_normalization.py`` (this file) — PAFN-faithful LLM wrapper. Imports
-    the shared primitives from ``field_normalization`` and adds:
-      • ``FIELD_ALIASES`` (food-safety / customs multilingual synonyms)
-      • ``KNOWN_COUNTRIES`` (for country extraction)
-      • ``COMPANY_INDICATORS`` / ``ADDRESS_INDICATORS`` (company-name heuristic)
-      • ``_PAFN_CURRENCY_CODES`` (expanded Gulf + global set)
-      • LLM prompt constants and LLM-call functions
-      • ``canonicalize_fields_for_doc_type`` (handles Pydantic models, line items)
-      • ``normalize_all_fields`` (rule-based → expiry → LLM pipeline)
-
-No function is duplicated between the two files.
+All document-type assumptions are supplied through the active template's
+normalization profile. This module contains only the LLM orchestration and
+Pydantic/line-item integration around the generic field primitives.
 """
 
 import json
 import logging
-import re
 import time
 
 from openai import AzureOpenAI
 
+from src.platform.document_intelligence.field_normalization import (
+    apply_rule_based_normalization as _apply_rule_based_normalization,
+)
 from src.platform.document_intelligence.field_normalization import (
     build_field_alias_maps as _build_alias_maps,
 )
@@ -37,20 +26,16 @@ from src.platform.document_intelligence.field_normalization import (
     compute_expiry_from_validity_period as _compute_expiry,
 )
 from src.platform.document_intelligence.field_normalization import (
-    convert_arabic_numerals,
-    normalize_arabic_date,
-    normalize_arabic_number,
-    normalize_date,
-    normalize_key,
-    strip_bidi_marks,
-    strip_trailing_date_suffix,
-    unwrap_brackets,
-)
-from src.platform.document_intelligence.field_normalization import (
     extract_country as _extract_country_generic,
 )
 from src.platform.document_intelligence.field_normalization import (
     normalize_currency as _normalize_currency_generic,
+)
+from src.platform.document_intelligence.field_normalization import (
+    normalize_key,
+    strip_bidi_marks,
+    strip_trailing_date_suffix,
+    unwrap_brackets,
 )
 from src.platform.document_intelligence.schemas import ExtractedMetadata
 
@@ -111,7 +96,7 @@ If no corrections are needed, return:
 }"""
 
 
-LLM_SEMANTIC_FIELD_MAPPING_PROMPT = """You are a multilingual semantic field mapper for customs and trade documents.
+LLM_SEMANTIC_FIELD_MAPPING_PROMPT = """You are a multilingual semantic field mapper for regulated documents.
 
 You will receive:
 1. A list of UNMATCHED key-value pairs extracted from a document (keys may be in Arabic, English, or mixed).
@@ -141,296 +126,12 @@ Return ONLY valid JSON — no markdown, no prose:
 }"""
 
 
-# ---------------------------------------------------------------------------
-# PAFN-specific domain constants
-# ---------------------------------------------------------------------------
-
-FIELD_ALIASES: dict[str, list[str]] = {
-    "certificate_number": [
-        "certificate no", "certificate number", "cert no", "cert number", "no", "编号",
-    ],
-    "issue_date": [
-        "issue date", "date of issue", "date issued", "签证日期", "发货日期", "date of despatch",
-    ],
-    "expiry_date": [
-        "expiry date", "expiration date", "valid until",
-    ],
-    "issuing_authority": [
-        "issuing authority", "authority", "entry-exit inspection", "检验检疫",
-    ],
-    "country_of_origin": [
-        "country of origin", "origin country", "原产国",
-    ],
-    "country_of_destination": [
-        "country of destination", "destination", "到达国家", "country and place of destination",
-    ],
-    "exporter_name": [
-        "exporter", "consignor", "name and address of consignor", "发货人名称",
-    ],
-    "exporter_address": [
-        "exporter address", "consignor address", "发货人地址",
-    ],
-    "consignee_name": [
-        "consignee", "name and address of consignee", "收货人名称",
-    ],
-    "consignee_address": [
-        "consignee address", "收货人地址",
-    ],
-    "goods_description": [
-        "description of goods", "goods description", "品名",
-    ],
-    "quantity": [
-        "quantity", "quantity declared", "报检数量", "数量",
-    ],
-    "gross_weight": [
-        "gross weight", "weight", "报检重量", "重量",
-        "gross weight (total)", "gross weight total", "total gross weight",
-    ],
-    "net_weight": [
-        "net weight", "net weight (total)", "net weight total", "total net weight",
-    ],
-    "gross_weight_total": [
-        "gross weight total", "total gross weight", "gross weight (total)",
-    ],
-    "net_weight_total": [
-        "net weight total", "total net weight", "net weight (total)",
-    ],
-    "quantity_or_number_of_packages": [
-        "quantity or number of packages", "number of cartons", "number of cartons (total)",
-        "number of packages", "number of packages (total)", "no of cartons",
-        "no of packages", "quantity",
-    ],
-    "package_count": [
-        "package count", "number of packages", "包装数量", "packages",
-    ],
-    "package_type": [
-        "package type", "type of packages", "包装种类",
-    ],
-    "inspection_details": [
-        "results of inspection", "inspection details", "检验结果",
-    ],
-    "additional_declaration": [
-        "additional declaration", "conclusion",
-    ],
-    "temperature_during_treatment": [
-        "temperature during storage and transport", "贮藏和运输温度",
-    ],
-    "declaration_number": [
-        "dec no", "declaration number", "رقم البيان",
-    ],
-    "declaration_date": [
-        "dec date", "declaration date", "تاريخ البيان",
-    ],
-    "declaration_type": [
-        "dec type", "declaration type", "نوع البيان",
-    ],
-    "port_type": [
-        "port type", "نوع المنفذ",
-    ],
-    "delivery_order_number": [
-        "delivery order no", "delivery order number", "رقم إذن التسليم",
-    ],
-    "importer_or_exporter_name": [
-        "importer", "exporter", "المستورد", "المصدر",
-    ],
-    "commercial_registration_number": [
-        "commercial registration", "registration number", "السجل التجاري",
-    ],
-    "bill_awb_manifest_number": [
-        "bill of lading", "awb", "manifest number", "رقم بوليصة الشحن",
-    ],
-    "carrier_name": [
-        "carrier", "captain", "driver", "الناقلة", "القبطان", "السائق",
-    ],
-    "voyage_or_flight_number": [
-        "voyage no", "flight no", "voyage number", "flight number", "رقم الرحلة",
-    ],
-    "tin_number": [
-        "tin no", "tin number", "الرقم الضريبي", "الرقم الضريبى",
-    ],
-    "total_net_weight": [
-        "net weight", "total net weight", "net weight total", "net weight (total)", "الوزن الصافي",
-    ],
-    "total_gross_weight": [
-        "gross weight", "total gross weight", "gross weight total", "gross weight (total)", "الوزن القائم",
-    ],
-    "total_number_of_packages": [
-        "no of packages", "number of packages", "total packages", "عدد الطرود",
-    ],
-    "total_duty": [
-        "total duty", "اجمالي الرسوم",
-    ],
-    "destination": [
-        "destination", "جهة المقصد",
-    ],
-    "port_of_discharge": [
-        "port of discharge", "ميناء التفريغ",
-    ],
-    "port_of_loading": [
-        "port of loading", "ميناء الشحن",
-    ],
-}
-
-COMPANY_INDICATORS = re.compile(
-    r'\b(Ltd|Limited|Inc|Corp|Corporation|Co\.|Company|LLC|LLP|PLC|'
-    r'V\.O\.F\.|B\.V\.|N\.V\.|GmbH|AG|S\.A\.|S\.L\.|Pty|Processors|'
-    r'Trading|Transport|ذ\.?م\.?م|شركة)\b',
-    re.IGNORECASE
-)
-
-ADDRESS_INDICATORS = re.compile(
-    r'\b(Street|St\.|Road|Rd\.|Avenue|Ave\.|Box|PO Box|P\.O\.|'
-    r'Floor|Building|Bldg|Suite|Block|Plot|Area|City|'
-    r'\d{4,6})\b',
-    re.IGNORECASE
-)
-
-KNOWN_COUNTRIES = [
-    "Australia", "New Zealand", "India", "Pakistan", "Kenya", "Brazil",
-    "United States", "USA", "UK", "United Kingdom", "China", "Japan",
-    "Thailand", "Indonesia", "Malaysia", "Philippines", "Vietnam",
-    "Saudi Arabia", "UAE", "Kuwait", "Qatar", "Bahrain", "Oman",
-    "Egypt", "Turkey", "Jordan", "Lebanon", "Syria", "Iraq", "Iran",
-    "France", "Germany", "Italy", "Spain", "Netherlands", "Belgium",
-]
-
-# Gulf + global currency set — wider than field_normalization's DEFAULT_CURRENCY_CODES.
-_PAFN_CURRENCY_CODES = frozenset({
-    "USD", "AUD", "EUR", "GBP", "JPY", "CAD", "CHF", "CNY", "HKD",
-    "NZD", "SEK", "KRW", "SGD", "NOK", "MXN", "INR",
-    "AED", "SAR", "KWD", "BHD", "OMR", "QAR",
-})
-
-# PAFN date and numeric field sets used by apply_rule_based_normalization.
-_DATE_FIELDS = frozenset({
-    "issue_date", "expiry_date", "invoice_date", "production_date",
-    "slaughter_date", "packing_date", "inspection_date",
-    "certificate_validity_date", "license_issue_date",
-    "license_expiry_date", "renewal_date", "date_of_departure",
-    "certificate_issue_date", "certificate_expiry_date",
-    "license_start_date", "authorization_effective_date",
-    "payment_date", "receipt_date", "release_date",
-    "entered_date", "actual_arrival_date",
-})
-
-_NUMERIC_FIELDS = frozenset({
-    "gross_weight", "net_weight", "weight", "quantity",
-    "quantity_or_weight", "total_net_weight", "total_gross_weight",
-    "gross_weight_total", "net_weight_total",
-    "invoice_total_amount", "unit_price", "line_amount",
-    "vat_amount", "excise_tax", "freight_amount",
-    "number_of_packages", "item_qty",
-})
-
-# Issue-date fields in PAFN priority order for expiry computation.
-_ISSUE_DATE_FIELDS = ("issue_date", "certificate_issue_date", "license_issue_date")
-
-
-# ---------------------------------------------------------------------------
-# Thin wrappers — supply PAFN defaults to field_normalization primitives
-# ---------------------------------------------------------------------------
-
-def build_field_alias_maps(allowed_fields: list[str]) -> tuple[dict[str, str], dict[str, str]]:
-    """Build alias maps using FIELD_ALIASES as the default alias_overrides."""
-    return _build_alias_maps(allowed_fields, alias_overrides=FIELD_ALIASES)
-
-
-def _extract_country(value: str) -> str | None:
-    return _extract_country_generic(value, KNOWN_COUNTRIES)
-
-
-def _normalize_currency(value: str) -> str | None:
-    return _normalize_currency_generic(value, _PAFN_CURRENCY_CODES)
-
-
-def compute_expiry_from_validity_period(fields: dict) -> dict:
-    """Compute expiry_date using the PAFN issue-date field priority order."""
-    return _compute_expiry(fields, issue_date_fields=_ISSUE_DATE_FIELDS)
-
-
-# ---------------------------------------------------------------------------
-# PAFN-specific rule-based normalization
-# (delegates pure math to imported functions from field_normalization)
-# ---------------------------------------------------------------------------
-
-def apply_rule_based_normalization(fields: dict) -> dict:
-    """Apply PAFN-specific rule-based cleanup and Arabic normalization.
-
-    The ``_DATE_FIELDS`` and ``_NUMERIC_FIELDS`` sets are algorithm content
-    (they define which fields receive specialized normalization).  All math
-    functions are imported from ``field_normalization``; no logic is duplicated.
-    """
-    if "invoice_number" in fields and fields["invoice_number"].get("value"):
-        original = str(fields["invoice_number"]["value"])
-        cleaned = strip_trailing_date_suffix(original)
-        if cleaned != original:
-            fields["invoice_number"]["value"] = cleaned
-            if "confidence" in fields["invoice_number"]:
-                fields["invoice_number"]["confidence"] = round(
-                    fields["invoice_number"]["confidence"] * 0.98, 4
-                )
-
-    if "certificate_number" in fields and fields["certificate_number"].get("value"):
-        original = str(fields["certificate_number"]["value"])
-        cleaned = unwrap_brackets(original)
-        if cleaned != original:
-            fields["certificate_number"]["value"] = cleaned
-
-    if "issue_date" in fields and fields["issue_date"].get("value"):
-        value = str(fields["issue_date"]["value"])
-        extracted_date = normalize_date(value)
-        if extracted_date and extracted_date != value:
-            fields["issue_date"]["value"] = extracted_date
-            if "confidence" in fields["issue_date"]:
-                fields["issue_date"]["confidence"] = round(
-                    fields["issue_date"]["confidence"] * 0.98, 4
-                )
-
-    if "country_of_origin" in fields and fields["country_of_origin"].get("value"):
-        value = str(fields["country_of_origin"]["value"])
-        extracted_country = _extract_country(value)
-        if extracted_country:
-            fields["country_of_origin"]["value"] = extracted_country
-
-    if "currency" in fields and "invoice_amount" in fields:
-        currency_value = fields["currency"].get("value")
-        amount_value = fields["invoice_amount"].get("value")
-        if not currency_value and amount_value:
-            inferred_currency = _normalize_currency(str(amount_value))
-            if inferred_currency:
-                amount_confidence = fields["invoice_amount"].get("confidence", 0.85)
-                fields["currency"] = {
-                    "value": inferred_currency,
-                    "confidence": round(amount_confidence * 0.95, 4),
-                }
-
-    for field_name in _DATE_FIELDS:
-        if field_name in fields and fields[field_name].get("value"):
-            raw_val = str(fields[field_name]["value"])
-            has_eastern = any("\u0660" <= ch <= "\u0669" for ch in raw_val)
-            has_slashes = "/" in raw_val
-            is_already_iso = bool(re.match(r"^\d{4}-\d{2}-\d{2}$", raw_val))
-            if (has_eastern or has_slashes) and not is_already_iso:
-                normalized_date = normalize_arabic_date(raw_val)
-                if normalized_date and normalized_date != raw_val:
-                    fields[field_name]["value"] = normalized_date
-
-    for field_name in _NUMERIC_FIELDS:
-        if field_name in fields and fields[field_name].get("value"):
-            raw_val = str(fields[field_name]["value"])
-            normalized_num = normalize_arabic_number(raw_val)
-            if normalized_num and normalized_num != raw_val:
-                fields[field_name]["value"] = normalized_num
-
-    for field_name, fv in fields.items():
-        if field_name in _DATE_FIELDS or field_name in _NUMERIC_FIELDS:
-            continue
-        if fv.get("value") and isinstance(fv["value"], str):
-            converted = convert_arabic_numerals(fv["value"])
-            if converted != fv["value"]:
-                fv["value"] = converted
-
-    return fields
+def build_field_alias_maps(
+    allowed_fields: list[str],
+    alias_overrides: dict[str, list[str]] | None = None,
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Build alias maps from the active template profile."""
+    return _build_alias_maps(allowed_fields, alias_overrides=alias_overrides)
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +202,7 @@ def canonicalize_fields_for_doc_type(
     *,
     allowed_fields: list[str],
     line_item_fields: list[str],
+    normalization_config: dict | None = None,
     deployment: str = "gpt-5.4",
 ) -> tuple[dict, list[dict]]:
     """Map raw extracted KV pairs onto the document type's canonical field schema.
@@ -521,9 +223,13 @@ def canonicalize_fields_for_doc_type(
     Returns:
         Tuple of (fields dict, line_items list).
     """
-    exact_aliases, normalized_aliases = build_field_alias_maps(allowed_fields)
+    normalization_config = normalization_config or {}
+    exact_aliases, normalized_aliases = build_field_alias_maps(
+        allowed_fields,
+        alias_overrides=normalization_config.get("field_aliases", {}),
+    )
     fields: dict = {field: {"value": None} for field in allowed_fields}
-    standalone_value_fields = {"company_name", "invoice_number"}
+    standalone_value_fields = set(normalization_config.get("standalone_value_fields", []))
 
     # 1) Primary: canonical_field provided by LLM
     for kv in metadata.key_value_pairs:
@@ -534,14 +240,8 @@ def canonicalize_fields_for_doc_type(
         value_text = (kv.value or "").strip()
 
         value = value_text
-        if canonical in standalone_value_fields:
-            if not value and key_text:
-                value = key_text
-            elif canonical == "company_name" and key_text and value:
-                key_is_company = bool(COMPANY_INDICATORS.search(key_text))
-                value_is_address = bool(ADDRESS_INDICATORS.search(value))
-                if key_is_company and value_is_address:
-                    value = key_text
+        if canonical in standalone_value_fields and not value and key_text:
+            value = key_text
 
         if not value:
             continue
@@ -613,10 +313,7 @@ def canonicalize_fields_for_doc_type(
                     }
 
     # 3) Propagate equivalent field groups
-    _EQUIVALENT_GROUPS = [
-        ("expiry_date", "expiration_date", "certificate_validity_date"),
-    ]
-    for group in _EQUIVALENT_GROUPS:
+    for group in normalization_config.get("equivalent_field_groups", []):
         present = [f for f in group if f in fields and fields[f].get("value") is not None]
         if not present:
             continue
@@ -761,6 +458,7 @@ def normalize_all_fields(
     file_name: str,
     *,
     allowed_fields: list[str],
+    normalization_config: dict | None = None,
     deployment: str = "gpt-5.4",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
@@ -771,10 +469,54 @@ def normalize_all_fields(
     explicit parameter instead of being fetched from
     ``document_type_fields.json``.
     """
+    normalization_config = normalization_config or {}
     normalization_log: dict = {}
-    fields = apply_rule_based_normalization(fields)
+    fields = _apply_rule_based_normalization(
+        fields,
+        date_fields=frozenset(normalization_config.get("date_fields", [])),
+        numeric_fields=frozenset(normalization_config.get("numeric_fields", [])),
+    )
+
+    for field_name in normalization_config.get("strip_trailing_date_suffix_fields", []):
+        entry = fields.get(field_name)
+        if entry and entry.get("value"):
+            entry["value"] = strip_trailing_date_suffix(str(entry["value"]))
+
+    for field_name in normalization_config.get("unwrap_bracket_fields", []):
+        entry = fields.get(field_name)
+        if entry and entry.get("value"):
+            entry["value"] = unwrap_brackets(str(entry["value"]))
+
+    known_countries = normalization_config.get("known_countries", [])
+    for field_name in normalization_config.get("country_fields", []):
+        entry = fields.get(field_name)
+        if entry and entry.get("value") and known_countries:
+            country = _extract_country_generic(str(entry["value"]), known_countries)
+            if country:
+                entry["value"] = country
+
+    currency_field = normalization_config.get("currency_field")
+    currency_codes = normalization_config.get("currency_codes", [])
+    if currency_field and currency_codes and not fields.get(currency_field, {}).get("value"):
+        for source_field in normalization_config.get("currency_source_fields", []):
+            source = fields.get(source_field, {})
+            if source.get("value"):
+                currency = _normalize_currency_generic(
+                    str(source["value"]), frozenset(currency_codes)
+                )
+                if currency:
+                    fields[currency_field] = {
+                        "value": currency,
+                        "confidence": round(source.get("confidence", 0.85) * 0.95, 4),
+                    }
+                    break
+
     normalization_log["rule_based"] = "applied"
-    fields = compute_expiry_from_validity_period(fields)
+    fields = _compute_expiry(
+        fields,
+        issue_date_fields=tuple(normalization_config.get("issue_date_fields", ["issue_date"])),
+        expiry_field=normalization_config.get("expiry_field", "expiry_date"),
+    )
 
     fields, line_items, llm_log = normalize_fields_with_llm(
         openai_client, fields, line_items, doc_type, file_name,

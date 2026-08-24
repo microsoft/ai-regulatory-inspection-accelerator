@@ -1,14 +1,23 @@
-# Customize: Add a New Industry Template
+---
+title: Customize an Industry Template
+description: Define and validate the fourteen artifacts in an ARIA industry template
+author: ARIA Engineering
+ms.date: 2026-08-24
+ms.topic: how-to
+---
 
-**Status: Schema defined, engine not yet implemented.** The 13-artifact template contract below is architecturally fixed (see [Technical Architecture, Section 7](architecture/TechnicalArchitecture.md#7-template-framework)) and you can start drafting these artifacts today. The Core Platform engine that consumes them (`src/platform/`) has not been built yet, so a drafted template cannot be activated or run until that lands - see the [Roadmap](../README.md#roadmap).
+The Core Platform consumes document definitions and normalization profiles from
+the template. Rule lifecycle and activation tooling remain on the
+[Roadmap](../README.md#roadmap).
 
-## The 13 template artifacts
+## The 14 template artifacts
 
 Every industry template is a directory under `templates/{industry-name}/` containing only JSON and Markdown - no executable code (enforced by CI once the domain-neutrality gate is active).
 
 | Artifact | Purpose |
 |---|---|
 | `evidence_types.json` | Document types and field schemas for this industry |
+| `normalization.json` | Content cleanup, quality thresholds, aliases, and field normalization behavior |
 | `rules.json` | Compliance rule seed data |
 | `reference_data.json` | Domain code lists and taxonomies |
 | `submission_schema.json` | API gateway submission validation schema |
@@ -24,17 +33,20 @@ Every industry template is a directory under `templates/{industry-name}/` contai
 
 ## Reference example
 
-[`templates/food-safety/template.json`](../templates/food-safety/template.json) is the only populated template today - currently a manifest declaring which artifacts are required, not yet the full artifact set. Use it as the starting shape for `template.json` itself; the 13 artifacts above still need to be authored for any template, including `food-safety`.
+[`templates/food-safety/template.json`](../templates/food-safety/template.json) is
+the populated reference manifest. Its `evidence_types.json` and
+`normalization.json` files are consumed by the current Document Intelligence
+pipeline. Use them as the starting shape for a new template.
 
-## Steps once the engine exists
+## Add a template
 
 1. Create `templates/{your-industry}/`
-2. Author the 13 artifacts above
+2. Author the 14 artifacts above
 3. Validate against `templates/_schema/template.schema.json`
-4. Run the template lifecycle tooling (planned - see [Deployment Guide](DeploymentGuide.md)) to seed rules to Cosmos DB and activate
+4. Run the template lifecycle tooling to seed rules to Cosmos DB and activate
 5. Run the evaluation framework against your `evaluation/` ground truth set before enabling production traffic
 
 ## Today, you can
 
-- Draft `evidence_types.json`, `decision_vocabulary.json`, and `pii_field_list.json` for your target industry - these have no runtime dependency and can be reviewed/refined now
+- Draft `evidence_types.json`, `normalization.json`, `decision_vocabulary.json`, and `pii_field_list.json` for your target industry
 - Open an issue to discuss a new industry template before drafting it, to avoid duplicate work

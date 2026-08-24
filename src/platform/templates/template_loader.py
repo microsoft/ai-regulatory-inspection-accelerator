@@ -3,14 +3,13 @@ ARIA — AI Regulatory Inspection Accelerator
 Core Platform — Template Loader
 
 Generic loader for the ARIA template contract.  Given a template ID
-(e.g. "food-safety"), loads ``evidence_types.json`` from the template
-directory and provides document-type field lookups that replace the
-hardcoded ``document_type_fields.json`` used in the PAFN implementation.
+(e.g. "food-safety"), loads ``evidence_types.json`` and the optional
+``normalization.json`` profile from the template directory. It provides
+document-type field and normalization lookups that replace hardcoded PAFN
+configuration.
 
-The only file read by this module is
-``templates/<template_id>/evidence_types.json``.  The caller is
-responsible for providing a ``template_root`` path (defaults to the
-``templates/`` directory adjacent to this package's workspace root).
+The caller is responsible for providing a ``template_root`` path (defaults
+to the ``templates/`` directory adjacent to this package's workspace root).
 
 Changes from PAFN's ``shared/prompts.py``:
   - ``_DOC_TYPE_ID_TO_NAME`` dict migrated to ``doc_type_id_mapping``
@@ -28,6 +27,7 @@ Changes from PAFN's ``shared/prompts.py``:
 import json
 import logging
 import re
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 
@@ -96,6 +96,36 @@ def _load_evidence_types(template_id: str, templates_root: Path) -> dict:
     return data
 
 
+@lru_cache(maxsize=16)
+def _load_normalization_config(template_id: str, templates_root: Path) -> dict:
+    """Load an optional template-owned normalization profile."""
+    config_path = templates_root / template_id / "normalization.json"
+    if not config_path.is_file():
+        return {}
+    try:
+        with open(config_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"normalization.json for template '{template_id}' contains invalid JSON: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise TypeError(
+            f"normalization.json for template '{template_id}' must contain an object."
+        )
+    return data
+
+
+def _merge_dicts(base: dict, override: dict) -> dict:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_dicts(merged[key], value)
+        else:
+            merged[key] = deepcopy(value)
+    return merged
+
+
 class TemplateLoader:
     """Provides field-schema lookups backed by a template's ``evidence_types.json``.
 
@@ -119,6 +149,7 @@ class TemplateLoader:
         self._template_id = template_id
         root = templates_root or _templates_root()
         self._data = _load_evidence_types(template_id, root)
+        self._normalization = _load_normalization_config(template_id, root)
         self._id_mapping: dict[str, str] = self._data.get("doc_type_id_mapping") or {}
         # Index document_types by doc_type key for O(1) lookups.
         self._by_type: dict[str, dict] = {}
@@ -225,6 +256,22 @@ class TemplateLoader:
         if entry:
             return entry.get("doc_notes")
         return None
+
+    def get_normalization_config(self, doc_type: str) -> dict:
+        """Return global normalization settings merged with document overrides."""
+        defaults = self._normalization.get("defaults", {})
+        overrides = self._normalization.get("document_types", {}).get(doc_type, {})
+        return _merge_dicts(defaults, overrides)
+
+    def get_quality_threshold(self, doc_type: str) -> float:
+        """Return the template-configured OCR quality threshold for a document type."""
+        config = self.get_normalization_config(doc_type)
+        threshold = float(config.get("quality_threshold", 0.75))
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError(
+                f"quality_threshold for '{doc_type}' must be between 0.0 and 1.0."
+            )
+        return threshold
 
     def known_doc_types(self) -> list[str]:
         """Return the list of all doc_type keys defined in this template."""

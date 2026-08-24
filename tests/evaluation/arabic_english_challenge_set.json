@@ -1,0 +1,153 @@
+{
+  "name": "ARIA Arabic-English Document Extraction Challenge Set",
+  "version": "1.0.0",
+  "primary_languages": ["ar", "en"],
+  "source_policy": "Synthetic examples written for ARIA; no copyrighted text reproduced.",
+  "native_speaker_review": {
+    "status": "pending",
+    "required_reviewers": 2,
+    "required_varieties": ["Modern Standard Arabic", "Gulf Arabic"]
+  },
+  "cases": [
+    {
+      "id": "msa-certificate-number",
+      "category": "modern_standard_arabic",
+      "input": {"key": "رقم الشهادة", "value": "١٢٣٤٥"},
+      "expectation": {
+        "action": "normalize",
+        "canonical_field": "certificate_number",
+        "value": "12345"
+      }
+    },
+    {
+      "id": "msa-issue-date",
+      "category": "modern_standard_arabic",
+      "input": {"key": "تاريخ الإصدار", "value": "٢٤/٠٨/٢٠٢٦"},
+      "expectation": {
+        "action": "normalize",
+        "canonical_field": "issue_date",
+        "value": "2026-08-24"
+      }
+    },
+    {
+      "id": "gulf-relative-date",
+      "category": "gulf_dialect",
+      "input": {"key": "ملاحظة", "value": "الشحنة واصلة باچر"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "notes",
+        "value": "الشحنة واصلة باچر"
+      }
+    },
+    {
+      "id": "gulf-colloquial-instruction",
+      "category": "gulf_dialect",
+      "input": {"key": "ملاحظة المخزن", "value": "دزّوا الشحنة للمخزن"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "notes",
+        "value": "دزّوا الشحنة للمخزن"
+      }
+    },
+    {
+      "id": "egyptian-negative-arrival",
+      "category": "regional_dialect",
+      "input": {"key": "ملاحظة", "value": "البضاعة لسه ما وصلتش"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "notes",
+        "value": "البضاعة لسه ما وصلتش"
+      }
+    },
+    {
+      "id": "levantine-negative-arrival",
+      "category": "regional_dialect",
+      "input": {"key": "ملاحظة", "value": "الشحنة لسا ما وصلت"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "notes",
+        "value": "الشحنة لسا ما وصلت"
+      }
+    },
+    {
+      "id": "maghrebi-negative-arrival",
+      "category": "regional_dialect",
+      "input": {"key": "ملاحظة", "value": "السلعة مازال ما وصلتش"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "notes",
+        "value": "السلعة مازال ما وصلتش"
+      }
+    },
+    {
+      "id": "arabizi-arrival-status",
+      "category": "arabizi",
+      "input": {"key": "shipment note", "value": "el sh7na ma wslat"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "notes",
+        "value": "el sh7na ma wslat"
+      }
+    },
+    {
+      "id": "arabizi-ambiguous-digit",
+      "category": "ambiguity_abstention",
+      "input": {"key": "unlabelled", "value": "3ndna 3 cartons"},
+      "expectation": {
+        "action": "abstain",
+        "canonical_field": null,
+        "value": "3ndna 3 cartons"
+      }
+    },
+    {
+      "id": "mixed-script-invoice-number",
+      "category": "code_switching",
+      "input": {"key": "رقم Invoice", "value": "INV-204"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "invoice_number",
+        "value": "INV-204"
+      }
+    },
+    {
+      "id": "mixed-direction-weight",
+      "category": "mixed_direction_text",
+      "input": {"key": "الوزن الصافي Net Weight", "value": "١٬٢٥٠٫٥ kg"},
+      "expectation": {
+        "action": "normalize",
+        "canonical_field": "net_weight",
+        "value": "1250.5"
+      }
+    },
+    {
+      "id": "paired-company-transliteration",
+      "category": "phonetic_transliteration",
+      "input": {"key": "اسم الشركة Company", "value": "شركة الشروق / Al Shorouq Co."},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "company_name",
+        "value": "شركة الشروق / Al Shorouq Co."
+      }
+    },
+    {
+      "id": "phonetic-name-variation",
+      "category": "phonetic_transliteration",
+      "input": {"key": "المستورد Importer", "value": "يوسف / Youssef"},
+      "expectation": {
+        "action": "preserve",
+        "canonical_field": "importer_name",
+        "value": "يوسف / Youssef"
+      }
+    },
+    {
+      "id": "bidi-control-preservation",
+      "category": "mixed_direction_text",
+      "input": {"key": "مرجع", "value": "‏REF-٢٠٢٦-١٢٣‎"},
+      "expectation": {
+        "action": "normalize",
+        "canonical_field": "document_reference",
+        "value": "REF-2026-123"
+      }
+    }
+  ]
+}

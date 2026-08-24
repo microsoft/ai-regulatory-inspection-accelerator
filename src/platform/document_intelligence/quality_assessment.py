@@ -8,24 +8,25 @@ configurable threshold, and normalize/validate the raw model response into
 a `QualityCheckResult`.
 
 Ported from PAFN's di/di_quality.py, generalized:
-  - The 19-issue OCR-readability rubric and system prompt are genuinely
-    domain-neutral already (blur, contrast, skew, occlusion, etc. apply to
-    any scanned/photographed document, not just food-safety certificates) -
-    kept as-is.
-  - Removed the direct `AzureOpenAI` vision call and PDF-rasterization I/O
-    (`_rasterize_pdf_first_page`). Core Platform has no dependency on a
-    specific AI client or PDF library. `assess_quality` accepts an
-    injectable `vision_check_fn` callback that performs the actual model
-    call (and any PDF rasterization) and returns the raw JSON response dict
-    - this module only validates/normalizes that response and applies the
-    threshold decision, which is the part that must be deterministic and
-    consistent regardless of which AI client implementation is wired in.
+    - Expanded the domain-neutral OCR-readability rubric from PAFN's original
+        checks to 19 specific image-quality issues.
+    - `assess_quality` supports an injectable provider callback for connector
+        integrations, while `check_image_quality` retains the PAFN-compatible
+        soft-check path used by the active extraction pipeline.
+    - Pass/fail is derived deterministically from the configured threshold
+        instead of trusting the model's boolean response.
   - Removed the `QUALITY_SCORE_THRESHOLD` env var lookup at import time
     (Core Platform must not read environment variables directly - see
     ADR-010). The threshold is now a parameter with the same default value.
 """
 
+import base64
+import json
+import logging
+import time
 from dataclasses import asdict, dataclass
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_QUALITY_SCORE_THRESHOLD = 0.75
 
@@ -151,3 +152,76 @@ def assess_quality(
     """
     raw_response = vision_check_fn(image_data, file_name)
     return evaluate_quality_response(raw_response, threshold=threshold)
+
+
+def check_image_quality(
+    openai_client,
+    image_data: bytes,
+    file_name: str,
+    *,
+    threshold: float = DEFAULT_QUALITY_SCORE_THRESHOLD,
+    deployment: str = "gpt-4.1",
+    max_retries: int = 3,
+    retry_delay_sec: int = 2,
+) -> QualityCheckResult:
+    """Run the PAFN-compatible soft quality check through an injected client."""
+    encoded_image = base64.b64encode(image_data).decode("utf-8")
+    suffix = file_name.lower()
+    if suffix.endswith(".pdf"):
+        media_type = "application/pdf"
+    elif suffix.endswith((".jpg", ".jpeg")):
+        media_type = "image/jpeg"
+    else:
+        media_type = "image/png"
+
+    for attempt in range(max_retries):
+        try:
+            response = openai_client.chat.completions.create(
+                model=deployment,
+                temperature=0.0,
+                max_completion_tokens=500,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": QUALITY_CHECK_SYSTEM_PROMPT},
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "Assess this document image for OCR extraction. "
+                                    f"File: {file_name}"
+                                ),
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{media_type};base64,{encoded_image}",
+                                    "detail": "low",
+                                },
+                            },
+                        ],
+                    },
+                ],
+            )
+            raw = response.choices[0].message.content.strip()
+            return evaluate_quality_response(json.loads(raw), threshold=threshold)
+        except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as exc:
+            logger.warning(
+                "Quality check failed for %s (attempt %d/%d): %s",
+                file_name, attempt + 1, max_retries, exc,
+            )
+        except Exception as exc:  # noqa: BLE001 - soft check isolates provider failures
+            logger.warning(
+                "Quality provider failed for %s (attempt %d/%d): %s",
+                file_name, attempt + 1, max_retries, exc,
+            )
+        if attempt + 1 < max_retries:
+            time.sleep(retry_delay_sec * (attempt + 1))
+
+    return QualityCheckResult(
+        passed=True,
+        quality_score=threshold,
+        issues=["Quality check unavailable - proceeding with extraction"],
+        recommendation="Proceed with extraction (quality check unavailable)",
+    )

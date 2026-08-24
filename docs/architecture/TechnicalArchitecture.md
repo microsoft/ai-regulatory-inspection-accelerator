@@ -1,6 +1,12 @@
-# ARIA - Technical Architecture
+---
+title: ARIA Technical Architecture
+description: Technical architecture for the ARIA regulatory inspection platform
+author: ARIA Engineering
+ms.date: 2026-08-24
+ms.topic: architecture
+---
 
-**Status:** Reference architecture - Core Platform implementation not yet started. See [Roadmap](../../README.md#roadmap).
+**Status:** Reference architecture with Core Platform implementation in progress. See [Roadmap](../../README.md#roadmap).
 
 > This is the concise architecture reference: diagrams, component tables, and short descriptions. For the full exhaustive specification (per-component Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact breakdowns, every token-efficiency strategy with code samples, all 4 deployment topology diagrams, the full 28-ADR catalog, and full validation evidence), see the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md) and [Internal ADR Catalog](internal/aria-adr-catalog-full.md).
 
@@ -35,7 +41,7 @@ Every industry that makes consequential decisions on document bundles - food saf
 | # | Principle | Consequence |
 |---|---|---|
 | AP-01 | Domain neutrality by construction | Zero industry vocabulary in `src/platform/`. CI lint enforcement. |
-| AP-02 | Configuration over code | New document type = JSON entry. New rule = Cosmos DB document. New industry = 13 JSON template files. |
+| AP-02 | Configuration over code | New document type = JSON entry. New rule = Cosmos DB document. New industry = 14 template artifacts. |
 | AP-03 | Decision traceability as a first-class concern | Every decision traceable to field → document → rule → ETag. |
 | AP-04 | Security by architecture, not configuration | Managed Identity, private endpoints, PII redaction at write boundary. |
 | AP-05 | Token efficiency by design | LLM receives minimum structured information, never raw documents. |
@@ -47,7 +53,7 @@ Every industry that makes consequential decisions on document bundles - food saf
 
 ### Reusability strategy
 
-Three mechanisms make the platform reusable across industries: (1) **configuration-driven behavior** - domain-specific rules, fields, and vocabulary are data (JSON/Cosmos DB), not code; (2) the **three-tier product model** - Core Platform (deployed once) → Industry Templates (13 JSON artifacts per industry) → Reference Implementations (customer-specific, isolated); (3) **connector abstraction** - the `BaseConnector` interface lets any external system integrate without platform code changes.
+Three mechanisms make the platform reusable across industries: (1) **configuration-driven behavior** - domain-specific rules, fields, and vocabulary are data (JSON/Cosmos DB), not code; (2) the **three-tier product model** - Core Platform (deployed once) → Industry Templates (14 artifacts per industry) → Reference Implementations (customer-specific, isolated); (3) **connector abstraction** - the `BaseConnector` interface lets any external system integrate without platform code changes.
 
 ---
 
@@ -276,8 +282,8 @@ The Token Efficiency Layer is a cross-cutting design pattern - not a single comp
 ```
 TIER 1 - CORE PLATFORM (deploy once, serve all industries)
   17 domain-neutral engines and frameworks - see Section 4
-TIER 2 - INDUSTRY TEMPLATES (13 JSON artifacts per domain)
-  evidence_types.json · rules.json · reference_data.json · submission_schema.json
+TIER 2 - INDUSTRY TEMPLATES (14 artifacts per domain)
+    evidence_types.json · normalization.json · rules.json · reference_data.json · submission_schema.json
   risk_weight_matrix.json · risk_threshold_bands.json · alias_pairs.json
   cross_validation_rules.json · decision_vocabulary.json · pii_field_list.json
   chat_tools.json · dashboard_config.json · evaluation/
@@ -430,7 +436,7 @@ Five architectural proofs validate the platform design. Full evidence for each l
 | # | Proof | Verdict |
 |---|---|---|
 | 1 | ARIA remains valuable if the PAFN reference implementation is removed | Core Platform + 5 additional industry templates remain fully deployable |
-| 2 | New industries can be onboarded without platform code changes | 13 JSON template artifacts are the only work required |
+| 2 | New industries can be onboarded without platform code changes | 14 template artifacts are the only work required |
 | 3 | Token efficiency is built into the architecture, not bolted on | ~81% aggregate token reduction targeted across a full case lifecycle, based on component-level projections - not yet measured against a production case set |
 | 4 | PAFN is a reference implementation, not the product | PAFN-specific code is fully isolated in `reference-implementations/` |
 | 5 | ARIA is reusable Microsoft-scale IP | 12 target verticals, TAM > $25B, 56% of PAFN components directly reusable with zero modification |
