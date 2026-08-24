@@ -1,0 +1,368 @@
+[
+  {
+    "id": "AGENCY_CODE_RULES",
+    "category": "AgencyCode",
+    "agencyCode": "2"
+  },
+
+  {
+    "id": "MANDATORY_DOC_RULES",
+    "category": "MandatoryDocuments",
+    "mandatoryDocuments": [
+      {"documentType": "Declaration_Document", "documentTypeId": "20"},
+      {"documentType": "Health_License", "documentTypeId": "40"},
+      {"documentType": "Health_Certificate_Country_of_Origin", "documentTypeId": "27"},
+      {"documentType": "House_Bill", "documentTypeId": "46"},
+      {"documentType": "Delivery_Orders", "documentTypeId": "47"},
+      [
+        {"documentType": "Packing_List", "documentTypeId": "48"},
+        {"documentType": "Stretching_List", "documentTypeId": "49"}
+      ],
+      [
+        {"documentType": "Certificate_Of_Origin", "documentTypeId": "51"},
+        {"documentType": "Issuing_Country_of_the_Country_of_Origin_Certificate", "documentTypeId": "60"}
+      ],
+      {"documentType": "Commercial_License", "documentTypeId": "52"},
+      {"documentType": "Import_License", "documentTypeId": "53"},
+      {"documentType": "Signature_Authorization", "documentTypeId": "54"}
+    ],
+    "conditionalDocuments": [
+      {"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"},
+      {"documentType": "Special_Food_Certificate", "documentTypeId": "22"},
+      {"documentType": "Fish_Import_License", "documentTypeId": "24"},
+      {"documentType": "Zubaidi_Import_License", "documentTypeId": "25"},
+      {"documentType": "Shrimp_Import_License", "documentTypeId": "26"},
+      {"documentType": "Invoice", "documentTypeId": "50"},
+      [
+        {"documentType": "Statistical_Declaration", "documentTypeId": "57"},
+        {"documentType": "GCC_Declaration", "documentTypeId": "57"}
+      ],
+      {"documentType": "Other_Documents", "documentTypeId": "23"}
+    ],
+    "otherDocuments": [
+      {"documentType": "Ministry_Of_Foreign_Affaris_Attestation", "documentTypeId": "65"},
+      {"documentType": "Vehicle,_Truck_&_Equipment_Specifications_Disclosure_Form", "documentTypeId": "70"},
+      {"documentType": "Vehicle_Initial_Registration_Form", "documentTypeId": "73"}
+    ]
+  },
+
+  {
+    "id": "MIN_FIELDS_RULES",
+    "category": "MinimumFields",
+    "severity": "Warning",
+    "minimumFieldsByDocuments": [
+      {
+        "documentName": "Declaration_Document",
+        "fields": ["declaration_number", "tin_number", "total_net_weight"]
+      },
+      {
+        "documentName": "Health_License",
+        "fields": ["license_number", "expiry_date", "issuing_authority"]
+      },
+      {
+        "documentName": ["Health_Certificate_Country_of_Origin", "Health_Certificate_from_Country_of_Origin"],
+        "fields": [
+          "certificate_number",
+          "issue_date",
+          "issuing_authority",
+          "country_of_origin",
+          "expiry_date"
+        ]
+      },
+      {
+        "documentName": "Halal_Slaughter_Certificate",
+        "fields": [
+          "certificate_number",
+          "issue_date",
+          "issuing_authority",
+          "meat_type",
+          "carcass_type",
+          "hs_code",
+          "certificate_valid_until",
+          "place_of_issue"
+        ]
+      },
+      {
+        "documentName": "Invoice",
+        "fields": ["invoice_number", "invoice_date", "seller_or_exporter_name", "buyer_or_importer_name"]
+      },
+      {
+        "documentName": ["Packing_List", "Stretching_List"],
+        "fields": ["invoice_number", "total_net_weight"]
+      },
+      {
+        "documentName": "Certificate_Of_Origin",
+        "fields": ["certificate_number", "issue_date", "country_of_origin", "issuing_authority"]
+      },
+      {
+        "documentName": "Commercial_License",
+        "fields": ["license_number", "license_expiry_date", "issuing_authority"]
+      },
+      {
+        "documentName": "Import_License",
+        "fields": ["import_license_number", "license_expiry_date", "issuing_authority"]
+      },
+      {
+        "documentName": "House_Bill",
+        "fields": ["document_number", "shipper_name", "consignee_name"]
+      }
+    ]
+  },
+
+  {
+    "id": "REJECTED_HS_CODES",
+    "category": "HsCodeValidation",
+    "rejectedCodes": [
+      {"hsCode": "0301", "sectionDescription": "Live Animals", "chapterDescription": "Live fish", "hsdescription": "Live fish — prohibited food import"},
+      {"hsCode": "0901.21", "sectionDescription": "Foodstuffs", "chapterDescription": "Coffee, tea", "hsdescription": "Roasted coffee — requires special import permit"},
+      {"hsCode": "2402", "sectionDescription": "Tobacco", "chapterDescription": "Cigars, cigarettes", "hsdescription": "Tobacco products — not under PAFN jurisdiction"},
+      {"hsCode": "2401", "sectionDescription": "Tobacco", "chapterDescription": "Unmanufactured tobacco", "hsdescription": "Raw tobacco — not under PAFN jurisdiction"}
+    ]
+  },
+
+  {
+    "id": "PAFN_HS_CODES",
+    "category": "HsCodeValidation",
+    "rejectedCodes": [
+      {"hsCode": "02"},
+      {"hsCode": "03"},
+      {"hsCode": "04"},
+      {"hsCode": "07"},
+      {"hsCode": "08"},
+      {"hsCode": "09"},
+      {"hsCode": "10"},
+      {"hsCode": "11"},
+      {"hsCode": "12"},
+      {"hsCode": "15"},
+      {"hsCode": "16"},
+      {"hsCode": "17"},
+      {"hsCode": "18"},
+      {"hsCode": "19"},
+      {"hsCode": "20"},
+      {"hsCode": "21"},
+      {"hsCode": "22"}
+    ]
+  },
+
+  {
+    "id": "HALAL_HS_CODES",
+    "category": "ConditionalDocuments",
+    "hsCodes": [
+      "0201", "0202", "0203", "0204", "0205", "0206", "0207", "0208", "0209", "0210",
+      "1601", "1602"
+    ]
+  },
+
+  {
+    "id": "FISH_HS_CODES",
+    "category": "ConditionalDocuments",
+    "hsCodes": ["0302", "0303", "0304", "0305"]
+  },
+
+  {
+    "id": "SHRIMP_HS_CODES",
+    "category": "ConditionalDocuments",
+    "hsCodes": ["0306.17", "0306.27"]
+  },
+
+  {
+    "id": "ZUBAIDI_HS_CODES",
+    "category": "ConditionalDocuments",
+    "hsCodes": ["0302.29", "0303.29"]
+  },
+
+  {
+    "id": "FRESH_HS_CODES",
+    "category": "ConditionalDocuments",
+    "hsCodes": ["07", "08"]
+  },
+
+  {
+    "id": "SIGNATURE_STAMP_RULES",
+    "category": "SignatureStampVerification",
+    "requiredSignatureDocs": [
+      "Certificate_Of_Origin",
+      "Ministry_Of_Foreign_Affairs_Attestation",
+      "Signature_Authorization",
+      "Address_Declaration",
+      "Health_Certificate_Country_Of_Origin",
+      "Health_Certificate_from_Country_of_Origin",
+      "GCC_Specifications_Certificate",
+      "Goods_Quantity_Description_Detection",
+      "Origin_Manufacturer_Detection"
+    ],
+    "informationalSignatureDocs": [
+      "Invoice",
+      "Packing_List"
+    ],
+    "severity": "Warning",
+    "isActive": "True"
+  },
+
+  {
+    "id": "CROSS_DOC_RULES",
+    "category": "CrossDocumentConsistency",
+    "crossDocumentRules": [
+      {
+        "ruleId": "CROSS_IMPORTER_NAME",
+        "field": "importer_name",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Health_Certificate_from_Country_of_Origin", "Certificate_Of_Origin", "Delivery_Orders", "Statistical_Declaration"],
+        "comparisonType": "fuzzyMatch",
+        "threshold": "0.85",
+        "severity": "Warning",
+        "description": "Consignee name doesn't match — verify the same company appears on all documents"
+      },
+      {
+        "ruleId": "CROSS_EXPORTER_NAME",
+        "field": "exporter_name",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Health_Certificate_from_Country_of_Origin", "Certificate_Of_Origin"],
+        "comparisonType": "fuzzyMatch",
+        "threshold": "0.85",
+        "severity": "Warning",
+        "description": "Exporter/shipper name doesn't match — verify the same supplier appears on all documents"
+      },
+      {
+        "ruleId": "CROSS_INVOICE_NUMBER",
+        "field": "invoice_number",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Certificate_Of_Origin", "Health_Certificate_from_Country_of_Origin"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Invoice number differs across documents — all documents should reference the same invoice"
+      },
+      {
+        "ruleId": "CROSS_INVOICE_DATE",
+        "field": "invoice_date",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Certificate_Of_Origin"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Invoice date differs across documents — verify the correct date with the importer"
+      },
+      {
+        "ruleId": "CROSS_HS_CODE",
+        "field": "hs_code",
+        "documents": ["Invoice", "House_Bill", "Statistical_Declaration"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "HS code differs across documents — the tariff code must be identical on all customs documents"
+      },
+      {
+        "ruleId": "CROSS_ITEM_DESCRIPTION",
+        "field": "item_description",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Certificate_Of_Origin"],
+        "comparisonType": "semanticMatch",
+        "threshold": 0.85,
+        "severity": "Warning",
+        "description": "Product description doesn't match — verify all documents describe the same goods"
+      },
+      {
+        "ruleId": "CROSS_QUANTITY",
+        "field": "quantity",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Delivery_Orders"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Quantity values differ across documents — confirm the correct quantity with the importer"
+      },
+      {
+        "ruleId": "CROSS_NET_WEIGHT",
+        "field": "net_weight",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Health_Certificate_from_Country_of_Origin", "Certificate_Of_Origin"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Net weight values differ across documents — confirm the correct weight with the importer"
+      },
+      {
+        "ruleId": "CROSS_GROSS_WEIGHT",
+        "field": "gross_weight",
+        "documents": ["Invoice", "House_Bill", "Certificate_Of_Origin", "Statistical_Declaration"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Gross weight values differ across documents — confirm the correct weight with the importer"
+      },
+      {
+        "ruleId": "CROSS_COUNTRY_OF_ORIGIN",
+        "field": "country_of_origin",
+        "documents": ["Invoice", "House_Bill", "Health_Certificate_from_Country_of_Origin", "Certificate_Of_Origin", "Statistical_Declaration"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Country of origin differs across documents — all documents must declare the same origin"
+      },
+      {
+        "ruleId": "CROSS_PORT_OF_LOADING",
+        "field": "port_of_loading",
+        "documents": ["House_Bill", "Certificate_Of_Origin", "Statistical_Declaration"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Port of loading differs across documents — verify the correct loading port with the shipper"
+      },
+      {
+        "ruleId": "CROSS_PORT_OF_DISCHARGE",
+        "field": "port_of_discharge",
+        "documents": ["House_Bill", "Certificate_Of_Origin", "Statistical_Declaration"],
+        "comparisonType": "exactMatch",
+        "severity": "Warning",
+        "description": "Port of discharge differs across documents — verify the correct destination port"
+      },
+      {
+        "ruleId": "CROSS_PACKAGING",
+        "field": "packaging",
+        "documents": ["Invoice", "Packing_List", "House_Bill", "Certificate_Of_Origin"],
+        "comparisonType": "fuzzyMatch",
+        "threshold": 0.85,
+        "severity": "Warning",
+        "description": "Packaging description doesn't match — verify all documents describe the same packaging"
+      }
+    ]
+  },
+
+  {
+    "id": "LOGICAL_RULES",
+    "category": "LogicalConsistency",
+    "isActive": "True",
+    "logicalRules": [
+      {
+        "ruleId": "FOOD_NOT_EXPIRED",
+        "appliesTo": "FoodItem",
+        "lineItemSources": [
+          {"documentType": "Packing_List", "documentTypeId": "48"},
+          {"documentType": "Stretching_List", "documentTypeId": "49"},
+          {"documentType": "Invoice", "documentTypeId": "50"}
+        ],
+        "inputs": ["expiryDate"],
+        "expression": "expiryDate >= today",
+        "description": "Food must not be already expired"
+      },
+      {
+        "ruleId": "ISSUE_DATE_NOT_IN_FUTURE",
+        "appliesTo": [
+          {"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"},
+          {"documentType": "Health_License", "documentTypeId": "40"},
+          {"documentType": "Health_Certificate_Country_of_Origin", "documentTypeId": "27"},
+          {"documentType": "Fish_Import_License", "documentTypeId": "24"},
+          {"documentType": "Shrimp_Import_License", "documentTypeId": "26"},
+          {"documentType": "Zubaidi_Import_License", "documentTypeId": "25"},
+          {"documentType": "Commercial_License", "documentTypeId": "52"},
+          {"documentType": "Import_License", "documentTypeId": "53"}
+        ],
+        "inputs": ["certificateIssueDate"],
+        "expression": "certificateIssueDate <= today",
+        "description": "Document issue date cannot be in the future"
+      },
+      {
+        "ruleId": "CERTIFICATE_NOT_EXPIRED",
+        "appliesTo": [
+          {"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"},
+          {"documentType": "Health_License", "documentTypeId": "40"},
+          {"documentType": "Health_Certificate_Country_of_Origin", "documentTypeId": "27"},
+          {"documentType": "Fish_Import_License", "documentTypeId": "24"},
+          {"documentType": "Shrimp_Import_License", "documentTypeId": "26"},
+          {"documentType": "Zubaidi_Import_License", "documentTypeId": "25"},
+          {"documentType": "Commercial_License", "documentTypeId": "52"},
+          {"documentType": "Import_License", "documentTypeId": "53"}
+        ],
+        "inputs": ["certificateExpiryDate"],
+        "expression": "certificateExpiryDate > today",
+        "description": "Certificate must still be valid at time of inspection"
+      }
+    ]
+  }
+]

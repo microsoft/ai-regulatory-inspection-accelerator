@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/dstoolkit-document-inspection-agent/templates/_schema/evidence-types.schema.json",
+  "title": "ARIA Evidence Types Schema",
+  "description": "Field-schema contract for a template's evidence_types.json artifact. Defines document types, their extraction fields, optional Azure DI model override, optional line-item fields, and the document-type-ID-to-name mapping used for runtime resolution.",
+  "type": "object",
+  "required": ["document_types"],
+  "additionalProperties": false,
+  "properties": {
+    "doc_type_id_mapping": {
+      "type": "object",
+      "description": "Maps external document-type IDs (strings) to canonical doc_type names. Used by the template loader to resolve a submission's documentTypeId to the doc_type key used throughout the schema.",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "document_types": {
+      "type": "array",
+      "description": "Ordered list of document type definitions. Each entry fully describes one document type's extraction contract.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["doc_type", "fields"],
+        "additionalProperties": false,
+        "properties": {
+          "doc_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Canonical document type identifier (e.g. 'Invoice', 'Halal_Slaughter_Certificate'). Must be unique within the document_types array."
+          },
+          "di_model": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional Azure Document Intelligence prebuilt model ID to use for Phase-1 structured extraction (e.g. 'prebuilt-invoice'). Omit to use the default layout model."
+          },
+          "doc_notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional extraction hints injected verbatim into the LLM system prompt for this document type. Use for document-specific parsing instructions."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Ordered list of canonical field names to extract from this document type. The order influences LLM prompt construction.",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "line_item_fields": {
+            "type": "array",
+            "description": "Optional list of field names to extract per repeating row (e.g. invoice product rows). When present, the LLM is instructed to populate a 'line_items' array in addition to top-level key_value_pairs.",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/dstoolkit-document-inspection-agent/templates/_schema/rules.schema.json",
+  "title": "ARIA Rules Schema",
+  "description": "Validation schema for a template's rules.json artifact. An array of rule documents, each identified by a unique string 'id'. The per-rule payload is polymorphic and validated at runtime by the rule executor.",
+  "type": "array",
+  "minItems": 0,
+  "items": {
+    "type": "object",
+    "required": ["id"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Unique identifier used by the rule executor to look up this document (e.g. 'MANDATORY_DOC_RULES', 'CROSS_DOC_RULES')."
+      },
+      "category": {
+        "type": "string",
+        "description": "Human-readable category label (optional, for documentation)."
+      },
+      "isActive": {
+        "type": ["string", "boolean"],
+        "description": "When 'False' or false, the executor skips this rule. Defaults to active."
+      }
+    },
+    "additionalProperties": true
+  }
+}
