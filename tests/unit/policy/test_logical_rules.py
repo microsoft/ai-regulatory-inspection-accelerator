@@ -1,8 +1,6 @@
 """Unit tests for src/platform/policy/evaluators/logical_rules.py"""
 
-from datetime import date, timedelta
-
-import pytest
+from datetime import date, datetime, timedelta, timezone
 
 from src.platform.policy.evaluators.logical_rules import validate_logical_rules
 
@@ -11,7 +9,7 @@ def _iso(d: date) -> str:
     return d.isoformat()
 
 
-TODAY = date.today()
+TODAY = datetime.now(timezone.utc).date()
 YESTERDAY = TODAY - timedelta(days=1)
 TOMORROW = TODAY + timedelta(days=1)
 LAST_YEAR = TODAY.replace(year=TODAY.year - 1)

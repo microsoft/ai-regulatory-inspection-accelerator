@@ -18,18 +18,14 @@ All Azure service calls are faked; no credentials are required.
 """
 
 import json
-import asyncio
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
+from typing import ClassVar
 
 from src.platform.document_intelligence.di_normalization import (
     canonicalize_fields_for_doc_type,
 )
 from src.platform.document_intelligence.schemas import ExtractedMetadata, KVPair
 from src.platform.templates.template_loader import TemplateLoader, _load_evidence_types
-
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -61,7 +57,7 @@ def _make_metadata(kv_pairs: list[dict]) -> ExtractedMetadata:
 # ---------------------------------------------------------------------------
 
 class TestAddNewDocTypeViaConfig:
-    EVIDENCE = {
+    EVIDENCE: ClassVar[dict] = {
         "doc_type_id_mapping": {
             "100": "Lab_Report",
         },
@@ -116,7 +112,7 @@ class TestAddNewDocTypeViaConfig:
              "canonical_field": "laboratory_name"},
         ])
 
-        fields, line_items = canonicalize_fields_for_doc_type(
+        fields, _line_items = canonicalize_fields_for_doc_type(
             metadata, "Lab_Report",
             openai_client=None,
             allowed_fields=allowed_fields,
@@ -156,7 +152,7 @@ class TestAddNewDocTypeViaConfig:
 # ---------------------------------------------------------------------------
 
 class TestUndeclaredTypeFallback:
-    EVIDENCE = {
+    EVIDENCE: ClassVar[dict] = {
         "document_types": [
             {
                 "doc_type": "Other",
@@ -200,13 +196,13 @@ class TestUndeclaredTypeFallback:
 # ---------------------------------------------------------------------------
 
 class TestRemoveDocTypeClearsFields:
-    EVIDENCE_WITH = {
+    EVIDENCE_WITH: ClassVar[dict] = {
         "document_types": [
             {"doc_type": "Lab_Report", "fields": ["lab_id", "result"]},
             {"doc_type": "Other", "fields": ["company_name", "issue_date"]},
         ],
     }
-    EVIDENCE_WITHOUT = {
+    EVIDENCE_WITHOUT: ClassVar[dict] = {
         "document_types": [
             {"doc_type": "Other", "fields": ["company_name", "issue_date"]},
         ],

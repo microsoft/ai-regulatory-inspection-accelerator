@@ -1,6 +1,8 @@
 """Unit tests for src/platform/policy/evaluators/minimum_fields.py"""
 
-from src.platform.policy.evaluators.minimum_fields import validate_min_fields, _norm
+from typing import ClassVar
+
+from src.platform.policy.evaluators.minimum_fields import _norm, validate_min_fields
 
 
 class TestNorm:
@@ -15,7 +17,7 @@ class TestNorm:
 
 
 class TestValidateMinFields:
-    RULE = {
+    RULE: ClassVar[dict] = {
         "id": "MIN_FIELDS_RULES",
         "severity": "Warning",
         "minimumFieldsByDocuments": [
@@ -23,7 +25,7 @@ class TestValidateMinFields:
         ],
     }
     # No patch needed — inject allowed_fields_by_doc directly (Core Platform improvement)
-    ALLOWED = {"Invoice": ["invoice_number", "invoice_date", "amount"]}
+    ALLOWED: ClassVar[dict] = {"Invoice": ["invoice_number", "invoice_date", "amount"]}
 
     def test_all_fields_present(self):
         submission = [{"document": "Invoice", "fields": {

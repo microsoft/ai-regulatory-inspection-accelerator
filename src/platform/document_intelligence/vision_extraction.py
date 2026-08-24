@@ -25,7 +25,6 @@ import json
 import logging
 import re
 import time
-from typing import Optional
 
 from openai import AzureOpenAI
 
@@ -729,7 +728,7 @@ def cross_validate_with_ocr(
                 action = "filled null" if current_value is None else "corrected"
                 corrections.append(f"{fname}: {action} → {reason}")
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - optional LLM validation must not abort extraction
         logger.warning("Cross-validation LLM call failed: %s", exc)
         return fields, []
 

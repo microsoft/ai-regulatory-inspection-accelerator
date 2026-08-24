@@ -32,19 +32,27 @@ from openai import AzureOpenAI
 
 from src.platform.document_intelligence.field_normalization import (
     build_field_alias_maps as _build_alias_maps,
+)
+from src.platform.document_intelligence.field_normalization import (
     compute_expiry_from_validity_period as _compute_expiry,
+)
+from src.platform.document_intelligence.field_normalization import (
     convert_arabic_numerals,
-    extract_country as _extract_country_generic,
     normalize_arabic_date,
     normalize_arabic_number,
-    normalize_currency as _normalize_currency_generic,
     normalize_date,
     normalize_key,
     strip_bidi_marks,
     strip_trailing_date_suffix,
     unwrap_brackets,
 )
-from src.platform.document_intelligence.schemas import ExtractedMetadata, KVPair, LineItem
+from src.platform.document_intelligence.field_normalization import (
+    extract_country as _extract_country_generic,
+)
+from src.platform.document_intelligence.field_normalization import (
+    normalize_currency as _normalize_currency_generic,
+)
+from src.platform.document_intelligence.schemas import ExtractedMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -472,13 +480,13 @@ def resolve_unmatched_fields_with_llm(
                 valid[key] = target
                 used_targets.add(target)
         if valid:
-            logging.info(
+            logger.info(
                 "Semantic field mapping | doc_type=%s | resolved=%d/%d: %s",
                 doc_type, len(valid), len(unmatched_kvs), valid,
             )
         return valid
-    except Exception as exc:
-        logging.warning("Semantic field mapping failed for doc_type=%s: %s", doc_type, exc)
+    except Exception as exc:  # noqa: BLE001 - optional LLM mapping must not abort extraction
+        logger.warning("Semantic field mapping failed for doc_type=%s: %s", doc_type, exc)
         return {}
 
 
@@ -704,7 +712,7 @@ def normalize_fields_with_llm(
             allowed_set = set(allowed_fields)
             for field_name, correction in corrections.items():
                 if field_name not in allowed_set:
-                    logging.warning(
+                    logger.warning(
                         "LLM normalization suggested correction for unknown field %r — skipping",
                         field_name,
                     )
@@ -721,25 +729,25 @@ def normalize_fields_with_llm(
                             "corrected": corrected,
                             "reason": correction.get("reason", "LLM correction"),
                         })
-            logging.info(
+            logger.info(
                 "LLM normalization completed | file=%s | corrections=%d",
                 file_name, len(correction_log["corrections_applied"])
             )
             return fields, line_items, correction_log
 
         except json.JSONDecodeError as e:
-            logging.warning(
+            logger.warning(
                 "LLM normalization JSON error for %s (attempt %d/%d): %s",
                 file_name, attempt + 1, max_retries, e
             )
-        except Exception as exc:
-            logging.warning(
+        except Exception as exc:  # noqa: BLE001 - retry arbitrary SDK failures
+            logger.warning(
                 "LLM normalization failed for %s (attempt %d/%d): %s",
                 file_name, attempt + 1, max_retries, exc
             )
             time.sleep(retry_delay_sec * (attempt + 1))
 
-    logging.warning(
+    logger.warning(
         "LLM normalization: all retries failed for %s, using original values", file_name
     )
     return fields, line_items, {"error": "LLM normalization failed", "llm_normalization_skipped": True}

@@ -7,8 +7,11 @@ all HS code values come from the rule config).
 
 
 def _normalize_hs(hs_code: str) -> str:
-    """Strip dots and trailing zeros for prefix comparison."""
-    normalized = hs_code.replace(".", "").rstrip("0")
+    """Strip separators and trailing ``00`` classification segments."""
+    segments = hs_code.split(".")
+    while len(segments) > 1 and segments[-1] == "00":
+        segments.pop()
+    normalized = "".join(segments)
     return normalized if normalized else "0"
 
 
@@ -41,7 +44,7 @@ def check_pafn_hs_code(hs_code: str, item_code: str, pafn_lookup: set) -> list:
     if not pafn_lookup:
         return []
     norm_hs = _normalize_hs(hs_code)
-    if norm_hs not in pafn_lookup:
+    if not any(norm_hs.startswith(prefix) for prefix in pafn_lookup):
         return [{
             "ruleCode": "NON_PAFN_HS_CODE",
             "result": "FAIL",

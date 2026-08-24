@@ -1,9 +1,11 @@
 """Unit tests for src/platform/policy/evaluators/hs_code.py"""
 
+from typing import ClassVar
+
 from src.platform.policy.evaluators.hs_code import (
     _normalize_hs,
-    check_rejected_hs_code,
     check_pafn_hs_code,
+    check_rejected_hs_code,
     validate_hs_codes,
 )
 
@@ -20,7 +22,7 @@ class TestNormalizeHs:
 
 
 class TestCheckRejectedHsCode:
-    LOOKUP = [("0301", {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"})]
+    LOOKUP: ClassVar[list] = [("0301", {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"})]
 
     def test_match_returns_finding(self):
         findings = check_rejected_hs_code("0301.10.00", "ITEM1", self.LOOKUP)
@@ -39,7 +41,7 @@ class TestCheckRejectedHsCode:
 
 
 class TestCheckPafnHsCode:
-    PAFN_LOOKUP = {"16029010", "0203"}
+    PAFN_LOOKUP: ClassVar[set] = {"16029010", "0203"}
 
     def test_valid_code_passes(self):
         findings = check_pafn_hs_code("1602.90.10.00", "ITEM1", self.PAFN_LOOKUP)
@@ -56,7 +58,7 @@ class TestCheckPafnHsCode:
 
 
 class TestValidateHsCodes:
-    RULES = {
+    RULES: ClassVar[dict] = {
         "rejectedCodes": [
             {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"}
         ],

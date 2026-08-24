@@ -1,9 +1,9 @@
 """
 Integration test: same rule evaluation produces identical findings on the reference case.
 
-Loads templates/food-safety/rules.json and runs run_rules() against the reference
-payload (cosmos_seed_data/payload.json) with a minimal submission (documents present
-but empty fields). Verifies the deterministic findings match expected values.
+Loads templates/food-safety/rules.json and runs run_rules() against a self-contained
+reference payload with a minimal submission (documents present but empty fields).
+Verifies the deterministic findings match expected values.
 
 This is the acceptance criterion: "Same rule evaluation produces identical findings
 on the reference case."
@@ -23,7 +23,6 @@ from src.platform.policy.rule_executor import run_rules
 
 WORKSPACE = Path(__file__).resolve().parent.parent.parent
 RULES_JSON = WORKSPACE / "templates" / "food-safety" / "rules.json"
-PAYLOAD_JSON = WORKSPACE / "pafn-inspection-agent" / "cosmos_seed_data" / "payload.json"
 
 
 @pytest.fixture(scope="module")
@@ -34,8 +33,33 @@ def food_safety_rules() -> list:
 
 @pytest.fixture(scope="module")
 def reference_payload() -> dict:
-    with open(PAYLOAD_JSON, encoding="utf-8") as f:
-        return json.load(f)
+    return {
+        "requestId": "REFERENCE-CHICKEN-001",
+        "bayanNumber": "TIM/1234/SHU25",
+        "items": [
+            {
+                "itemCode": "CHICKEN-001",
+                "itemType": "Frozen chicken",
+                "serial": 1,
+                "hsCode": "1602.90.10.00.00",
+                "expiryDate": "2027-02-04",
+            },
+            {
+                "itemCode": "CHICKEN-002",
+                "itemType": "Frozen chicken",
+                "serial": 2,
+                "hsCode": "1602.90.10.00.00",
+                "expiryDate": "2027-02-07",
+            },
+        ],
+        "documents": [
+            {"documentTypeId": "20", "documentType": "Declaration_Document"},
+            {"documentTypeId": "40", "documentType": "Health_License"},
+            {"documentTypeId": "27", "documentType": "Health_Certificate_Country_of_Origin"},
+            {"documentTypeId": "50", "documentType": "Invoice"},
+            {"documentTypeId": "51", "documentType": "Certificate_Of_Origin"},
+        ],
+    }
 
 
 def _minimal_submission(payload: dict) -> list:

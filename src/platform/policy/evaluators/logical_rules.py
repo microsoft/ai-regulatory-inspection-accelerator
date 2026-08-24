@@ -5,7 +5,7 @@ Ported from PAFN's rules_engine/logical_rules.py — unchanged (pure algorithm,
 rule configuration comes from the LOGICAL_RULES rule document).
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 _LINE_ITEM_SOURCE_PRIORITY = ("Packing_List", "Stretching_List", "Invoice")
 
@@ -72,7 +72,7 @@ def _resolve_doc(entry, doc_by_id: dict) -> tuple[dict | None, str]:
 def validate_logical_rules(rule: dict, payload: dict, submission: list) -> list:
     """Evaluate logical consistency rules against the payload and normalized submission."""
     findings = []
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
 
     doc_by_id: dict[str, dict] = {}
     for doc in submission:
