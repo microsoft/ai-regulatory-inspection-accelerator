@@ -7,6 +7,7 @@ All content (country maps, document name map) is domain-neutral algorithm data.
 """
 
 import re as _re
+
 import pycountry
 
 _ARABIC_COUNTRY_MAP: dict[str, str] = {
@@ -139,9 +140,9 @@ def build_doc_field_index(submission: list, min_confidence: float = 0.0) -> dict
 def get_field_value(
     doc_fields: dict,
     rule_field: str,
-    field_resolution: dict = None,
-    doc_name: str = None,
-) -> str:
+    field_resolution: dict | None = None,
+    doc_name: str | None = None,
+) -> str | None:
     """Resolve a rule field name to its value in a document's extracted fields."""
     if field_resolution and doc_name:
         resolved = field_resolution.get(rule_field, {}).get(doc_name)

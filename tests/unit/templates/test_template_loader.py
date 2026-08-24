@@ -12,14 +12,11 @@ Tests cover:
 """
 
 import json
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from src.platform.templates.template_loader import TemplateLoader, _load_evidence_types
-
 
 # ---------------------------------------------------------------------------
 # Fixture helpers
@@ -78,8 +75,6 @@ class TestBasicLoading:
             {"doc_type": "Dup", "fields": ["f1"]},
             {"doc_type": "Dup", "fields": ["f2"]},
         ]
-        _load_evidence_types.cache_clear()
-        loader = TemplateLoader("test-tmpl", tmp_path)
         (tmp_path / "test-tmpl").mkdir(parents=True, exist_ok=True)
         (tmp_path / "test-tmpl" / "evidence_types.json").write_text(
             json.dumps(data), encoding="utf-8"

@@ -10,10 +10,8 @@ Unit tests for the DI extraction pipeline:
 All tests are offline — Azure DI, Blob, and OpenAI calls are faked.
 """
 
-import asyncio
 import json
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -27,7 +25,6 @@ from src.platform.document_intelligence.schemas import (
     ExtractedMetadata,
 )
 from src.platform.templates.template_loader import TemplateLoader, _load_evidence_types
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -151,7 +148,7 @@ class TestBuildMetadataExtractionPrompt:
 class TestExtractMetadataLLM:
     def test_returns_extracted_metadata(self, doc_input, di_result, loader):
         client = _make_openai_client(VALID_LLM_RESPONSE)
-        meta, raw = extract_metadata_llm(doc_input, di_result, client, "Invoice", loader)
+        meta, _raw = extract_metadata_llm(doc_input, di_result, client, "Invoice", loader)
         assert isinstance(meta, ExtractedMetadata)
 
     def test_parses_kv_pairs_correctly(self, doc_input, di_result, loader):
@@ -177,7 +174,7 @@ class TestExtractMetadataLLM:
 
     def test_returns_empty_metadata_after_all_retries(self, doc_input, di_result, loader):
         client = _make_openai_client("not json")
-        meta, raw = extract_metadata_llm(
+        meta, _raw = extract_metadata_llm(
             doc_input, di_result, client, "Invoice", loader
         )
         # Expect empty / default metadata after retry exhaustion

@@ -1,26 +1,17 @@
 """Unit tests for src/platform/policy/rule_executor.py — deterministic helpers."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from typing import ClassVar
+from unittest.mock import patch
 
 from src.platform.policy.rule_executor import (
     _find_rule,
-    FINDING_CONFIDENCE_THRESHOLD,
-    MANDATORY_RULE_ID,
-    MIN_FIELDS_RULE_ID,
-    HS_CODE_RULE_ID,
-    CROSS_DOC_RULE_ID,
-    SIGNATURE_STAMP_RULE_ID,
-    LOGICAL_RULE_ID,
-    AGENCY_CODE_RULE_ID,
     run_rules,
 )
 
 
 class TestFindRule:
-    RULES = [
+    RULES: ClassVar[list] = [
         {"id": "MANDATORY_DOC_RULES", "data": "mandatory"},
         {"id": "CROSS_DOC_RULES", "data": "cross_doc"},
     ]
@@ -89,9 +80,6 @@ class TestRunRules:
     def test_agency_code_read_from_agency_code_rules(self):
         """AGENCY_CODE_RULES doc supplies the agency code instead of hardcoded '2'."""
         captured = {}
-        original = __import__(
-            "src.platform.policy.evaluators.agency_code", fromlist=["validate_agency_code"]
-        ).validate_agency_code
 
         def capturing_validator(submission, agency_code="2"):
             captured["agency_code"] = agency_code

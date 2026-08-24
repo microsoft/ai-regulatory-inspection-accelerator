@@ -54,8 +54,8 @@ from src.platform.document_intelligence.di_normalization import (
     normalize_all_fields,
 )
 from src.platform.document_intelligence.schemas import (
-    DocumentIntelligenceResult,
     DocumentInput,
+    DocumentIntelligenceResult,
     ExtractedMetadata,
     KVPair,
     LineItem,
@@ -63,11 +63,12 @@ from src.platform.document_intelligence.schemas import (
 )
 from src.platform.document_intelligence.vision_extraction import (
     cross_validate_with_ocr,
-    extract_metadata_ensemble,
     extract_metadata_hybrid,
     extract_metadata_vision,
 )
 from src.platform.templates.template_loader import TemplateLoader
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Configuration (read from environment, same as PAFN)
@@ -319,7 +320,7 @@ async def run_document_intelligence(
                 f"Document Intelligence auth failure (HTTP {exc.status_code}) — check "
                 f"Managed Identity role assignment. Original error: {exc}"
             ) from exc
-        logging.error("Document Intelligence failed for %s: %s", file_name, exc)
+        logger.error("Document Intelligence failed for %s: %s", file_name, exc)
         return DocumentIntelligenceResult()
 
     markdown_content = _add_bidi_marks(result.content or "")
@@ -352,7 +353,7 @@ async def run_document_intelligence(
         sum(word_confidences) / len(word_confidences) if word_confidences else 0.0
     )
 
-    logging.info(
+    logger.info(
         "DI analysis finished | file=%s | model=%s | pages=%d | chars=%d | "
         "ocrConf=%.4f | languages=%s | handwriting=%s | signatures=%s",
         file_name, model_id, page_count, len(markdown_content),
@@ -411,11 +412,11 @@ def extract_metadata_llm(
             if json_match:
                 data = json.loads(json_match.group())
             else:
-                logging.warning(
+                logger.warning(
                     "No JSON object in LLM response for %s: %s",
                     doc_input.file_name, raw[:200],
                 )
-                data = {}
+                continue
 
             normalized_tables: list[TableData] = []
             for t in (data.get("tables_extracted") or []):
@@ -483,7 +484,7 @@ def extract_metadata_llm(
             data.setdefault("language", "")
 
             metadata = ExtractedMetadata(**data)
-            logging.info(
+            logger.info(
                 "LLM extraction done | file=%s | docType=%s | kvPairs=%d | tables=%d | lineItems=%d",
                 doc_input.file_name, doc_type,
                 len(metadata.key_value_pairs),
@@ -493,7 +494,7 @@ def extract_metadata_llm(
             return metadata, raw
 
         except json.JSONDecodeError as exc:
-            logging.warning(
+            logger.warning(
                 "JSON parse error for %s (attempt %d/%d): %s",
                 doc_input.file_name, attempt + 1, MAX_RETRIES, exc,
             )
@@ -503,13 +504,13 @@ def extract_metadata_llm(
                     f"OpenAI auth failure (HTTP {exc.status_code}) — check Managed Identity "
                     f"role assignment on the OpenAI resource. Original error: {exc}"
                 ) from exc
-            logging.warning(
+            logger.warning(
                 "LLM call failed for %s (attempt %d/%d): %s",
                 doc_input.file_name, attempt + 1, MAX_RETRIES, exc,
             )
             time.sleep(RETRY_DELAY_SEC * (attempt + 1))
 
-    logging.error(
+    logger.error(
         "LLM extraction: all retries failed for %s (doc_type=%s)",
         doc_input.file_name, doc_type,
     )
@@ -536,7 +537,7 @@ async def _preprocess_for_vision(blob_data: bytes, file_name: str) -> list[bytes
         )
         return await asyncio.to_thread(preprocess_for_vision, blob_data, file_name)
     except ImportError:
-        logging.warning(
+        logger.warning(
             "handwriting_preprocessing not available — skipping pre-processing | file=%s",
             file_name,
         )
@@ -597,7 +598,7 @@ async def run(
     extracted_fields: dict = {}
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
-    logging.info("Starting DI extraction | requestId=%s | docCount=%d", request_id, len(documents))
+    logger.info("Starting DI extraction | requestId=%s | docCount=%d", request_id, len(documents))
 
     semaphore = asyncio.Semaphore(concurrency)
 
@@ -618,17 +619,12 @@ async def run(
                 downloader = await container_client.get_blob_client(blob_path).download_blob()
                 blob_data: bytes = await downloader.readall()
 
-                logging.info(
+                logger.info(
                     "Blob downloaded | docId=%s | size=%d bytes", doc_id, len(blob_data)
                 )
 
                 # ── Step 0: Image Quality Check ───────────────────────────────
                 # Import quality check from the shared quality_assessment module
-                from src.platform.document_intelligence.quality_assessment import (
-                    QUALITY_CHECK_SYSTEM_PROMPT,
-                    evaluate_quality_response,
-                    DEFAULT_QUALITY_SCORE_THRESHOLD,
-                )
                 from shared.image_quality import check_image_quality  # PAFN shim
 
                 quality_check_result = await asyncio.to_thread(
@@ -639,13 +635,13 @@ async def run(
                     retry_delay_sec=retry_delay_sec,
                 )
 
-                logging.info(
+                logger.info(
                     "Quality check done | docId=%s | score=%.2f | issues=%s",
                     doc_id, quality_check_result.quality_score, quality_check_result.issues,
                 )
 
                 if not quality_check_result.passed:
-                    logging.warning(
+                    logger.warning(
                         "Quality check failed — skipping DI+LLM | docId=%s | score=%.2f",
                         doc_id, quality_check_result.quality_score,
                     )
@@ -693,7 +689,7 @@ async def run(
                     use_vision_path = True
                     if not vision_pages:
                         if _is_pdf(file_name):
-                            logging.warning(
+                            logger.warning(
                                 "PDF rasterization failed for handwritten Arabic doc — "
                                 "falling back to OCR+LLM | docId=%s",
                                 doc_id,
@@ -707,7 +703,7 @@ async def run(
                             vision_pages[0] if len(vision_pages) == 1 else vision_pages
                         )
                         if is_mixed:
-                            logging.info(
+                            logger.info(
                                 "Mixed Arabic — hybrid extraction | docId=%s", doc_id
                             )
                             metadata, _llm_raw = await asyncio.to_thread(
@@ -720,7 +716,7 @@ async def run(
                                 retry_delay_sec=retry_delay_sec,
                             )
                         else:
-                            logging.info(
+                            logger.info(
                                 "Handwritten Arabic — vision extraction | docId=%s", doc_id
                             )
                             metadata, _llm_raw = await asyncio.to_thread(
@@ -733,7 +729,7 @@ async def run(
                             )
                     else:
                         if not di_result.markdown_content:
-                            logging.warning(
+                            logger.warning(
                                 "DI returned empty content and PDF rasterization failed — "
                                 "storing null fields | docId=%s", doc_id,
                             )
@@ -745,7 +741,7 @@ async def run(
                             )
                 else:
                     if not di_result.markdown_content:
-                        logging.warning(
+                        logger.warning(
                             "DI returned empty content — storing null fields | docId=%s", doc_id,
                         )
                         metadata, _llm_raw = ExtractedMetadata(), "{}"
@@ -828,9 +824,7 @@ async def run(
                 return (doc_id, result_entry, None)
 
             except Exception as exc:
-                logging.exception(
-                    "Unrecoverable error processing docId=%s: %s", doc_id, exc
-                )
+                logger.exception("Unrecoverable error processing docId=%s", doc_id)
                 error = {
                     "code": "OCR_EXTRACTION_FAILED",
                     "severity": "error",
@@ -849,7 +843,7 @@ async def run(
             extracted_fields[doc_id] = result_entry
 
     success = len(errors) == 0
-    logging.info(
+    logger.info(
         "DI extraction complete | requestId=%s | success=%s | docs=%d | errors=%d",
         request_id, success, len(extracted_fields), len(errors),
     )

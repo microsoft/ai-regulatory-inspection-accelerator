@@ -18,16 +18,15 @@ identical to PAFN production.
 import logging
 import os
 import traceback
-from typing import Optional
 
 from src.platform.policy.evaluators.agency_code import validate_agency_code
+from src.platform.policy.evaluators.cross_document import validate_cross_docs
+from src.platform.policy.evaluators.hs_code import validate_hs_codes
+from src.platform.policy.evaluators.item_check import validate_item_checks
+from src.platform.policy.evaluators.logical_rules import validate_logical_rules
 from src.platform.policy.evaluators.mandatory_documents import validate_mandatory_docs
 from src.platform.policy.evaluators.minimum_fields import validate_min_fields
-from src.platform.policy.evaluators.hs_code import validate_hs_codes
-from src.platform.policy.evaluators.cross_document import validate_cross_docs
-from src.platform.policy.evaluators.item_check import validate_item_checks
 from src.platform.policy.evaluators.signature_stamp import validate_signature_stamp
-from src.platform.policy.evaluators.logical_rules import validate_logical_rules
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ FINDING_CONFIDENCE_THRESHOLD = float(
 )
 
 
-def _find_rule(rules_list: list, rule_id: str) -> Optional[dict]:
+def _find_rule(rules_list: list, rule_id: str) -> dict | None:
     """Return the first rule dict with matching id, or None."""
     return next((r for r in rules_list if r.get("id") == rule_id), None)
 
@@ -74,7 +73,6 @@ async def run_rules(
                                template's evidence_types.json instead of a hardcoded file.
     """
     findings = []
-    request_id = payload.get("requestId", "")
     normalized_submission = submission
 
     # Read agency code from AGENCY_CODE_RULES rule doc; fall back to "2" (PAFN default).
@@ -86,7 +84,7 @@ async def run_rules(
         result = validate_agency_code(submission, agency_code=agency_code)
         findings.extend(result)
         logger.info("agency_code: %d finding(s)", len(result))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
         logger.error("Step 0 agency_code FAILED | %s\n%s", exc, traceback.format_exc())
 
     # Step 1: Mandatory documents + name normalization
@@ -96,7 +94,7 @@ async def run_rules(
             result, normalized_submission = validate_mandatory_docs(rules_list, payload, submission)
             findings.extend(result)
             logger.info("mandatory: %d finding(s)", len(result))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
             logger.error("Step 1 mandatory_documents FAILED | %s\n%s", exc, traceback.format_exc())
     else:
         logger.warning("Skipping mandatory — %s not in rules_list", MANDATORY_RULE_ID)
@@ -108,7 +106,7 @@ async def run_rules(
             result = validate_min_fields(rule, normalized_submission, allowed_fields_by_doc=allowed_fields_by_doc)
             findings.extend(result)
             logger.info("minimum_fields: %d finding(s)", len(result))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
             logger.error("Step 2 minimum_fields FAILED | %s\n%s", exc, traceback.format_exc())
     else:
         logger.warning("Skipping minimum_fields — %s not in rules_list", MIN_FIELDS_RULE_ID)
@@ -124,7 +122,7 @@ async def run_rules(
             result = validate_hs_codes(combined_rule, payload)
             findings.extend(result)
             logger.info("hs_code: %d finding(s)", len(result))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
             logger.error("Step 3 hs_code FAILED | %s\n%s", exc, traceback.format_exc())
     else:
         logger.warning("Skipping hs_code — %s not in rules_list", HS_CODE_RULE_ID)
@@ -141,7 +139,7 @@ async def run_rules(
             findings.extend(cross_findings)
             findings.extend(result.get("item_type_findings", []))
             logger.info("cross_document: %d finding(s)", len(cross_findings))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
             logger.error("Step 4 cross_document FAILED | %s\n%s", exc, traceback.format_exc())
     else:
         logger.warning("Skipping cross_document — %s not in rules_list", CROSS_DOC_RULE_ID)
@@ -151,7 +149,7 @@ async def run_rules(
         item_findings = validate_item_checks(payload, normalized_submission)
         findings.extend(item_findings)
         logger.info("item_check: %d finding(s)", len(item_findings))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
         logger.error("Step 5 item_check FAILED | %s\n%s", exc, traceback.format_exc())
 
     # Step 6: Signature / stamp verification
@@ -161,7 +159,7 @@ async def run_rules(
             result = validate_signature_stamp(rule, normalized_submission)
             findings.extend(result)
             logger.info("signature_stamp: %d finding(s)", len(result))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
             logger.error("Step 6 signature_stamp FAILED | %s\n%s", exc, traceback.format_exc())
     else:
         logger.warning("Skipping signature_stamp — %s not in rules_list", SIGNATURE_STAMP_RULE_ID)
@@ -173,7 +171,7 @@ async def run_rules(
             result = validate_logical_rules(rule, payload, normalized_submission)
             findings.extend(result)
             logger.info("logical_rules: %d finding(s)", len(result))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
             logger.error("Step 7 logical_rules FAILED | %s\n%s", exc, traceback.format_exc())
     else:
         logger.warning("Skipping logical_rules — %s not in rules_list or inactive", LOGICAL_RULE_ID)

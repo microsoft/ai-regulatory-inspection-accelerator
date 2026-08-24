@@ -54,7 +54,8 @@ def _normalize_date(value: str) -> str | None:
     for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%Y/%m/%d",
                 "%b %d %Y", "%B %d %Y", "%d %b %Y", "%d %B %Y"):
         try:
-            return datetime.strptime(value, fmt).strftime("%Y-%m-%d")
+            parsed = datetime.strptime(value, fmt).date()  # noqa: DTZ007 - date-only value
+            return parsed.isoformat()
         except ValueError:
             pass
     return None
@@ -281,7 +282,7 @@ async def validate_cross_docs(
                     line_items=source_line_items,
                     managed_identity_client_id=managed_identity_client_id,
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - optional LLM check must not abort rules
                 logger.error("LLM item type checks failed: %s", exc)
 
     return {

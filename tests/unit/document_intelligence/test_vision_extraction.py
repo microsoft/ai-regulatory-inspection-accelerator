@@ -14,12 +14,9 @@ No real Azure credentials are required.
 
 import json
 
-import pytest
-
 from src.platform.document_intelligence.schemas import (
     DocumentInput,
     ExtractedMetadata,
-    KVPair,
 )
 from src.platform.document_intelligence.vision_extraction import (
     _build_hybrid_extraction_prompt,
@@ -28,7 +25,6 @@ from src.platform.document_intelligence.vision_extraction import (
     extract_metadata_hybrid,
     extract_metadata_vision,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared test data

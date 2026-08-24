@@ -14,7 +14,6 @@ text are identical to PAFN production.
 """
 
 import logging
-from datetime import datetime, timezone
 
 from src.platform.policy.rule_executor import run_rules
 
@@ -89,7 +88,7 @@ async def run(
             item_type_check_fn=item_type_check_fn,
             allowed_fields_by_doc=allowed_fields_by_doc,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - convert executor failure to a HOLD verdict
         logger.error("run_rules failed unexpectedly | %s", exc)
         executor_findings = []
         findings.append({

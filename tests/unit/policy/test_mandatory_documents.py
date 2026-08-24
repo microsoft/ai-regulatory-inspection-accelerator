@@ -1,11 +1,12 @@
 """Unit tests for src/platform/policy/evaluators/mandatory_documents.py"""
 
+from typing import ClassVar
+
 from src.platform.policy.evaluators.mandatory_documents import (
-    _norm,
-    _normalize_hs,
-    _get_hs_prefixes,
-    validate_mandatory_docs,
     GCC_COUNTRIES,
+    _get_hs_prefixes,
+    _norm,
+    validate_mandatory_docs,
 )
 
 
@@ -18,7 +19,7 @@ class TestNorm:
 
 
 class TestGetHsPrefixes:
-    RULES = [{"id": "HALAL_HS_CODES", "hsCodes": ["0201", "0202.10.00"]}]
+    RULES: ClassVar[list] = [{"id": "HALAL_HS_CODES", "hsCodes": ["0201", "0202.10.00"]}]
 
     def test_returns_normalized(self):
         prefixes = _get_hs_prefixes(self.RULES, "HALAL_HS_CODES")
@@ -37,7 +38,7 @@ class TestGccCountries:
 
 
 class TestValidateMandatoryDocs:
-    MANDATORY_RULE = {
+    MANDATORY_RULE: ClassVar[dict] = {
         "id": "MANDATORY_DOC_RULES",
         "mandatoryDocuments": [
             {"documentType": "Invoice", "documentTypeId": "50"},
