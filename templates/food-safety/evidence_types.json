@@ -1,0 +1,774 @@
+{
+  "doc_type_id_mapping": {
+    "20": "Declaration_Document",
+    "21": "Halal_Slaughter_Certificate",
+    "22": "Special_Food_Certificate",
+    "23": "Other",
+    "24": "Fish_Import_License",
+    "25": "Zubaidi_Import_License",
+    "26": "Shrimp_Import_License",
+    "27": "Health_Certificate_from_Country_of_Origin",
+    "40": "Health_License",
+    "42": "Declaration_Document",
+    "43": "Other",
+    "46": "House_Bill",
+    "47": "Delivery_Orders",
+    "48": "Packing_List",
+    "49": "Stretching_List",
+    "50": "Invoice",
+    "51": "Certificate_Of_Origin",
+    "52": "Commercial_License",
+    "53": "Import_License",
+    "54": "Signature_Authorization",
+    "55": "Address_Declaration",
+    "56": "Civil_ID",
+    "57": "Statistical_Declaration",
+    "60": "Issuing_Country_Of_Origin_Certificate",
+    "61": "Invoice_Documents",
+    "65": "Ministry_Of_Foreign_Affairs_Attestation",
+    "70": "Vehicle_Truck_Equipment_Specifications",
+    "73": "Vehicle_Initial_Registration",
+    "74": "GCC_Specifications_Certificate",
+    "75": "Goods_Quantity_Description_Detection",
+    "77": "Origin_Manufacturer_Detection",
+    "80": "Chemical_Import_License",
+    "93": "Material_Safety_Document_Sheet",
+    "94": "Company_Establishment_Questionnaire",
+    "97": "Other"
+  },
+  "document_types": [
+    {
+      "doc_type": "House_Bill",
+      "fields": [
+        "document_number",
+        "shipper_name",
+        "consignee_name",
+        "goods_description",
+        "quantity_or_packages",
+        "weight",
+        "gross_weight",
+        "origin_location",
+        "hs_code",
+        "delivery_order_number",
+        "net_weight",
+        "country_of_origin",
+        "bl_number",
+        "manifest_number",
+        "port_of_loading",
+        "port_of_discharge"
+      ]
+    },
+    {
+      "doc_type": "Delivery_Orders",
+      "fields": [
+        "delivery_order_number",
+        "consignee_name",
+        "manifest_number",
+        "origin_location",
+        "origin_country",
+        "quantity_landed",
+        "weight",
+        "goods_description",
+        "entered_date",
+        "actual_arrival_date",
+        "gross_weight",
+        "net_weight",
+        "bayan_number",
+        "house_bill_number",
+        "goods_type",
+        "bl_number",
+        "quantity",
+        "total_net_weight",
+        "country_of_origin",
+        "port_of_loading",
+        "port_of_discharge"
+      ]
+    },
+    {
+      "doc_type": "Packing_List",
+      "doc_notes": "This is a Packing List. The label 'OUR RE:' or 'OUR REF:' or 'OUR REFERENCE:' in the header is an exporter reference that maps to invoice_number. Weight totals are often expressed in metric tons (MT or M/T).",
+      "fields": [
+        "invoice_number",
+        "invoice_date",
+        "importer_consignee_name",
+        "exporter_shipper_name",
+        "total_net_weight",
+        "gross_weight",
+        "phytosanitary_certificate_number"
+      ],
+      "line_item_fields": [
+        "goods_description",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "weight_unit",
+        "hs_code"
+      ]
+    },
+    {
+      "doc_type": "Stretching_List",
+      "doc_notes": "This is a Packing List (also called Stretching List). The label 'OUR RE:' or 'OUR REF:' or 'OUR REFERENCE:' in the header is an exporter reference that maps to invoice_number. Weight totals are often expressed in metric tons (MT or M/T). Per-item data (description, weight, quantity, dates) belongs in line items, not top-level fields.",
+      "fields": [
+        "shipper_or_exporter_name",
+        "consignee_or_importer_name",
+        "total_packages_or_total_quantity",
+        "total_net_weight",
+        "item_description",
+        "quantity_or_number_of_packages",
+        "net_weight",
+        "port_of_loading",
+        "origin_country",
+        "total_gross_weight",
+        "hs_code",
+        "expiry_date",
+        "gross_weight",
+        "country_of_origin_per_item",
+        "invoice_number",
+        "invoice_date",
+        "goods_description",
+        "quantity",
+        "country_of_origin",
+        "phytosanitary_certificate_number"
+      ],
+      "line_item_fields": [
+        "item_description",
+        "quantity_or_number_of_packages",
+        "net_weight",
+        "gross_weight",
+        "hs_code",
+        "expiry_date",
+        "production_date",
+        "country_of_origin_per_item",
+        "ean_or_ucc_code",
+        "brand_name_per_item"
+      ]
+    },
+    {
+      "doc_type": "Invoice",
+      "di_model": "prebuilt-invoice",
+      "doc_notes": "This is a commercial invoice. The invoice body contains a MULTI-ROW product table — each row is a SEPARATE product. Extract each non-empty product row as a SEPARATE object in line_items. CRITICAL: never concatenate quantities from different rows into a single string or number. If row 1 has quantity 1716 and row 2 has quantity 910, produce TWO line_items entries — not '1716910'. Each line_item must have its own quantity, net_weight, gross_weight, item_description, and other per-row fields. Weight columns in the product table use metric tons (M/T) — e.g. '14.002560' means 14.002560 MT. Header summary lines (total packages, total net weight M/T, total gross weight M/T) go into key_value_pairs as gross_weight_total and net_weight_total respectively. Dates (invoice_date) must be ISO-8601 (YYYY-MM-DD).",
+      "fields": [
+        "invoice_date",
+        "seller_or_exporter_name",
+        "buyer_or_importer_name",
+        "buyer_or_importer_address",
+        "invoice_total_amount",
+        "item_description",
+        "quantity_or_weight",
+        "unit_price",
+        "line_amount",
+        "invoice_type",
+        "currency",
+        "country_of_origin",
+        "country_of_destination",
+        "producer_or_manufacturer_name",
+        "producer_or_manufacturer_address",
+        "tax_number_or_vat_number",
+        "exporter_registration_number",
+        "awb_or_bill_of_lading_number",
+        "shipment_reference_number",
+        "customer_number",
+        "buyer_order_number",
+        "order_number",
+        "delivery_note_number",
+        "delivery_terms",
+        "payment_terms",
+        "payment_information",
+        "bank_account_details",
+        "freight_amount",
+        "gross_weight_total",
+        "net_weight_total",
+        "container_number",
+        "seal_number",
+        "port_of_loading",
+        "port_of_discharge",
+        "etd",
+        "eta",
+        "package_count",
+        "unit_of_measure",
+        "gross_weight",
+        "net_weight",
+        "production_date",
+        "expiry_date",
+        "batch_or_lot_number",
+        "brand_name",
+        "product_code",
+        "hs_code",
+        "country_of_origin_per_item",
+        "vat_rate",
+        "invoice_number",
+        "invoice_amount"
+      ],
+      "line_item_fields": [
+        "item_description",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "unit_price",
+        "line_amount",
+        "hs_code",
+        "expiry_date",
+        "production_date",
+        "country_of_origin_per_item",
+        "goods_description",
+        "quantity_or_weight",
+        "weight_unit"
+      ]
+    },
+    {
+      "doc_type": "Certificate_Of_Origin",
+      "fields": [
+        "certificate_number_or_reference",
+        "certificate_number",
+        "issue_date",
+        "exporter_name",
+        "consignee_or_importer_name",
+        "country_of_origin",
+        "issuing_authority_or_certifying_body",
+        "goods_description",
+        "quantity_or_weight",
+        "bill_of_lading_number",
+        "port_of_loading",
+        "place_of_issue",
+        "invoice_number",
+        "invoice_date",
+        "gross_weight",
+        "net_weight",
+        "hs_code"
+      ]
+    },
+    {
+      "doc_type": "Commercial_License",
+      "fields": [
+        "issuing_authority",
+        "license_number",
+        "license_issue_date",
+        "license_expiry_date",
+        "legal_entity",
+        "commercial_registration_number",
+        "company_name_or_trade_name"
+      ]
+    },
+    {
+      "doc_type": "Import_License",
+      "fields": [
+        "issuing_authority",
+        "import_license_number",
+        "license_start_date",
+        "license_expiry_date",
+        "trade_name",
+        "commercial_registration_number",
+        "legal_entity"
+      ]
+    },
+    {
+      "doc_type": "Signature_Authorization",
+      "fields": [
+        "issuing_authority",
+        "signature_specimen",
+        "authorization_effective_date",
+        "issue_date",
+        "legal_entity",
+        "license_expiry_date",
+        "valid_until",
+        "company_name",
+        "expiry_date"
+      ]
+    },
+    {
+      "doc_type": "Address_Declaration",
+      "fields": [
+        "company_name",
+        "issue_date",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Civil_ID",
+      "fields": [
+        "issue_date",
+        "expiry_date"
+      ]
+    },
+    {
+      "doc_type": "Statistical_Declaration",
+      "fields": [
+        "declaration_number",
+        "declaration_type",
+        "port_type",
+        "importer_or_exporter_name",
+        "bill_awb_manifest_number",
+        "net_weight",
+        "gross_weight",
+        "number_of_packages",
+        "hs_code",
+        "goods_description",
+        "origin_country",
+        "number_of_trucks"
+      ]
+    },
+    {
+      "doc_type": "Issuing_Country_Of_Origin_Certificate",
+      "fields": [
+        "certificate_number",
+        "issue_date",
+        "expiry_date",
+        "issuing_authority",
+        "country_of_origin",
+        "company_name"
+      ]
+    },
+    {
+      "doc_type": "Invoice_Documents",
+      "fields": [
+        "invoice_number",
+        "invoice_date",
+        "invoice_amount",
+        "currency",
+        "seller_or_exporter_name",
+        "buyer_or_importer_name",
+        "awb_or_bill_of_lading_number",
+        "gross_weight_total",
+        "net_weight_total",
+        "gross_weight",
+        "net_weight",
+        "country_of_origin",
+        "hs_code",
+        "expiry_date"
+      ],
+      "line_item_fields": [
+        "item_description",
+        "goods_description",
+        "quantity_or_weight",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "weight_unit",
+        "hs_code",
+        "expiry_date"
+      ]
+    },
+    {
+      "doc_type": "Ministry_Of_Foreign_Affairs_Attestation",
+      "fields": [
+        "certificate_number",
+        "issue_date",
+        "expiry_date",
+        "issuing_authority",
+        "country_of_origin",
+        "company_name"
+      ]
+    },
+    {
+      "doc_type": "Vehicle_Truck_Equipment_Specifications",
+      "fields": [
+        "company_name",
+        "issue_date",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Vehicle_Initial_Registration",
+      "fields": [
+        "company_name",
+        "issue_date"
+      ]
+    },
+    {
+      "doc_type": "GCC_Specifications_Certificate",
+      "fields": [
+        "certificate_number",
+        "document_number_or_reference",
+        "issue_date",
+        "expiry_date",
+        "certificate_validity_period",
+        "issuing_authority",
+        "exporter_name",
+        "importer_name",
+        "company_name",
+        "origin_country",
+        "country_of_origin",
+        "goods_description",
+        "quantity_or_weight",
+        "net_weight_total",
+        "gross_weight_total",
+        "port_type",
+        "hs_code",
+        "slaughter_certificate_number",
+        "health_attestation_statement",
+        "authorized_signature"
+      ]
+    },
+    {
+      "doc_type": "Goods_Quantity_Description_Detection",
+      "fields": [
+        "goods_description",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "company_name"
+      ]
+    },
+    {
+      "doc_type": "Origin_Manufacturer_Detection",
+      "fields": [
+        "company_name",
+        "country_of_origin",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Chemical_Import_License",
+      "fields": [
+        "license_number",
+        "issue_date",
+        "expiry_date",
+        "issuing_authority",
+        "company_name"
+      ]
+    },
+    {
+      "doc_type": "Material_Safety_Document_Sheet",
+      "fields": [
+        "company_name",
+        "issue_date",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Company_Establishment_Questionnaire",
+      "fields": [
+        "company_name",
+        "issue_date"
+      ]
+    },
+    {
+      "doc_type": "Other",
+      "fields": [
+        "company_name",
+        "issue_date",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Declaration_Document",
+      "doc_notes": "This is a Kuwait Customs Declaration form (بيان جمركي / Customs Declaration). NUMBERED FIELD LABELS: The form has numeric labels (1–50) next to each field name — these are FORM FIELD IDENTIFIERS, not data values. Always extract the adjacent cell DATA VALUE, never the label number itself. HEADER TOTALS (key_value_pairs): field 7 (الوزن الصافي / NET WEIGHT) → total_net_weight; field 10 (الوزن القائم / GROSS WEIGHT) → total_gross_weight; field 16 (عدد الطرود / NO. OF PACKAGES, value may start with 'مانفست=') → total_number_of_packages (numeric portion only, strip 'مانفست='). LINE ITEM TABLES: The form contains (1) a tariff/goods table (fields 22–31) with columns: H.S. CODE (22), GOODS DESCRIPTION (23), ORIGIN (24), FOREIGN VALUE (25), CURRENCY TYPE (26), CURRENCY VALUE (27), CIF LOCAL VALUE KWD (28), D. RATE (29), TOTAL DUTY (31); and (2) a weight/packages table (fields 32–37) with columns: PACKAGES QTY (32), TYPE (33), ITEM QTY (34), UNIT (35), NET weight (36), GROSS weight (37). Rows 1–5 in each table are pre-printed blank slots — ONLY extract rows where the H.S. CODE column (field 22) or the GOODS DESCRIPTION column (field 23) contains an actual value. For each such filled row, combine data from BOTH tables (same row number) into ONE line_item object with: hs_code (col 22), goods_description (col 23), origin_country (col 24), foreign_value (col 25), currency_type (col 26), cif_local_value (col 28), duty_rate (col 29), item_duty (col 31), quantity (col 34 ITEM QTY), net_weight (col 36), gross_weight (col 37), number_of_packages (col 32), package_type (col 33). AGENCY TABLE: Field 40 (الجهة / AGENCY) has two numbered sub-columns — extract the value in sub-column 2 as the agency_code (sub-column 2 = PAFN jurisdiction code).",
+      "fields": [
+        "issuing_authority",
+        "declaration_number",
+        "declaration_date",
+        "declaration_type",
+        "port_type",
+        "delivery_order_number",
+        "importer_or_exporter_name",
+        "commercial_registration_number",
+        "bill_awb_manifest_number",
+        "port_of_loading",
+        "port_of_discharge",
+        "destination",
+        "total_net_weight",
+        "total_gross_weight",
+        "total_number_of_packages",
+        "measurement_unit",
+        "carrier_name",
+        "voyage_or_flight_number",
+        "tin_number",
+        "total_duty",
+        "currency",
+        "exporter_name"
+      ],
+      "line_item_fields": [
+        "hs_code",
+        "goods_description",
+        "origin_country",
+        "foreign_value",
+        "currency_type",
+        "cif_local_value",
+        "duty_rate",
+        "item_duty",
+        "net_weight",
+        "gross_weight",
+        "quantity",
+        "number_of_packages",
+        "package_type",
+        "exemption_of_duty",
+        "agency_code"
+      ]
+    },
+    {
+      "doc_type": "Halal_Slaughter_Certificate",
+      "doc_notes": "The loading_port field maps to PORT DE CARREGAMENTO / LOADING PORT on Brazilian BRF halal certs. meat_type, carcass_type, hs_code, certificate_valid_until, and place_of_issue are required by MIN_FIELDS_RULES but may be absent on some issuing authority formats.",
+      "fields": [
+        "certificate_number",
+        "health_certificate_number",
+        "slaughterhouse_name",
+        "exporter_or_shipper_name",
+        "importer_or_consignee_name",
+        "product_description",
+        "quantity_or_number_of_packages",
+        "weight",
+        "slaughter_date",
+        "halal_certifying_agency",
+        "signature_and_stamp",
+        "meat_type",
+        "carcass_type",
+        "hs_code",
+        "invoice_number",
+        "production_date",
+        "expiry_date",
+        "gross_weight",
+        "net_weight",
+        "transport_mode",
+        "loading_port",
+        "border_of_entry",
+        "certificate_valid_until",
+        "place_of_issue",
+        "issuing_authority",
+        "issue_date",
+        "number_of_packages",
+        "producer_name"
+      ],
+      "line_item_fields": [
+        "item_description",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "hs_code",
+        "production_date",
+        "expiry_date",
+        "batch_or_lot_number"
+      ]
+    },
+    {
+      "doc_type": "Special_Food_Certificate",
+      "fields": [
+        "certificate_issue_date",
+        "importer_name",
+        "product_name",
+        "classification",
+        "country_of_origin",
+        "certificate_expiry_date",
+        "issuing_authority",
+        "certificate_validity_years",
+        "certificate_number",
+        "issue_date",
+        "expiry_date",
+        "company_name",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Fish_Import_License",
+      "fields": [
+        "issue_date",
+        "issuing_authority",
+        "license_number",
+        "license_expiry_date",
+        "imported_item_count",
+        "shipment_details",
+        "item_name",
+        "country_of_origin",
+        "expiry_date",
+        "company_name",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Zubaidi_Import_License",
+      "fields": [
+        "importer_name",
+        "license_number",
+        "expiry_date",
+        "port_type",
+        "country_of_origin",
+        "item_name",
+        "number_of_items",
+        "company_name",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Shrimp_Import_License",
+      "fields": [
+        "importer_name",
+        "license_number",
+        "expiry_date",
+        "port_type",
+        "country_of_origin",
+        "item_name",
+        "number_of_items",
+        "company_name",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "Health_License",
+      "fields": [
+        "license_number",
+        "renewal_date",
+        "expiry_date",
+        "license_owner_name",
+        "commercial_activity",
+        "commercial_name",
+        "issuing_authority",
+        "issue_date",
+        "company_name"
+      ]
+    },
+    {
+      "doc_type": "Health_Certificate_Country_Of_Origin",
+      "fields": [
+        "certificate_number_or_reference",
+        "certificate_number",
+        "issue_date",
+        "issuing_authority",
+        "exporter_or_consignor_name",
+        "exporter_name",
+        "importer_or_consignee_name",
+        "consignee_or_importer_name",
+        "country_of_origin",
+        "fit_for_human_consumption_attestation",
+        "product_description",
+        "quantity",
+        "place_of_issue",
+        "inspection_date",
+        "certificate_validity_date",
+        "certificate_validity_note",
+        "expiration_date",
+        "expiry_date",
+        "competent_authority_name",
+        "producer_name",
+        "manufacturer_name",
+        "packing_establishment_name",
+        "slaughterhouse_name",
+        "plant_establishment_approval_number",
+        "export_declaration_number",
+        "invoice_number",
+        "invoice_date",
+        "port_of_loading",
+        "port_of_discharge",
+        "means_of_transport",
+        "container_number",
+        "number_of_packages",
+        "package_type",
+        "net_weight",
+        "gross_weight",
+        "production_date",
+        "batch_or_lot_number",
+        "brand_name",
+        "hs_code",
+        "goods_description",
+        "quantity_or_weight",
+        "bill_of_lading_number",
+        "issuing_authority_or_certifying_body",
+        "country_of_origin_per_item",
+        "company_name"
+      ],
+      "line_item_fields": [
+        "product_description",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "hs_code",
+        "expiry_date",
+        "country_of_origin_per_item",
+        "batch_or_lot_number"
+      ]
+    },
+    {
+      "doc_type": "Health_Certificate_from_Country_of_Origin",
+      "fields": [
+        "certificate_number_or_reference",
+        "certificate_number",
+        "issue_date",
+        "issuing_authority",
+        "exporter_or_consignor_name",
+        "exporter_name",
+        "importer_or_consignee_name",
+        "consignee_or_importer_name",
+        "country_of_origin",
+        "fit_for_human_consumption_attestation",
+        "product_description",
+        "quantity",
+        "place_of_issue",
+        "inspection_date",
+        "certificate_validity_date",
+        "certificate_validity_note",
+        "expiration_date",
+        "expiry_date",
+        "competent_authority_name",
+        "producer_name",
+        "manufacturer_name",
+        "packing_establishment_name",
+        "slaughterhouse_name",
+        "plant_establishment_approval_number",
+        "export_declaration_number",
+        "invoice_number",
+        "invoice_date",
+        "port_of_loading",
+        "port_of_discharge",
+        "means_of_transport",
+        "container_number",
+        "number_of_packages",
+        "package_type",
+        "net_weight",
+        "gross_weight",
+        "production_date",
+        "batch_or_lot_number",
+        "brand_name",
+        "hs_code",
+        "goods_description",
+        "quantity_or_weight",
+        "bill_of_lading_number",
+        "issuing_authority_or_certifying_body",
+        "country_of_origin_per_item",
+        "company_name"
+      ],
+      "line_item_fields": [
+        "product_description",
+        "quantity",
+        "net_weight",
+        "gross_weight",
+        "hs_code",
+        "expiry_date",
+        "country_of_origin_per_item",
+        "batch_or_lot_number"
+      ]
+    },
+    {
+      "doc_type": "Regulations",
+      "fields": [
+        "certificate_number",
+        "issue_date",
+        "issuing_authority"
+      ]
+    },
+    {
+      "doc_type": "Lab_Results",
+      "fields": [
+        "certificate_number",
+        "issue_date",
+        "company_name",
+        "goods_description"
+      ]
+    },
+    {
+      "doc_type": "GCC_Declaration",
+      "fields": [
+        "declaration_number",
+        "declaration_type",
+        "port_type",
+        "importer_or_exporter_name",
+        "bill_awb_manifest_number",
+        "net_weight",
+        "gross_weight",
+        "number_of_packages",
+        "hs_code",
+        "goods_description",
+        "origin_country",
+        "bl_number",
+        "country_of_origin"
+      ]
+    }
+  ]
+}
