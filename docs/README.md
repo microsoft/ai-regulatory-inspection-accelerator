@@ -1,4 +1,10 @@
-# ARIA Documentation Index
+---
+title: ARIA Documentation Index
+description: Index of architecture, deployment, customization, and evaluation documentation for ARIA
+author: ARIA Engineering
+ms.date: 2026-08-24
+ms.topic: reference
+---
 
 This folder contains supporting documentation for **ARIA - AI Regulatory Inspection Accelerator**, a reusable, Azure-native Solution Accelerator. PAFN (the Kuwait food safety inspection system) is the first production reference implementation of ARIA - see the root [README.md](../README.md) for the full solution overview, business scenario, and getting started guide.
 
@@ -16,7 +22,11 @@ This folder contains supporting documentation for **ARIA - AI Regulatory Inspect
 
 ## Customize
 
-- [Customize: Add a New Industry Template](CustomizeIndustryTemplate.md) - the 13-artifact template contract and how to draft a new industry template today.
+- [Customize: Add a New Industry Template](CustomizeIndustryTemplate.md) - the 14-artifact template contract and how to draft a new industry template today.
+
+## Quality and evaluation
+
+- [Arabic-English Evaluation Standard](ArabicEnglishEvaluation.md) - challenge-set coverage, safety gates, native-speaker review requirements, and authoritative language references.
 
 ---
 

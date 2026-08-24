@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/microsoft/ai-regulatory-inspection-accelerator/templates/_schema/normalization.schema.json",
+  "title": "ARIA Template Normalization Profile",
+  "type": "object",
+  "required": ["defaults"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "defaults": {"$ref": "#/definitions/profile"},
+    "document_types": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/definitions/profile"}
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "profile": {
+      "type": "object",
+      "properties": {
+        "quality_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+        "content": {"$ref": "#/definitions/contentProfile"},
+        "date_fields": {"$ref": "#/definitions/stringArray"},
+        "numeric_fields": {"$ref": "#/definitions/stringArray"},
+        "issue_date_fields": {"$ref": "#/definitions/stringArray"},
+        "expiry_field": {"type": "string"},
+        "strip_trailing_date_suffix_fields": {"$ref": "#/definitions/stringArray"},
+        "unwrap_bracket_fields": {"$ref": "#/definitions/stringArray"},
+        "country_fields": {"$ref": "#/definitions/stringArray"},
+        "known_countries": {"$ref": "#/definitions/stringArray"},
+        "currency_codes": {"$ref": "#/definitions/stringArray"},
+        "currency_field": {"type": "string"},
+        "currency_source_fields": {"$ref": "#/definitions/stringArray"},
+        "standalone_value_fields": {"$ref": "#/definitions/stringArray"},
+        "equivalent_field_groups": {
+          "type": "array",
+          "items": {"$ref": "#/definitions/stringArray"}
+        },
+        "field_aliases": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/definitions/stringArray"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "contentProfile": {
+      "type": "object",
+      "properties": {
+        "strip_selection_marks": {"type": "boolean"},
+        "collapse_blank_lines": {"type": "boolean"},
+        "collapse_page_separators": {"type": "boolean"},
+        "remove_repeated_headers": {"type": "boolean"},
+        "repeated_line_min_pages": {"type": "integer", "minimum": 2},
+        "repeated_line_max_length": {"type": "integer", "minimum": 4}
+      },
+      "additionalProperties": false
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    }
+  }
+}

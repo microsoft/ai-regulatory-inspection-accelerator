@@ -123,6 +123,20 @@ class TestBuildMetadataExtractionPrompt:
         assert "invoice_date" in prompt
         assert "net_weight" in prompt
 
+    def test_prompt_is_domain_neutral(self, loader):
+        prompt = _build_metadata_extraction_prompt("Invoice", loader).lower()
+        assert all(term not in prompt for term in ("food-safety", "pafn", "kuwait customs"))
+
+    def test_prompt_targets_verified_bilingual_behavior(self, loader):
+        prompt = _build_metadata_extraction_prompt("Invoice", loader).lower()
+        assert "arabic and english bilingual" in prompt
+        assert "modern standard arabic" in prompt
+        assert "dialectal" in prompt
+        assert "arabizi" in prompt
+        assert "code-switching" in prompt
+        assert "multilingual" not in prompt
+        assert "lower the confidence" in prompt
+
     def test_contains_doc_notes(self, loader):
         prompt = _build_metadata_extraction_prompt("Invoice", loader)
         assert "Extract every product row" in prompt

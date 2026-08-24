@@ -86,8 +86,10 @@
     "requiredArtifacts": {
       "type": "object",
       "description": "List of required template artifact files. All must be present for the template to be valid.",
+      "required": ["normalization"],
       "properties": {
         "evidenceTypes": { "type": "boolean", "const": true },
+        "normalization": { "type": "boolean", "const": true },
         "rules": { "type": "boolean", "const": true },
         "referenceData": { "type": "boolean", "const": true },
         "submissionSchema": { "type": "boolean", "const": true },
