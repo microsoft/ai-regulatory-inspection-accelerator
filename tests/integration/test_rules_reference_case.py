@@ -11,11 +11,14 @@ on the reference case."
 
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
+from src.platform.orchestration.pipeline import DEFAULT_ACTIVITY_NAMES, run_pipeline
 from src.platform.policy.rule_executor import run_rules
+from src.platform.policy.rules_policy import run as run_policy
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -76,9 +79,31 @@ def _minimal_submission(payload: dict) -> list:
 
 
 def _run_rules_sync(rules_list, payload, submission) -> list:
-    return asyncio.get_event_loop().run_until_complete(
-        run_rules(rules_list=rules_list, payload=payload, submission=submission)
-    )
+    return asyncio.run(run_rules(rules_list=rules_list, payload=payload, submission=submission))
+
+
+class _PipelineContext:
+    def __init__(self, payload: dict):
+        self.payload = payload
+        self.is_replaying = False
+        self.current_utc_datetime = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        self.calls: list[tuple[str, dict]] = []
+
+    def get_input(self) -> dict:
+        return self.payload
+
+    def call_activity_with_retry(self, name: str, retry_policy, input: dict):
+        self.calls.append((name, input))
+        return object()
+
+
+def _drive_pipeline(generator, results: list[dict]) -> None:
+    next(generator)
+    for result in results:
+        try:
+            generator.send(result)
+        except StopIteration:
+            return
 
 
 # ---------------------------------------------------------------------------
@@ -185,4 +210,51 @@ class TestReferenceCase:
         assert len(halal_missing) > 0, (
             "Expected MANDATORY_DOC_MISSING for Halal_Slaughter_Certificate "
             "given HS code 1602.90.10.00.00 matches HALAL_HS_CODES"
+        )
+
+    def test_generic_five_stage_pipeline_preserves_reference_findings(
+        self, food_safety_rules, reference_payload
+    ):
+        extracted_fields = {
+            document["documentTypeId"]: {
+                "documentType": document["documentType"],
+                "fields": {},
+                "lineItems": [],
+            }
+            for document in reference_payload["documents"]
+        }
+        direct_findings = _run_rules_sync(
+            food_safety_rules,
+            reference_payload,
+            _minimal_submission(reference_payload),
+        )
+        policy_result = asyncio.run(
+            run_policy(reference_payload, extracted_fields, food_safety_rules)
+        )
+        context = _PipelineContext(reference_payload)
+
+        _drive_pipeline(
+            run_pipeline(context, retry_policy=object()),
+            [
+                {"passed": True, "errors": [], "warnings": [], "documents": None},
+                {"success": True, "extractedFields": extracted_fields},
+                {
+                    "success": True,
+                    "evidenceMap": extracted_fields,
+                    "findings": [],
+                    "documentChecks": [],
+                },
+                policy_result,
+                {},
+            ],
+        )
+
+        assert [name for name, _input in context.calls] == list(
+            DEFAULT_ACTIVITY_NAMES.values()
+        )
+        assert context.calls[-1][1]["findings"] == direct_findings
+        assert context.calls[-1][1]["recommendation"] == policy_result["recommendation"]
+        assert all(
+            domain_name not in " ".join(DEFAULT_ACTIVITY_NAMES.values()).lower()
+            for domain_name in ("food", "pafn", "halal", "customs")
         )

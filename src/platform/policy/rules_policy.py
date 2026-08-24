@@ -27,6 +27,8 @@ async def run(
     extracted_fields: dict,
     rules_list: list,
     *,
+    reasoning_findings: list[dict] | None = None,
+    reasoning_document_checks: list[dict] | None = None,
     allowed_fields_by_doc: dict | None = None,
     llm_comparison_fn=None,
     item_type_check_fn=None,
@@ -39,6 +41,8 @@ async def run(
         payload:               Submission dict (requestId, items, documents).
         extracted_fields:      DI extraction result keyed by documentTypeId.
         rules_list:            Rule documents loaded from Cosmos DB or rules.json.
+        reasoning_findings:    Generic findings produced by the Reasoning Agent.
+        reasoning_document_checks: Per-document checks produced by the Reasoning Agent.
         allowed_fields_by_doc: {doc_type: [field_name]} from TemplateLoader.
                                Forwarded to validate_min_fields for field intersection.
         llm_comparison_fn:     Injectable async callable for cross-doc LLM checks.
@@ -59,8 +63,16 @@ async def run(
         }
     """
     request_id: str = payload["requestId"]
-    findings: list[dict] = []
+    findings: list[dict] = list(reasoning_findings or [])
     verdict = "PASS"
+
+    for finding in findings:
+        if finding.get("result") in ("FAIL", "WARN"):
+            verdict = _escalate(verdict, "HOLD")
+
+    document_checks = list(reasoning_document_checks or [])
+    if any(check.get("result") == "FAIL" for check in document_checks):
+        verdict = _escalate(verdict, "HOLD")
 
     logger.info(
         "Starting rules engine | requestId=%s | itemCount=%d | ruleDocs=%d",
@@ -143,6 +155,7 @@ async def run(
         "aiRiskLevel": ai_risk_level,
         "summary": summary,
         "findings": findings,
+        "documentChecks": document_checks,
         "verdictId": verdict_id,
     }
 
