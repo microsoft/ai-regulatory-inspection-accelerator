@@ -2,16 +2,9 @@
 ARIA — AI Regulatory Inspection Accelerator
 Core Platform — Orchestration — Pipeline Orchestrator
 
-Sequences the four pipeline activities as a Durable Functions orchestrator:
+Sequences the five pipeline activities as a Durable Functions orchestrator:
 
-  Pre-Validation Agent -> DI Extraction Agent -> Rules & Policy Agent -> Delivery Agent
-
-(LLM cross-document reasoning runs inside the Rules & Policy Agent activity -
-see docs/architecture/TechnicalArchitecture.md Section 5. PAFN's production
-Function App only registers four Durable activities - pre_validation_activity,
-di_extraction_activity, rules_policy_activity, delivery_activity - confirming
-LLM validation is an internal function call inside rules_policy_activity, not
-a separate orchestrated activity.)
+    Pre-Validation -> Extraction -> Reasoning -> Rules & Policy -> Delivery
 
 This module is decorator-free and has zero dependency on azure-functions /
 azure-durable-functions - it only relies on the DurableOrchestrationContext
@@ -37,13 +30,14 @@ constructs or sends a callback, it only invokes the Delivery Agent activity).
 from collections.abc import Callable, Generator
 from typing import Any
 
-# Default Durable Functions activity names for the four pipeline agents.
+# Default Durable Functions activity names for the five pipeline agents.
 # A reference implementation's function_app.py registers its activities
 # under these names by default; override via `activity_names` if a
 # deployment needs different Durable Functions activity names.
 DEFAULT_ACTIVITY_NAMES: dict[str, str] = {
     "pre_validation": "pre_validation_activity",
     "di_extraction": "di_extraction_activity",
+    "reasoning": "reasoning_activity",
     "rules_policy": "rules_policy_activity",
     "delivery": "delivery_activity",
 }
@@ -66,12 +60,9 @@ def run_pipeline(
             calls are made via `yield context.call_activity_with_retry(...)`
             so the Durable Functions runtime can checkpoint and safely
             resume this orchestration after a host restart.
-        activity_names: Optional override of the four Durable Functions
+        activity_names: Optional override of the five Durable Functions
             activity names (see DEFAULT_ACTIVITY_NAMES): pre_validation,
-            di_extraction, rules_policy, delivery - matching the Pre-Validation
-            Agent, DI Extraction Agent, Rules & Policy Agent, and Delivery
-            Agent named in docs/architecture/TechnicalArchitecture.md. Only
-            the agent names are Core Platform concepts - the underlying
+            di_extraction, reasoning, rules_policy, delivery. The underlying
             activity implementations are template/deployment-specific.
         retry_policy: Passed through unchanged to every
             call_activity_with_retry call. Typically an
@@ -83,7 +74,7 @@ def run_pipeline(
             once per real execution, never on replay).
 
     Sequence:
-      Pre-Validation Agent -> DI Extraction Agent -> Rules & Policy Agent -> Delivery Agent
+    Pre-Validation -> Extraction -> Reasoning -> Rules & Policy -> Delivery
 
     On any stage failure, Delivery is still invoked so the adopting system
     always receives a decision callback regardless of outcome (see
@@ -151,12 +142,47 @@ def run_pipeline(
         )
         return
 
-    # ── Rules & Policy Agent (includes LLM cross-document reasoning) ──────
+    # ── Reasoning Agent ───────────────────────────────────────────────────
+    reasoning_result: dict = yield context.call_activity_with_retry(
+        names["reasoning"], retry_policy,
+        {
+            "payload": payload,
+            "extractedFields": di_extraction_result["extractedFields"],
+        }
+    )
+
+    if not reasoning_result["success"]:
+        _emit(
+            "ReasoningFailed",
+            properties={"errorCount": str(len(reasoning_result.get("errors", [])))},
+        )
+        yield context.call_activity_with_retry(
+            names["delivery"], retry_policy,
+            {
+                "payload": payload,
+                "status": "PIPELINE_ERROR",
+                "findings": [],
+                "errors": reasoning_result.get("errors", []),
+                "recommendation": "HOLD",
+                "confidence": None,
+                "summary": "Evidence reasoning failed. Manual review required.",
+                "verdictId": None,
+                "pipelineStartedAt": pipeline_started_at,
+            }
+        )
+        return
+
+    # ── Rules & Policy Agent ──────────────────────────────────────────────
     rules_policy_result: dict = yield context.call_activity_with_retry(
         names["rules_policy"], retry_policy,
         {
             "payload": payload,
             "extractedFields": di_extraction_result["extractedFields"],
+            "evidenceMap": reasoning_result.get(
+                "evidenceMap", di_extraction_result["extractedFields"]
+            ),
+            "reasoningFindings": reasoning_result.get("findings", []),
+            "reasoningDocumentChecks": reasoning_result.get("documentChecks", []),
         }
     )
 

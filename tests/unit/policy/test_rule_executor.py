@@ -32,7 +32,7 @@ class TestRunRules:
     """Integration-style tests with mocked individual validators."""
 
     def _run(self, rules_list, payload, submission):
-        return asyncio.get_event_loop().run_until_complete(
+        return asyncio.run(
             run_rules(rules_list=rules_list, payload=payload, submission=submission)
         )
 
@@ -125,6 +125,6 @@ class TestRunRules:
         with patch("src.platform.policy.rule_executor.validate_agency_code", return_value=[]), \
              patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]), \
              patch("src.platform.policy.rule_executor.validate_min_fields", side_effect=capturing_min_fields):
-            asyncio.get_event_loop().run_until_complete(_run_with_param())
+            asyncio.run(_run_with_param())
 
         assert captured["allowed_fields_by_doc"] == allowed
