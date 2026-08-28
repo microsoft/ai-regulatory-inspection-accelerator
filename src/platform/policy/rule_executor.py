@@ -8,8 +8,7 @@ Changes from PAFN:
   - run_rules() gains an optional `allowed_fields_by_doc` parameter that is
     forwarded to validate_min_fields() so callers can source field lists from
     TemplateLoader instead of document_type_fields.json.
-  - PAFN agency code and step-0 agency_code parameter sourced from
-    AGENCY_CODE_RULES rule document (falls back to "2" when rule absent).
+    - Agency and jurisdiction HS values are sourced from template rule documents.
 
 Logic, step ordering, confidence cutoff, and finding normalization are
 identical to PAFN production.
@@ -33,7 +32,6 @@ logger = logging.getLogger(__name__)
 MANDATORY_RULE_ID = "MANDATORY_DOC_RULES"
 MIN_FIELDS_RULE_ID = "MIN_FIELDS_RULES"
 HS_CODE_RULE_ID = "REJECTED_HS_CODES"
-PAFN_HS_CODE_RULE_ID = "PAFN_HS_CODES"
 CROSS_DOC_RULE_ID = "CROSS_DOC_RULES"
 SIGNATURE_STAMP_RULE_ID = "SIGNATURE_STAMP_RULES"
 LOGICAL_RULE_ID = "LOGICAL_RULES"
@@ -75,17 +73,27 @@ async def run_rules(
     findings = []
     normalized_submission = submission
 
-    # Read agency code from AGENCY_CODE_RULES rule doc; fall back to "2" (PAFN default).
     agency_rule = _find_rule(rules_list, AGENCY_CODE_RULE_ID)
-    agency_code = agency_rule.get("agencyCode", "2") if agency_rule else "2"
 
     # Step 0: Agency code check
-    try:
-        result = validate_agency_code(submission, agency_code=agency_code)
-        findings.extend(result)
-        logger.info("agency_code: %d finding(s)", len(result))
-    except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-        logger.error("Step 0 agency_code FAILED | %s\n%s", exc, traceback.format_exc())
+    if agency_rule and agency_rule.get("agencyCode"):
+        try:
+            result = validate_agency_code(
+                submission,
+                agency_code=str(agency_rule["agencyCode"]),
+                document_type=agency_rule["documentType"],
+                field_name=agency_rule["fieldName"],
+                missing_rule_code=agency_rule.get("missingRuleCode", "AGENCY_CODE_MISSING"),
+                mismatch_rule_code=agency_rule.get(
+                    "mismatchRuleCode", "AGENCY_CODE_MISMATCH"
+                ),
+            )
+            findings.extend(result)
+            logger.info("agency_code: %d finding(s)", len(result))
+        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
+            logger.error("Step 0 agency_code FAILED | %s\n%s", exc, traceback.format_exc())
+    else:
+        logger.warning("Skipping agency_code — %s not configured", AGENCY_CODE_RULE_ID)
 
     # Step 1: Mandatory documents + name normalization
     rule = _find_rule(rules_list, MANDATORY_RULE_ID)
@@ -113,12 +121,19 @@ async def run_rules(
 
     # Step 3: HS code validation
     rule = _find_rule(rules_list, HS_CODE_RULE_ID)
-    pafn_rule = _find_rule(rules_list, PAFN_HS_CODE_RULE_ID)
     if rule:
         try:
             combined_rule = {**rule}
-            if pafn_rule:
-                combined_rule["pafnCodes"] = pafn_rule.get("rejectedCodes", [])
+            jurisdiction_rule_id = rule.get("validJurisdictionRuleId")
+            jurisdiction_rule = (
+                _find_rule(rules_list, jurisdiction_rule_id)
+                if jurisdiction_rule_id
+                else None
+            )
+            if jurisdiction_rule:
+                combined_rule["jurisdictionCodes"] = jurisdiction_rule.get(
+                    "acceptedCodes", []
+                )
             result = validate_hs_codes(combined_rule, payload)
             findings.extend(result)
             logger.info("hs_code: %d finding(s)", len(result))

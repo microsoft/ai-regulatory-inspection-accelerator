@@ -1,9 +1,8 @@
 """
 Mandatory Fields Rule Logic
 
-Ported from PAFN's rules_engine/mandatory_documents.py.
-GCC_COUNTRIES stays hardcoded — it is a PAFN/Kuwait-specific constant that
-is not a template config concern per the accepted scope decision.
+Ported from PAFN's rules_engine/mandatory_documents.py. Personal-shipment and
+conditional-document criteria are supplied by template rule configuration.
 """
 
 import re
@@ -14,9 +13,6 @@ from src.platform.policy.evaluators import llm_mapper
 def _norm(s: str) -> str:
     """Lowercase alphanumeric only — bridges casing and separator differences."""
     return re.sub(r"[^a-z0-9]", "", s.lower())
-
-
-GCC_COUNTRIES = ("SA", "AE", "KW", "QA", "BH", "OM")
 
 
 def _normalize_hs(hs_code: str) -> str:
@@ -40,12 +36,6 @@ def validate_mandatory_docs(rules, payload, submission):
     """
     findings = []
     rule = next(r for r in rules if r["id"] == "MANDATORY_DOC_RULES")
-
-    halal_codes   = _get_hs_prefixes(rules, "HALAL_HS_CODES")
-    fish_codes    = _get_hs_prefixes(rules, "FISH_HS_CODES")
-    shrimp_codes  = _get_hs_prefixes(rules, "SHRIMP_HS_CODES")
-    zubaidi_codes = _get_hs_prefixes(rules, "ZUBAIDI_HS_CODES")
-    fresh_codes   = _get_hs_prefixes(rules, "FRESH_HS_CODES")
 
     # Name normalization: payload is authoritative
     payload_id_to_type = {
@@ -76,10 +66,18 @@ def validate_mandatory_docs(rules, payload, submission):
         return entry["documentType"] if isinstance(entry, dict) else entry
 
     bayan_number = payload.get("bayanNumber", "") or ""
-    is_personal = bayan_number.upper().startswith("TDR")
+    personal_config = rule.get("personalShipment", {})
+    personal_prefixes = tuple(
+        prefix.upper() for prefix in personal_config.get("declarationPrefixes", [])
+    )
+    is_personal = bool(personal_prefixes) and bayan_number.upper().startswith(
+        personal_prefixes
+    )
 
     if is_personal:
-        for req_id, req_type in (("42", "Declaration_Document"), ("43", "Other_Documents")):
+        for requirement in personal_config.get("requiredDocuments", []):
+            req_id = _entry_id(requirement)
+            req_type = _entry_type(requirement)
             if req_id not in payload_type_ids:
                 findings.append({
                     "ruleCode": "MANDATORY_DOC_MISSING",
@@ -128,15 +126,6 @@ def validate_mandatory_docs(rules, payload, submission):
                         "documentType": " or ".join(_entry_type(opt) for opt in valid_opts),
                     })
 
-        _CONDITIONAL_CHECKS = [
-            ("Halal_Slaughter_Certificate", lambda hs: bool(halal_codes) and _normalize_hs(hs).startswith(halal_codes)),
-            ("Fish_Import_License",         lambda hs: bool(fish_codes) and _normalize_hs(hs).startswith(fish_codes)),
-            ("Shrimp_Import_License",       lambda hs: bool(shrimp_codes) and _normalize_hs(hs).startswith(shrimp_codes)),
-            ("Zubaidi_Import_License",      lambda hs: bool(zubaidi_codes) and _normalize_hs(hs).startswith(zubaidi_codes)),
-            ("Invoice",                     lambda hs: bool(fresh_codes) and _normalize_hs(hs).startswith(fresh_codes)),
-            ("Statistical_Declaration",     lambda country: country.strip() in GCC_COUNTRIES),
-        ]
-
         cond_type_to_id: dict[str, str] = {}
         for entry in rule.get("conditionalDocuments", []):
             if isinstance(entry, dict):
@@ -150,9 +139,16 @@ def validate_mandatory_docs(rules, payload, submission):
         for item in payload.get("items", []):
             hs_code = str(item.get("hsCode", ""))
             country = llm_mapper.normalize_country(str(item.get("countryOfOrigin", "")))
-            for doc_type, check_fn in _CONDITIONAL_CHECKS:
-                value = country if doc_type == "Statistical_Declaration" else hs_code
-                if value and check_fn(value):
+            for requirement in rule.get("conditionalRequirements", []):
+                doc_type = requirement.get("documentType", "")
+                hs_rule_id = requirement.get("hsCodeRuleId")
+                hs_prefixes = _get_hs_prefixes(rules, hs_rule_id) if hs_rule_id else ()
+                origin_countries = requirement.get("originCountries", [])
+                hs_matches = bool(hs_prefixes) and _normalize_hs(hs_code).startswith(
+                    hs_prefixes
+                )
+                country_matches = bool(origin_countries) and country in origin_countries
+                if doc_type and (hs_matches or country_matches):
                     conditionally_required.add(doc_type)
 
         for doc_type in conditionally_required:

@@ -2,8 +2,8 @@
 Agency Code Verification Rule
 
 Ported from PAFN's rules_engine/agency_code.py.
-Change from PAFN: PAFN_AGENCY_CODE is now a parameter instead of a module-level
-constant so any template can configure the expected agency code via AGENCY_CODE_RULES.
+Agency value, source document, source field, and finding codes are supplied by
+the active template's agency rule.
 """
 
 import logging
@@ -11,31 +11,36 @@ import re
 
 logger = logging.getLogger(__name__)
 
-_DECLARATION_DOC_TYPE = "Declaration_Document"
-
-
 def _parse_agency_codes(raw: str) -> list[str]:
     return [tok.strip() for tok in re.split(r"[,/;\s]+", raw) if tok.strip()]
 
 
 def validate_agency_code(
     submission: list[dict],
-    agency_code: str = "2",
+    agency_code: str,
+    *,
+    document_type: str,
+    field_name: str,
+    missing_rule_code: str = "AGENCY_CODE_MISSING",
+    mismatch_rule_code: str = "AGENCY_CODE_MISMATCH",
 ) -> list[dict]:
-    """Check that the Declaration Document contains the expected agency code.
+    """Check that a configured document contains the expected agency code.
 
     Args:
-        submission:   List of extracted-document dicts.
-        agency_code:  Expected agency code (default "2" for PAFN).
-                      Callers source this from the AGENCY_CODE_RULES rule document.
+        submission: List of extracted-document dicts.
+        agency_code: Expected agency code.
+        document_type: Document containing the agency field.
+        field_name: Field containing one or more agency codes.
+        missing_rule_code: Finding code when no agency value is present.
+        mismatch_rule_code: Finding code when the expected value is absent.
     """
     declaration_doc = next(
-        (d for d in submission if d.get("document") == _DECLARATION_DOC_TYPE),
+        (d for d in submission if d.get("document") == document_type),
         None,
     )
 
     if declaration_doc is None:
-        logger.debug("Agency code check skipped — Declaration_Document not in submission")
+        logger.debug("Agency code check skipped — %s not in submission", document_type)
         return []
 
     fields: dict = declaration_doc.get("fields", {})
@@ -45,7 +50,7 @@ def validate_agency_code(
     for item in line_items:
         raw = None
         if isinstance(item, dict):
-            agency_field = item.get("agency_code")
+            agency_field = item.get(field_name)
             if isinstance(agency_field, dict):
                 raw = agency_field.get("value") or ""
             elif agency_field is not None:
@@ -54,7 +59,7 @@ def validate_agency_code(
             all_codes.extend(_parse_agency_codes(raw.strip()))
 
     if not all_codes:
-        agency_field = fields.get("agency_code", {})
+        agency_field = fields.get(field_name, {})
         raw_value = (
             (agency_field.get("value") or "")
             if isinstance(agency_field, dict)
@@ -67,10 +72,10 @@ def validate_agency_code(
     if not all_codes:
         return [
             {
-                "ruleCode": "AGENCY_CODE_MISSING",
+                "ruleCode": missing_rule_code,
                 "result": "FAIL",
                 "message": (
-                    "No agency code found in Declaration Document. "
+                    f"No agency code found in {document_type}. "
                     f"At least one agency code must be {agency_code} for this shipment "
                     "to be under jurisdiction."
                 ),
@@ -85,10 +90,10 @@ def validate_agency_code(
 
     return [
         {
-            "ruleCode": "AGENCY_CODE_NOT_PAFN",
+            "ruleCode": mismatch_rule_code,
             "result": "FAIL",
             "message": (
-                f"None of the agency codes in the Declaration Document "
+                f"None of the agency codes in {document_type} "
                 f"({', '.join(all_codes)}) is {agency_code}. "
                 "None of the items in this shipment are related to this jurisdiction."
             ),

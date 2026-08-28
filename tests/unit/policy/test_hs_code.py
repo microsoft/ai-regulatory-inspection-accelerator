@@ -4,7 +4,7 @@ from typing import ClassVar
 
 from src.platform.policy.evaluators.hs_code import (
     _normalize_hs,
-    check_pafn_hs_code,
+    check_jurisdiction_hs_code,
     check_rejected_hs_code,
     validate_hs_codes,
 )
@@ -40,20 +40,24 @@ class TestCheckRejectedHsCode:
         assert len(findings) == 1
 
 
-class TestCheckPafnHsCode:
-    PAFN_LOOKUP: ClassVar[set] = {"16029010", "0203"}
+class TestCheckJurisdictionHsCode:
+    JURISDICTION_LOOKUP: ClassVar[set] = {"16029010", "0203"}
 
     def test_valid_code_passes(self):
-        findings = check_pafn_hs_code("1602.90.10.00", "ITEM1", self.PAFN_LOOKUP)
+        findings = check_jurisdiction_hs_code(
+            "1602.90.10.00", "ITEM1", self.JURISDICTION_LOOKUP
+        )
         assert findings == []
 
     def test_invalid_code_fails(self):
-        findings = check_pafn_hs_code("0901.21", "ITEM1", self.PAFN_LOOKUP)
+        findings = check_jurisdiction_hs_code(
+            "0901.21", "ITEM1", self.JURISDICTION_LOOKUP, "OUTSIDE_SCOPE"
+        )
         assert len(findings) == 1
-        assert findings[0]["ruleCode"] == "NON_PAFN_HS_CODE"
+        assert findings[0]["ruleCode"] == "OUTSIDE_SCOPE"
 
     def test_empty_pafn_lookup_skips(self):
-        findings = check_pafn_hs_code("1602.90", "ITEM1", set())
+        findings = check_jurisdiction_hs_code("1602.90", "ITEM1", set())
         assert findings == []
 
 
@@ -62,7 +66,8 @@ class TestValidateHsCodes:
         "rejectedCodes": [
             {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"}
         ],
-        "pafnCodes": [{"hsCode": "16"}, {"hsCode": "02"}],
+        "jurisdictionCodes": [{"hsCode": "16"}, {"hsCode": "02"}],
+        "outsideJurisdictionRuleCode": "NON_PAFN_HS_CODE",
     }
 
     def test_rejected_code_in_payload(self):
