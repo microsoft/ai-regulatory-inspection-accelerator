@@ -3,7 +3,6 @@
 from typing import ClassVar
 
 from src.platform.policy.evaluators.mandatory_documents import (
-    GCC_COUNTRIES,
     _get_hs_prefixes,
     _norm,
     validate_mandatory_docs,
@@ -30,13 +29,6 @@ class TestGetHsPrefixes:
         assert _get_hs_prefixes(self.RULES, "NONEXISTENT") == ()
 
 
-class TestGccCountries:
-    def test_expected_codes_present(self):
-        assert "SA" in GCC_COUNTRIES
-        assert "AE" in GCC_COUNTRIES
-        assert "KW" in GCC_COUNTRIES
-
-
 class TestValidateMandatoryDocs:
     MANDATORY_RULE: ClassVar[dict] = {
         "id": "MANDATORY_DOC_RULES",
@@ -45,6 +37,13 @@ class TestValidateMandatoryDocs:
             {"documentType": "Certificate_Of_Origin", "documentTypeId": "51"},
         ],
         "conditionalDocuments": [],
+        "personalShipment": {
+            "declarationPrefixes": ["TDR"],
+            "requiredDocuments": [
+                {"documentType": "Declaration_Document", "documentTypeId": "42"},
+                {"documentType": "Other_Documents", "documentTypeId": "43"},
+            ],
+        },
     }
 
     def _rules(self, extra=None):
@@ -124,6 +123,9 @@ class TestValidateMandatoryDocs:
                 "id": "MANDATORY_DOC_RULES",
                 "mandatoryDocuments": [],
                 "conditionalDocuments": [{"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"}],
+                "conditionalRequirements": [
+                    {"documentType": "Halal_Slaughter_Certificate", "hsCodeRuleId": "HALAL_HS_CODES"}
+                ],
             },
             {"id": "HALAL_HS_CODES", "hsCodes": ["0202"]},
         ]
@@ -134,3 +136,23 @@ class TestValidateMandatoryDocs:
         }
         findings, _ = validate_mandatory_docs(rules, payload, [{"documentTypeId": "50", "document": "Invoice", "fields": {}}])
         assert any(f["documentType"] == "Halal_Slaughter_Certificate" for f in findings if f["ruleCode"] == "MANDATORY_DOC_MISSING")
+
+    def test_origin_country_trigger_is_template_driven(self):
+        rule = {
+            "id": "MANDATORY_DOC_RULES",
+            "mandatoryDocuments": [],
+            "conditionalDocuments": [
+                {"documentType": "Regional_Declaration", "documentTypeId": "90"}
+            ],
+            "conditionalRequirements": [
+                {"documentType": "Regional_Declaration", "originCountries": ["NZ"]}
+            ],
+        }
+        payload = self._payload(
+            ["50"],
+            items=[{"hsCode": "9999", "countryOfOrigin": "New Zealand"}],
+        )
+
+        findings, _ = validate_mandatory_docs([rule], payload, self._submission(["Invoice"]))
+
+        assert any(f["documentType"] == "Regional_Declaration" for f in findings)

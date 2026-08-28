@@ -39,14 +39,19 @@ def check_rejected_hs_code(hs_code: str, item_code: str, rejected_lookup: list) 
     return matches
 
 
-def check_pafn_hs_code(hs_code: str, item_code: str, pafn_lookup: set) -> list:
+def check_jurisdiction_hs_code(
+    hs_code: str,
+    item_code: str,
+    jurisdiction_lookup: set,
+    rule_code: str = "OUTSIDE_JURISDICTION_HS_CODE",
+) -> list:
     """Verify that the HS code belongs to the valid jurisdiction HS code list."""
-    if not pafn_lookup:
+    if not jurisdiction_lookup:
         return []
     norm_hs = _normalize_hs(hs_code)
-    if not any(norm_hs.startswith(prefix) for prefix in pafn_lookup):
+    if not any(norm_hs.startswith(prefix) for prefix in jurisdiction_lookup):
         return [{
-            "ruleCode": "NON_PAFN_HS_CODE",
+            "ruleCode": rule_code,
             "result": "FAIL",
             "itemCode": item_code,
             "hsCode": hs_code,
@@ -67,11 +72,14 @@ def validate_hs_codes(rules: dict, payload: dict) -> list:
         for entry in rules.get("rejectedCodes", [])
     ]
 
-    pafn_lookup = {
+    jurisdiction_lookup = {
         _normalize_hs(entry["hsCode"])
-        for entry in rules.get("pafnCodes", [])
+        for entry in rules.get("jurisdictionCodes", [])
         if entry.get("hsCode")
     }
+    jurisdiction_rule_code = rules.get(
+        "outsideJurisdictionRuleCode", "OUTSIDE_JURISDICTION_HS_CODE"
+    )
 
     for item in payload.get("items", []):
         hs = item.get("hsCode")
@@ -79,6 +87,13 @@ def validate_hs_codes(rules: dict, payload: dict) -> list:
             hs_str = str(hs)
             item_code = item.get("itemCode", "")
             findings.extend(check_rejected_hs_code(hs_str, item_code, rejected_lookup))
-            findings.extend(check_pafn_hs_code(hs_str, item_code, pafn_lookup))
+            findings.extend(
+                check_jurisdiction_hs_code(
+                    hs_str,
+                    item_code,
+                    jurisdiction_lookup,
+                    jurisdiction_rule_code,
+                )
+            )
 
     return findings

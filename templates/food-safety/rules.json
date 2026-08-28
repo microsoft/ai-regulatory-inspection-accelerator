@@ -2,7 +2,11 @@
   {
     "id": "AGENCY_CODE_RULES",
     "category": "AgencyCode",
-    "agencyCode": "2"
+    "agencyCode": "2",
+    "documentType": "Declaration_Document",
+    "fieldName": "agency_code",
+    "missingRuleCode": "AGENCY_CODE_MISSING",
+    "mismatchRuleCode": "AGENCY_CODE_NOT_PAFN"
   },
 
   {
@@ -43,6 +47,24 @@
       {"documentType": "Ministry_Of_Foreign_Affaris_Attestation", "documentTypeId": "65"},
       {"documentType": "Vehicle,_Truck_&_Equipment_Specifications_Disclosure_Form", "documentTypeId": "70"},
       {"documentType": "Vehicle_Initial_Registration_Form", "documentTypeId": "73"}
+    ],
+    "personalShipment": {
+      "declarationPrefixes": ["TDR"],
+      "requiredDocuments": [
+        {"documentType": "Declaration_Document", "documentTypeId": "42"},
+        {"documentType": "Other_Documents", "documentTypeId": "43"}
+      ]
+    },
+    "conditionalRequirements": [
+      {"documentType": "Halal_Slaughter_Certificate", "hsCodeRuleId": "HALAL_HS_CODES"},
+      {"documentType": "Fish_Import_License", "hsCodeRuleId": "FISH_HS_CODES"},
+      {"documentType": "Shrimp_Import_License", "hsCodeRuleId": "SHRIMP_HS_CODES"},
+      {"documentType": "Zubaidi_Import_License", "hsCodeRuleId": "ZUBAIDI_HS_CODES"},
+      {"documentType": "Invoice", "hsCodeRuleId": "FRESH_HS_CODES"},
+      {
+        "documentType": "Statistical_Declaration",
+        "originCountries": ["SA", "AE", "KW", "QA", "BH", "OM"]
+      }
     ]
   },
 
@@ -112,6 +134,8 @@
   {
     "id": "REJECTED_HS_CODES",
     "category": "HsCodeValidation",
+    "validJurisdictionRuleId": "PAFN_HS_CODES",
+    "outsideJurisdictionRuleCode": "NON_PAFN_HS_CODE",
     "rejectedCodes": [
       {"hsCode": "0301", "sectionDescription": "Live Animals", "chapterDescription": "Live fish", "hsdescription": "Live fish — prohibited food import"},
       {"hsCode": "0901.21", "sectionDescription": "Foodstuffs", "chapterDescription": "Coffee, tea", "hsdescription": "Roasted coffee — requires special import permit"},
@@ -123,7 +147,7 @@
   {
     "id": "PAFN_HS_CODES",
     "category": "HsCodeValidation",
-    "rejectedCodes": [
+    "acceptedCodes": [
       {"hsCode": "02"},
       {"hsCode": "03"},
       {"hsCode": "04"},

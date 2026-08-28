@@ -27,6 +27,37 @@ from src.platform.policy.rules_policy import run as run_policy
 WORKSPACE = Path(__file__).resolve().parent.parent.parent
 RULES_JSON = WORKSPACE / "templates" / "food-safety" / "rules.json"
 
+EXPECTED_FINDING_PROJECTION = [
+    ("AGENCY_CODE_MISSING", "FAIL", None, None, None),
+    ("CROSS_COUNTRY_OF_ORIGIN", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_EXPORTER_NAME", "NOT_APPLICABLE", None, None, None),
+    ("CROSS_GROSS_WEIGHT", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_HS_CODE", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_IMPORTER_NAME", "NOT_APPLICABLE", None, None, None),
+    ("CROSS_INVOICE_DATE", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_INVOICE_NUMBER", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_ITEM_DESCRIPTION", "NOT_APPLICABLE", None, None, None),
+    ("CROSS_NET_WEIGHT", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_PACKAGING", "NOT_APPLICABLE", None, None, None),
+    ("CROSS_PORT_OF_DISCHARGE", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_PORT_OF_LOADING", "NOT_APPLICABLE", None, None, "Warning"),
+    ("CROSS_QUANTITY", "NOT_APPLICABLE", None, None, "Warning"),
+    ("MANDATORY_DOC_MISSING", "FAIL", "Commercial_License", None, None),
+    ("MANDATORY_DOC_MISSING", "FAIL", "Delivery_Orders", None, None),
+    ("MANDATORY_DOC_MISSING", "FAIL", "Halal_Slaughter_Certificate", None, None),
+    ("MANDATORY_DOC_MISSING", "FAIL", "House_Bill", None, None),
+    ("MANDATORY_DOC_MISSING", "FAIL", "Import_License", None, None),
+    ("MANDATORY_DOC_MISSING", "FAIL", "Packing_List or Stretching_List", None, None),
+    ("MANDATORY_DOC_MISSING", "FAIL", "Signature_Authorization", None, None),
+    ("MIN_FIELDS_RULES", "WARN", None, None, "Warning"),
+    ("MIN_FIELDS_RULES", "WARN", None, None, "Warning"),
+    ("MIN_FIELDS_RULES", "WARN", None, None, "Warning"),
+    ("MIN_FIELDS_RULES", "WARN", None, None, "Warning"),
+    ("MIN_FIELDS_RULES", "WARN", None, None, "Warning"),
+    ("SIGNATURE_STAMP_MISSING", "WARN", None, None, "Warning"),
+    ("SIGNATURE_STAMP_NOT_DETECTED", "NOT_APPLICABLE", None, None, "Info"),
+]
+
 
 @pytest.fixture(scope="module")
 def food_safety_rules() -> list:
@@ -153,6 +184,27 @@ class TestReferenceCase:
         submission = _minimal_submission(reference_payload)
         findings = _run_rules_sync(food_safety_rules, reference_payload, submission)
         assert isinstance(findings, list)
+
+    def test_complete_finding_projection_matches_pafn_baseline(
+        self, food_safety_rules, reference_payload
+    ):
+        findings = _run_rules_sync(
+            food_safety_rules,
+            reference_payload,
+            _minimal_submission(reference_payload),
+        )
+        projection = sorted(
+            (
+                finding.get("ruleCode"),
+                finding.get("result"),
+                finding.get("documentType"),
+                finding.get("itemCode"),
+                finding.get("severity"),
+            )
+            for finding in findings
+        )
+
+        assert projection == EXPECTED_FINDING_PROJECTION
 
     def test_mandatory_docs_missing(self, food_safety_rules, reference_payload):
         """Reference payload has only 5 docs; mandatory list requires ~10."""
