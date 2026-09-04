@@ -10,12 +10,19 @@ WORD_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.docu
 EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 POWERPOINT_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 OFFICE_MIME_TYPES = frozenset({WORD_MIME, EXCEL_MIME, POWERPOINT_MIME})
+MAX_XML_BYTES = 50 * 1024 * 1024
 
 
 def normalize_office_document(content: bytes, mime_type: str) -> str:
     """Extract readable Markdown from a DOCX, XLSX, or PPTX OOXML package."""
     try:
         with ZipFile(BytesIO(content)) as package:
+            xml_size = sum(
+                entry.file_size for entry in package.infolist()
+                if entry.filename.endswith(".xml")
+            )
+            if xml_size > MAX_XML_BYTES:
+                raise ValueError("The Office document exceeds the normalization limit.")
             if mime_type == WORD_MIME:
                 return _normalize_word(package)
             if mime_type == EXCEL_MIME:

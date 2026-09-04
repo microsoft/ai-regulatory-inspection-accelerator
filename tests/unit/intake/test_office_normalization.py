@@ -7,6 +7,7 @@ import pytest
 
 from src.platform.intake.office_normalization import (
     EXCEL_MIME,
+    MAX_XML_BYTES,
     POWERPOINT_MIME,
     WORD_MIME,
     normalize_office_document,
@@ -69,6 +70,15 @@ def test_xlsx_invalid_shared_string_reference_is_rejected():
 
     with pytest.raises(ValueError, match="could not be normalized"):
         normalize_office_document(package.getvalue(), EXCEL_MIME)
+
+
+def test_office_package_over_xml_budget_is_rejected():
+    package = BytesIO()
+    with ZipFile(package, "w") as archive:
+        archive.writestr("word/document.xml", b" " * (MAX_XML_BYTES + 1))
+
+    with pytest.raises(ValueError, match="exceeds the normalization limit"):
+        normalize_office_document(package.getvalue(), WORD_MIME)
 
 
 def test_pptx_text_is_normalized_by_slide():
