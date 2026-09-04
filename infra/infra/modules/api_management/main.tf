@@ -119,6 +119,61 @@ resource "azurerm_api_management_api_operation" "post_inspection" {
   url_template        = "/"
 }
 
+resource "azurerm_api_management_api_schema" "submission" {
+  schema_id           = "submission-schema"
+  api_name            = azurerm_api_management_api.inspector.name
+  api_management_name = azurerm_api_management.apim.name
+  resource_group_name = var.resource_group_name
+  content_type        = "application/vnd.oai.openapi.components+json"
+  value = jsonencode({
+    components = {
+      schemas = {
+        Submission = jsondecode(file("${path.root}/../../templates/food-safety/submission_schema.json"))
+      }
+    }
+  })
+}
+
+resource "azurerm_api_management_api_operation_policy" "post_inspection" {
+  operation_id        = azurerm_api_management_api_operation.post_inspection.operation_id
+  api_name            = azurerm_api_management_api.inspector.name
+  api_management_name = azurerm_api_management.apim.name
+  resource_group_name = var.resource_group_name
+
+  xml_content = <<XML
+<policies>
+  <inbound>
+    <base />
+    <validate-content unspecified-content-type-action="prevent" max-size="52428800" size-exceeded-action="prevent" errors-variable-name="validationErrors">
+      <content type="application/json" validate-as="json" action="prevent" schema-id="submission-schema" schema-ref="#/components/schemas/Submission" />
+    </validate-content>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+    <choose>
+      <when condition="@(context.LastError.Source == &quot;validate-content&quot;)">
+        <return-response>
+          <set-status code="400" reason="Invalid evidence submission" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>@(new JObject(new JProperty("code", "INVALID_SUBMISSION_SCHEMA"), new JProperty("message", "The request body does not match the evidence submission schema."), new JProperty("errors", context.Variables.GetValueOrDefault&lt;IEnumerable&lt;Microsoft.Azure.ApiManagement.Policy.Expressions.JsonSchemaError&gt;&gt;("validationErrors"))))</set-body>
+        </return-response>
+      </when>
+    </choose>
+  </on-error>
+</policies>
+XML
+
+  depends_on = [azurerm_api_management_api_schema.submission]
+}
+
 resource "azurerm_api_management_api_operation" "get_verdict" {
   operation_id        = "get-verdict"
   api_name            = azurerm_api_management_api.inspector.name

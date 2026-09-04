@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aria.microsoft.com/schemas/food-safety/submission.json",
+  "title": "ARIA Food Safety Evidence Submission",
+  "type": "object",
+  "required": [
+    "requestId",
+    "documents",
+    "attachmentTypes",
+    "items"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "expectedDocumentCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "attachmentTypes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": [
+          "documentTypeId",
+          "documentType",
+          "checksum",
+          "mimeType",
+          "blobPath",
+          "fileSizeBytes"
+        ],
+        "properties": {
+          "documentTypeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "documentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[A-Fa-f0-9]{64}$"
+          },
+          "mimeType": {
+            "type": "string",
+            "enum": [
+              "application/pdf",
+              "image/tiff",
+              "image/jpeg",
+              "image/png",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            ]
+          },
+          "blobPath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fileSizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 52428800
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": true
+}
