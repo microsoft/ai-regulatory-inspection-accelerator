@@ -42,25 +42,31 @@ external service dependency, fully deterministic):
                              vice versa
   6. Empty items          — items[] must be non-empty
 
-Storage-backed checks NOT performed here (left to the connector/template
-layer, which should call `run()` for the checks above and then merge in
-storage-specific errors using the same error dict shape — `code`,
-`severity`, `shortDescription`, `longDescription`, `affectedDocumentId`):
-  - Blob existence
-  - SHA-256 checksum recomputation against actual blob content
-  - Empty blob (0 bytes) detection
-  - Actual vs. declared file size mismatch
-  - Blob filename vs. declared fileName mismatch
+Storage-backed checks are enabled when the caller supplies `content_resolver`.
+The resolver keeps storage I/O outside this pure module while allowing the
+validator to verify Blob existence, SHA-256, empty content, and declared size.
 """
 
+import hashlib
+from collections.abc import Callable
+
 DEFAULT_ALLOWED_MIME_TYPES: frozenset[str] = frozenset(
-    {"application/pdf", "image/tiff", "image/jpeg", "image/png"}
+    {
+        "application/pdf",
+        "image/tiff",
+        "image/jpeg",
+        "image/png",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    }
 )
 
 
 def run(
     payload: dict,
     allowed_mime_types: frozenset[str] | None = None,
+    content_resolver: Callable[[dict], bytes] | None = None,
 ) -> dict:
     """
     Run structural pre-validation on a submitted case payload.
@@ -79,6 +85,8 @@ def run(
         allowed_mime_types: Optional override of the allowed MIME type
             allow-list (see DEFAULT_ALLOWED_MIME_TYPES). Templates with
             different accepted document formats should override this.
+        content_resolver: Optional function that returns the stored bytes for
+            a document. Enables content-backed checksum and size validation.
 
     Returns:
         {
@@ -131,6 +139,9 @@ def run(
             "declared item to perform cross-document validation and rules evaluation. "
             "Add item data and resubmit.",
         ))
+
+    if content_resolver is not None:
+        errors.extend(_check_document_content(documents, content_resolver))
 
     return {
         "passed": len(errors) == 0,
@@ -226,6 +237,55 @@ def _check_missing_checksums(documents: list[dict]) -> list[dict]:
                 "at upload time and included in the submission payload.",
                 str(doc.get("documentTypeId", "")),
             ))
+    return errors
+
+
+def _check_document_content(
+    documents: list[dict],
+    content_resolver: Callable[[dict], bytes],
+) -> list[dict]:
+    errors: list[dict] = []
+    for doc in documents:
+        try:
+            content = content_resolver(doc)
+        except (FileNotFoundError, KeyError):
+            errors.append(_error(
+                "DOCUMENT_NOT_FOUND",
+                f"The {_doc_label(doc)} could not be found in staging.",
+                "The submitted document does not exist at its declared staging location.",
+                str(doc.get("documentTypeId", "")),
+            ))
+            continue
+
+        if not content:
+            errors.append(_error(
+                "EMPTY_DOCUMENT",
+                f"The {_doc_label(doc)} is empty.",
+                "The staged document contains zero bytes and cannot be processed.",
+                str(doc.get("documentTypeId", "")),
+            ))
+            continue
+
+        declared_checksum = str(doc.get("checksum", "")).lower()
+        actual_checksum = hashlib.sha256(content).hexdigest()
+        if declared_checksum and actual_checksum != declared_checksum:
+            errors.append(_error(
+                "CHECKSUM_MISMATCH",
+                f"The {_doc_label(doc)} failed integrity verification.",
+                "The staged document SHA-256 checksum does not match the submitted checksum.",
+                str(doc.get("documentTypeId", "")),
+            ))
+
+        declared_size = doc.get("fileSizeBytes")
+        if declared_size is not None and len(content) != declared_size:
+            errors.append(_error(
+                "FILE_SIZE_MISMATCH",
+                f"The {_doc_label(doc)} size does not match its metadata.",
+                f"The submission declared {declared_size} bytes but the staged document contains "
+                f"{len(content)} bytes.",
+                str(doc.get("documentTypeId", "")),
+            ))
+
     return errors
 
 

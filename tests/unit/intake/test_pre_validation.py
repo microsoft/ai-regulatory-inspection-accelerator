@@ -1,12 +1,8 @@
 """
 Unit tests for src/platform/intake/pre_validation.py (Pre-Validation Agent).
-
-All tests exercise the pure, metadata-only checks documented in the module:
-document count, duplicate detection, MIME type, missing checksum, attachment
-type consistency, and empty items. Storage-backed checks (blob existence,
-checksum recomputation, etc.) are intentionally out of scope for this module
-and therefore not tested here.
 """
+
+import hashlib
 
 from src.platform.intake.pre_validation import run
 
@@ -103,6 +99,50 @@ class TestMissingChecksum:
         result = run(payload)
         assert result["passed"] is False
         assert any(e["code"] == "MISSING_CHECKSUM" for e in result["errors"])
+
+
+class TestContentIntegrity:
+    def test_matching_sha256_and_size_pass(self):
+        content = b"demo evidence"
+        payload = {
+            "documents": [_doc(
+                checksum=hashlib.sha256(content).hexdigest(),
+                fileSizeBytes=len(content),
+            )],
+            "attachmentTypes": ["Invoice"],
+            "items": [{"id": 1}],
+        }
+
+        result = run(payload, content_resolver=lambda _: content)
+
+        assert result["passed"] is True
+
+    def test_modified_content_fails_sha256_validation(self):
+        payload = {
+            "documents": [_doc(checksum=hashlib.sha256(b"original").hexdigest())],
+            "attachmentTypes": ["Invoice"],
+            "items": [{"id": 1}],
+        }
+
+        result = run(payload, content_resolver=lambda _: b"modified")
+
+        assert result["passed"] is False
+        assert any(error["code"] == "CHECKSUM_MISMATCH" for error in result["errors"])
+
+    def test_missing_staged_document_is_rejected(self):
+        payload = {
+            "documents": [_doc()],
+            "attachmentTypes": ["Invoice"],
+            "items": [{"id": 1}],
+        }
+
+        def missing_document(_: dict) -> bytes:
+            raise FileNotFoundError
+
+        result = run(payload, content_resolver=missing_document)
+
+        assert result["passed"] is False
+        assert any(error["code"] == "DOCUMENT_NOT_FOUND" for error in result["errors"])
 
 
 class TestAttachmentTypeConsistency:
