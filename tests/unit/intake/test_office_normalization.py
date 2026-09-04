@@ -42,6 +42,20 @@ def test_xlsx_cells_are_normalized_to_markdown_rows():
     assert markdown == "## Sheet 1\n\nItem | 42\n"
 
 
+def test_xlsx_inline_strings_are_preserved():
+    worksheet_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData><row><c t="inlineStr"><is><t>Inspection</t></is></c></row></sheetData>
+</worksheet>"""
+    package = BytesIO()
+    with ZipFile(package, "w") as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+
+    markdown = normalize_office_document(package.getvalue(), EXCEL_MIME)
+
+    assert markdown == "## Sheet 1\n\nInspection\n"
+
+
 def test_pptx_text_is_normalized_by_slide():
     slide_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"

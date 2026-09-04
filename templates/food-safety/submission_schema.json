@@ -4,16 +4,26 @@
   "title": "ARIA Food Safety Evidence Submission",
   "type": "object",
   "required": [
-    "requestId",
     "documents",
     "attachmentTypes",
     "items"
   ],
+  "anyOf": [
+    {
+      "required": ["requestId"]
+    },
+    {
+      "required": ["caseId"]
+    }
+  ],
   "properties": {
     "requestId": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 128
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "caseId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
     },
     "expectedDocumentCount": {
       "type": "integer",

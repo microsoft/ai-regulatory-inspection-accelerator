@@ -52,10 +52,13 @@ def _normalize_excel(package: ZipFile) -> str:
         for row in root.iter(f"{namespace}row"):
             values = []
             for cell in row:
-                value = cell.find(f"{namespace}v")
-                text = "" if value is None else value.text or ""
-                if cell.get("t") == "s" and text.isdigit():
-                    text = shared_strings[int(text)]
+                if cell.get("t") == "inlineStr":
+                    text = "".join(node.text or "" for node in cell.iter(f"{namespace}t"))
+                else:
+                    value = cell.find(f"{namespace}v")
+                    text = "" if value is None else value.text or ""
+                    if cell.get("t") == "s" and text.isdigit():
+                        text = shared_strings[int(text)]
                 values.append(text)
             rows.append(" | ".join(values))
         sections.append(f"## Sheet {index}\n\n" + "\n".join(rows))

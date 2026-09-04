@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -9,6 +11,8 @@ from typing import Protocol
 
 from src.platform.intake.pre_validation import run as run_pre_validation
 from src.platform.orchestration.submission import SubmissionDecision, evaluate_submission
+
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 class IntakeRepository(Protocol):
@@ -50,12 +54,25 @@ async def submit(
 ) -> SubmissionResult:
     """Validate, initialize, and start one evidence submission."""
     request_id = str(payload.get("requestId", "")).strip()
-    if not request_id:
-        return SubmissionResult(400, _error_body("MISSING_REQUEST_ID", "requestId is required."))
+    if not request_id or REQUEST_ID_PATTERN.fullmatch(request_id) is None:
+        return SubmissionResult(400, _error_body(
+            "INVALID_REQUEST_ID",
+            "requestId must contain only letters, numbers, periods, underscores, colons, or hyphens.",
+        ))
+
+    invalid_blob_paths = [
+        document for document in payload.get("documents", [])
+        if not _is_case_blob_path(request_id, document.get("blobPath"))
+    ]
+    if invalid_blob_paths:
+        return SubmissionResult(400, _error_body(
+            "INVALID_BLOB_PATH",
+            "Each blobPath must belong to the submitted requestId.",
+        ))
 
     decision = evaluate_submission(
         await orchestrator.get_status(request_id),
-        repository.get_case_status(request_id),
+        await asyncio.to_thread(repository.get_case_status, request_id),
     )
     if decision is not SubmissionDecision.ACCEPT:
         code = (
@@ -66,11 +83,23 @@ async def submit(
         return SubmissionResult(409, _error_body(code, "The request has already been submitted."))
 
     timestamp = (now or _utc_now)().isoformat()
-    repository.save_inbound(payload)
+    await asyncio.to_thread(repository.save_inbound, payload)
 
-    validation = run_pre_validation(payload, content_resolver=content_resolver)
+    content_cache: dict[str, bytes] = {}
+
+    def cached_content(document: dict) -> bytes:
+        blob_path = document["blobPath"]
+        if blob_path not in content_cache:
+            content_cache[blob_path] = content_resolver(document)
+        return content_cache[blob_path]
+
+    validation = await asyncio.to_thread(
+        run_pre_validation,
+        payload,
+        content_resolver=cached_content,
+    )
     if not validation["passed"]:
-        repository.append_audit_event({
+        await asyncio.to_thread(repository.append_audit_event, {
             "id": f"{request_id}:rejected:{timestamp}",
             "requestId": request_id,
             "eventType": "INTAKE_REJECTED",
@@ -86,12 +115,39 @@ async def submit(
 
     accepted_documents = validation["documents"]
     if document_preparer is not None:
-        accepted_documents = [
-            document_preparer(request_id, document, content_resolver(document))
-            for document in accepted_documents
-        ]
+        try:
+            accepted_documents = [
+                await asyncio.to_thread(
+                    document_preparer,
+                    request_id,
+                    document,
+                    cached_content(document),
+                )
+                for document in accepted_documents
+            ]
+        except ValueError:
+            error = {
+                "code": "DOCUMENT_NORMALIZATION_FAILED",
+                "severity": "error",
+                "shortDescription": "An Office document could not be normalized.",
+                "longDescription": "The submitted Office package is invalid or unsupported.",
+                "affectedDocumentId": None,
+            }
+            await asyncio.to_thread(repository.append_audit_event, {
+                "id": f"{request_id}:rejected:{timestamp}",
+                "requestId": request_id,
+                "eventType": "INTAKE_REJECTED",
+                "timestamp": timestamp,
+                "errors": [error],
+            })
+            return SubmissionResult(400, {
+                "code": "DOCUMENT_NORMALIZATION_FAILED",
+                "message": "An Office document could not be normalized.",
+                "errors": [error],
+                "warnings": validation["warnings"],
+            })
     accepted_payload = {**payload, "documents": accepted_documents}
-    repository.create_received_case({
+    await asyncio.to_thread(repository.create_received_case, {
         "id": request_id,
         "requestId": request_id,
         "status": "RECEIVED",
@@ -99,7 +155,7 @@ async def submit(
         "documentCount": len(accepted_documents),
         "warnings": validation["warnings"],
     })
-    repository.append_audit_event({
+    await asyncio.to_thread(repository.append_audit_event, {
         "id": f"{request_id}:received:{timestamp}",
         "requestId": request_id,
         "eventType": "INTAKE_RECEIVED",
@@ -107,7 +163,7 @@ async def submit(
         "warnings": validation["warnings"],
     })
     status_query_uri = await orchestrator.start(request_id, accepted_payload)
-    repository.append_audit_event({
+    await asyncio.to_thread(repository.append_audit_event, {
         "id": f"{request_id}:accepted:{timestamp}",
         "requestId": request_id,
         "eventType": "INTAKE_ACCEPTED",
@@ -125,6 +181,13 @@ async def submit(
 
 def _error_body(code: str, message: str) -> dict:
     return {"code": code, "message": message}
+
+
+def _is_case_blob_path(request_id: str, blob_path: object) -> bool:
+    if not isinstance(blob_path, str) or "\\" in blob_path:
+        return False
+    parts = blob_path.split("/")
+    return len(parts) > 1 and parts[0] == request_id and all(part not in {"", ".", ".."} for part in parts)
 
 
 def _utc_now() -> datetime:

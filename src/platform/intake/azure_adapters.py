@@ -69,7 +69,8 @@ class AzureBlobContentResolver:
             return document
         markdown = normalize_office_document(content, mime_type)
         document_id = str(document["documentTypeId"])
-        normalized_path = f"artifacts/{request_id}/normalized/{document_id}.md"
+        checksum = str(document["checksum"]).lower()
+        normalized_path = f"artifacts/{request_id}/normalized/{document_id}-{checksum}.md"
         self.container.upload_blob(normalized_path, markdown.encode("utf-8"), overwrite=True)
         return {**document, "normalizedBlobPath": normalized_path}
 
