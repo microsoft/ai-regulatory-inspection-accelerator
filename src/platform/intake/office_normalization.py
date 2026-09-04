@@ -22,7 +22,7 @@ def normalize_office_document(content: bytes, mime_type: str) -> str:
                 return _normalize_excel(package)
             if mime_type == POWERPOINT_MIME:
                 return _normalize_powerpoint(package)
-    except (BadZipFile, KeyError, ElementTree.ParseError) as error:
+    except (BadZipFile, KeyError, IndexError, ElementTree.ParseError) as error:
         raise ValueError("The Office document could not be normalized.") from error
     raise ValueError(f"Unsupported Office MIME type: {mime_type}")
 

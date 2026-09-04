@@ -3,6 +3,8 @@
 from io import BytesIO
 from zipfile import ZipFile
 
+import pytest
+
 from src.platform.intake.office_normalization import (
     EXCEL_MIME,
     POWERPOINT_MIME,
@@ -54,6 +56,19 @@ def test_xlsx_inline_strings_are_preserved():
     markdown = normalize_office_document(package.getvalue(), EXCEL_MIME)
 
     assert markdown == "## Sheet 1\n\nInspection\n"
+
+
+def test_xlsx_invalid_shared_string_reference_is_rejected():
+    worksheet_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData><row><c t="s"><v>4</v></c></row></sheetData>
+</worksheet>"""
+    package = BytesIO()
+    with ZipFile(package, "w") as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+
+    with pytest.raises(ValueError, match="could not be normalized"):
+        normalize_office_document(package.getvalue(), EXCEL_MIME)
 
 
 def test_pptx_text_is_normalized_by_slide():

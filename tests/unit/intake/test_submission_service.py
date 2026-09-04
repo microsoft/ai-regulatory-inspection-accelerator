@@ -199,6 +199,38 @@ def test_request_id_rejects_cosmos_invalid_characters():
     assert result.body["code"] == "INVALID_REQUEST_ID"
 
 
+def test_request_id_rejects_values_over_durable_limit():
+    payload = _payload(b"demo evidence")
+    payload["requestId"] = "A" * 101
+    repository = FakeRepository()
+
+    result = asyncio.run(submit(
+        payload,
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: b"demo evidence",
+    ))
+
+    assert result.status_code == 400
+    assert result.body["code"] == "INVALID_REQUEST_ID"
+
+
+def test_request_id_must_be_string():
+    payload = _payload(b"demo evidence")
+    payload["requestId"] = 123
+    repository = FakeRepository()
+
+    result = asyncio.run(submit(
+        payload,
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: b"demo evidence",
+    ))
+
+    assert result.status_code == 400
+    assert repository.operations == []
+
+
 def test_normalization_failure_is_rejected_and_audited():
     content = b"invalid Office package"
     repository = FakeRepository()
@@ -216,4 +248,5 @@ def test_normalization_failure_is_rejected_and_audited():
 
     assert result.status_code == 400
     assert result.body["code"] == "DOCUMENT_NORMALIZATION_FAILED"
+    assert result.body["errors"][0]["affectedDocumentId"] == "1"
     assert repository.events[-1]["eventType"] == "INTAKE_REJECTED"

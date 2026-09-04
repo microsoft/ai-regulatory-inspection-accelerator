@@ -12,7 +12,7 @@ from typing import Protocol
 from src.platform.intake.pre_validation import run as run_pre_validation
 from src.platform.orchestration.submission import SubmissionDecision, evaluate_submission
 
-REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,100}$")
 
 
 class IntakeRepository(Protocol):
@@ -53,12 +53,19 @@ async def submit(
     now: Callable[[], datetime] | None = None,
 ) -> SubmissionResult:
     """Validate, initialize, and start one evidence submission."""
-    request_id = str(payload.get("requestId", "")).strip()
+    raw_request_id = payload.get("requestId")
+    if not isinstance(raw_request_id, str):
+        return SubmissionResult(400, _error_body(
+            "INVALID_REQUEST_ID",
+            "requestId must be a string.",
+        ))
+    request_id = raw_request_id.strip()
     if not request_id or REQUEST_ID_PATTERN.fullmatch(request_id) is None:
         return SubmissionResult(400, _error_body(
             "INVALID_REQUEST_ID",
-            "requestId must contain only letters, numbers, periods, underscores, colons, or hyphens.",
+            "requestId must be 1-100 characters using letters, numbers, periods, underscores, colons, or hyphens.",
         ))
+    payload = {**payload, "requestId": request_id}
 
     invalid_blob_paths = [
         document for document in payload.get("documents", [])
@@ -85,18 +92,10 @@ async def submit(
     timestamp = (now or _utc_now)().isoformat()
     await asyncio.to_thread(repository.save_inbound, payload)
 
-    content_cache: dict[str, bytes] = {}
-
-    def cached_content(document: dict) -> bytes:
-        blob_path = document["blobPath"]
-        if blob_path not in content_cache:
-            content_cache[blob_path] = content_resolver(document)
-        return content_cache[blob_path]
-
     validation = await asyncio.to_thread(
         run_pre_validation,
         payload,
-        content_resolver=cached_content,
+        content_resolver=content_resolver,
     )
     if not validation["passed"]:
         await asyncio.to_thread(repository.append_audit_event, {
@@ -115,37 +114,38 @@ async def submit(
 
     accepted_documents = validation["documents"]
     if document_preparer is not None:
-        try:
-            accepted_documents = [
-                await asyncio.to_thread(
+        prepared_documents = []
+        for document in accepted_documents:
+            try:
+                prepared_document = await asyncio.to_thread(
                     document_preparer,
                     request_id,
                     document,
-                    cached_content(document),
+                    await asyncio.to_thread(content_resolver, document),
                 )
-                for document in accepted_documents
-            ]
-        except ValueError:
-            error = {
-                "code": "DOCUMENT_NORMALIZATION_FAILED",
-                "severity": "error",
-                "shortDescription": "An Office document could not be normalized.",
-                "longDescription": "The submitted Office package is invalid or unsupported.",
-                "affectedDocumentId": None,
-            }
-            await asyncio.to_thread(repository.append_audit_event, {
-                "id": f"{request_id}:rejected:{timestamp}",
-                "requestId": request_id,
-                "eventType": "INTAKE_REJECTED",
-                "timestamp": timestamp,
-                "errors": [error],
-            })
-            return SubmissionResult(400, {
-                "code": "DOCUMENT_NORMALIZATION_FAILED",
-                "message": "An Office document could not be normalized.",
-                "errors": [error],
-                "warnings": validation["warnings"],
-            })
+            except ValueError:
+                error = {
+                    "code": "DOCUMENT_NORMALIZATION_FAILED",
+                    "severity": "error",
+                    "shortDescription": "An Office document could not be normalized.",
+                    "longDescription": "The submitted Office package is invalid or unsupported.",
+                    "affectedDocumentId": str(document.get("documentTypeId", "")),
+                }
+                await asyncio.to_thread(repository.append_audit_event, {
+                    "id": f"{request_id}:rejected:{timestamp}",
+                    "requestId": request_id,
+                    "eventType": "INTAKE_REJECTED",
+                    "timestamp": timestamp,
+                    "errors": [error],
+                })
+                return SubmissionResult(400, {
+                    "code": "DOCUMENT_NORMALIZATION_FAILED",
+                    "message": "An Office document could not be normalized.",
+                    "errors": [error],
+                    "warnings": validation["warnings"],
+                })
+            prepared_documents.append(prepared_document)
+        accepted_documents = prepared_documents
     accepted_payload = {**payload, "documents": accepted_documents}
     await asyncio.to_thread(repository.create_received_case, {
         "id": request_id,
