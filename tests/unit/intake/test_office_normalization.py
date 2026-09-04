@@ -3,8 +3,11 @@
 from io import BytesIO
 from zipfile import ZipFile
 
+import pytest
+
 from src.platform.intake.office_normalization import (
     EXCEL_MIME,
+    MAX_XML_BYTES,
     POWERPOINT_MIME,
     WORD_MIME,
     normalize_office_document,
@@ -40,6 +43,42 @@ def test_xlsx_cells_are_normalized_to_markdown_rows():
     markdown = normalize_office_document(package.getvalue(), EXCEL_MIME)
 
     assert markdown == "## Sheet 1\n\nItem | 42\n"
+
+
+def test_xlsx_inline_strings_are_preserved():
+    worksheet_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData><row><c t="inlineStr"><is><t>Inspection</t></is></c></row></sheetData>
+</worksheet>"""
+    package = BytesIO()
+    with ZipFile(package, "w") as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+
+    markdown = normalize_office_document(package.getvalue(), EXCEL_MIME)
+
+    assert markdown == "## Sheet 1\n\nInspection\n"
+
+
+def test_xlsx_invalid_shared_string_reference_is_rejected():
+    worksheet_xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData><row><c t="s"><v>4</v></c></row></sheetData>
+</worksheet>"""
+    package = BytesIO()
+    with ZipFile(package, "w") as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+
+    with pytest.raises(ValueError, match="could not be normalized"):
+        normalize_office_document(package.getvalue(), EXCEL_MIME)
+
+
+def test_office_package_over_xml_budget_is_rejected():
+    package = BytesIO()
+    with ZipFile(package, "w") as archive:
+        archive.writestr("word/document.xml", b" " * (MAX_XML_BYTES + 1))
+
+    with pytest.raises(ValueError, match="exceeds the normalization limit"):
+        normalize_office_document(package.getvalue(), WORD_MIME)
 
 
 def test_pptx_text_is_normalized_by_slide():

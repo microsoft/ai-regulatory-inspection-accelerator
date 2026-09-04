@@ -10,19 +10,26 @@ WORD_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.docu
 EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 POWERPOINT_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 OFFICE_MIME_TYPES = frozenset({WORD_MIME, EXCEL_MIME, POWERPOINT_MIME})
+MAX_XML_BYTES = 50 * 1024 * 1024
 
 
 def normalize_office_document(content: bytes, mime_type: str) -> str:
     """Extract readable Markdown from a DOCX, XLSX, or PPTX OOXML package."""
     try:
         with ZipFile(BytesIO(content)) as package:
+            xml_size = sum(
+                entry.file_size for entry in package.infolist()
+                if entry.filename.endswith(".xml")
+            )
+            if xml_size > MAX_XML_BYTES:
+                raise ValueError("The Office document exceeds the normalization limit.")
             if mime_type == WORD_MIME:
                 return _normalize_word(package)
             if mime_type == EXCEL_MIME:
                 return _normalize_excel(package)
             if mime_type == POWERPOINT_MIME:
                 return _normalize_powerpoint(package)
-    except (BadZipFile, KeyError, ElementTree.ParseError) as error:
+    except (BadZipFile, KeyError, IndexError, ElementTree.ParseError) as error:
         raise ValueError("The Office document could not be normalized.") from error
     raise ValueError(f"Unsupported Office MIME type: {mime_type}")
 
@@ -52,10 +59,13 @@ def _normalize_excel(package: ZipFile) -> str:
         for row in root.iter(f"{namespace}row"):
             values = []
             for cell in row:
-                value = cell.find(f"{namespace}v")
-                text = "" if value is None else value.text or ""
-                if cell.get("t") == "s" and text.isdigit():
-                    text = shared_strings[int(text)]
+                if cell.get("t") == "inlineStr":
+                    text = "".join(node.text or "" for node in cell.iter(f"{namespace}t"))
+                else:
+                    value = cell.find(f"{namespace}v")
+                    text = "" if value is None else value.text or ""
+                    if cell.get("t") == "s" and text.isdigit():
+                        text = shared_strings[int(text)]
                 values.append(text)
             rows.append(" | ".join(values))
         sections.append(f"## Sheet {index}\n\n" + "\n".join(rows))

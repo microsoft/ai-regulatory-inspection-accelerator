@@ -164,3 +164,89 @@ def test_in_progress_request_is_rejected_without_persistence():
     assert result.status_code == 409
     assert result.body["code"] == "DUPLICATE_IN_PROGRESS"
     assert repository.operations == []
+
+
+def test_blob_path_must_belong_to_request():
+    payload = _payload(b"demo evidence")
+    payload["documents"][0]["blobPath"] = "OTHER-CASE/invoice.pdf"
+    repository = FakeRepository()
+
+    result = asyncio.run(submit(
+        payload,
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: b"demo evidence",
+    ))
+
+    assert result.status_code == 400
+    assert result.body["code"] == "INVALID_BLOB_PATH"
+    assert repository.operations == []
+
+
+def test_request_id_rejects_cosmos_invalid_characters():
+    payload = _payload(b"demo evidence")
+    payload["requestId"] = "CASE/2026"
+    repository = FakeRepository()
+
+    result = asyncio.run(submit(
+        payload,
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: b"demo evidence",
+    ))
+
+    assert result.status_code == 400
+    assert result.body["code"] == "INVALID_REQUEST_ID"
+
+
+def test_request_id_rejects_values_over_durable_limit():
+    payload = _payload(b"demo evidence")
+    payload["requestId"] = "A" * 101
+    repository = FakeRepository()
+
+    result = asyncio.run(submit(
+        payload,
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: b"demo evidence",
+    ))
+
+    assert result.status_code == 400
+    assert result.body["code"] == "INVALID_REQUEST_ID"
+
+
+def test_request_id_must_be_string():
+    payload = _payload(b"demo evidence")
+    payload["requestId"] = 123
+    repository = FakeRepository()
+
+    result = asyncio.run(submit(
+        payload,
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: b"demo evidence",
+    ))
+
+    assert result.status_code == 400
+    assert repository.operations == []
+
+
+def test_normalization_failure_is_rejected_and_audited():
+    content = b"invalid Office package"
+    repository = FakeRepository()
+
+    def fail_normalization(request_id: str, document: dict, data: bytes) -> dict:
+        raise ValueError("invalid package")
+
+    result = asyncio.run(submit(
+        _payload(content),
+        repository=repository,
+        orchestrator=FakeOrchestrator(repository),
+        content_resolver=lambda _: content,
+        document_preparer=fail_normalization,
+    ))
+
+    assert result.status_code == 400
+    assert result.body["code"] == "DOCUMENT_NORMALIZATION_FAILED"
+    assert result.body["errors"][0]["affectedDocumentId"] == "1"
+    assert repository.events[-1]["eventType"] == "INTAKE_REJECTED"
