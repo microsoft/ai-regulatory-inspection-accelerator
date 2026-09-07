@@ -13,6 +13,12 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+DEFAULT_PROVIDER_OPTIONS = {
+    "temperature": 0.0,
+    "seed": 42,
+    "response_format": {"type": "json_object"},
+}
+
 
 @dataclass(frozen=True)
 class TokenUsage:
@@ -64,6 +70,7 @@ class AIClient:
         """
         started_at = self._clock()
         try:
+            provider_options = _with_deterministic_defaults(provider_options)
             response = self._complete_fn(
                 messages=messages,
                 model=model,
@@ -71,6 +78,63 @@ class AIClient:
             )
             if inspect.isawaitable(response):
                 response = await response
+
+            latency_ms = max(0, round((self._clock() - started_at) * 1000))
+            usage = _extract_usage(_value(response, "usage"))
+            result = AIResult(
+                content=_extract_content(response),
+                model=str(_value(response, "model") or model),
+                usage=usage,
+                latency_ms=latency_ms,
+            )
+            self._emit(
+                "LLMCallCompleted",
+                activity=activity,
+                case_id=case_id,
+                tenant_id=tenant_id,
+                model=result.model,
+                usage=usage,
+                latency_ms=latency_ms,
+            )
+            return result
+        except Exception as exc:
+            latency_ms = max(0, round((self._clock() - started_at) * 1000))
+            if self._track_event is not None:
+                self._track_event(
+                    "LLMCallFailed",
+                    case_id=case_id,
+                    tenant_id=tenant_id,
+                    activity=activity,
+                    model=model,
+                    error_type=type(exc).__name__,
+                    latency_ms=latency_ms,
+                )
+            raise
+
+    def complete_sync(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        activity: str,
+        case_id: str,
+        tenant_id: str,
+        model: str,
+        **provider_options: Any,
+    ) -> AIResult:
+        """Execute a synchronous completion with the same tracking contract."""
+        started_at = self._clock()
+        try:
+            provider_options = _with_deterministic_defaults(provider_options)
+            response = self._complete_fn(
+                messages=messages,
+                model=model,
+                **provider_options,
+            )
+            if inspect.isawaitable(response):
+                close = getattr(response, "close", None)
+                if close is not None:
+                    close()
+                raise TypeError("complete_sync requires a synchronous completion callable")
 
             latency_ms = max(0, round((self._clock() - started_at) * 1000))
             usage = _extract_usage(_value(response, "usage"))
@@ -131,12 +195,29 @@ class AIClient:
         )
 
 
+def as_ai_client(client: Any) -> AIClient:
+    """Return an AIClient for either a tracked wrapper or an Azure SDK client."""
+    if isinstance(client, AIClient):
+        return client
+    try:
+        complete_fn = client.chat.completions.create
+    except AttributeError as exc:
+        raise TypeError("client must be an AIClient or expose chat.completions.create") from exc
+    return AIClient(complete_fn)
+
+
 def _value(value: Any, name: str, default: Any = None) -> Any:
     if value is None:
         return default
     if isinstance(value, Mapping):
         return value.get(name, default)
     return getattr(value, name, default)
+
+
+def _with_deterministic_defaults(provider_options: dict[str, Any]) -> dict[str, Any]:
+    options = dict(DEFAULT_PROVIDER_OPTIONS)
+    options.update(provider_options)
+    return options
 
 
 def _extract_usage(raw_usage: Any) -> TokenUsage:

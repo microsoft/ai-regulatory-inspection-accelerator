@@ -24,6 +24,7 @@ from src.platform.document_intelligence.schemas import (
     DocumentIntelligenceResult,
     ExtractedMetadata,
 )
+from src.platform.shared.ai_client import AIClient
 from src.platform.templates.template_loader import TemplateLoader, _load_evidence_types
 
 # ---------------------------------------------------------------------------
@@ -55,6 +56,20 @@ def loader(tmp_path) -> TemplateLoader:
     (tmp_path / "food-test").mkdir()
     (tmp_path / "food-test" / "evidence_types.json").write_text(
         json.dumps(evidence), encoding="utf-8"
+    )
+    (tmp_path / "food-test" / "knowledge_pack.json").write_text(
+        json.dumps({
+            "prompts": {
+                "metadata_extraction": (
+                    "You are an Arabic and English bilingual extraction expert. "
+                    "Use Modern Standard Arabic, dialectal wording, Arabizi, and "
+                    "code-switching. Preserve text and lower the confidence when "
+                    "uncertain. Document: {{document_type}}. Fields: {{fields}}. "
+                    "{{document_notes}} {{line_item_guidance}} Return key_value_pairs JSON."
+                )
+            }
+        }),
+        encoding="utf-8",
     )
     _load_evidence_types.cache_clear()
     return TemplateLoader("food-test", tmp_path)
@@ -160,6 +175,34 @@ class TestBuildMetadataExtractionPrompt:
 # ---------------------------------------------------------------------------
 
 class TestExtractMetadataLLM:
+    def test_routes_through_ai_client_and_tracks_usage(self, doc_input, di_result, loader):
+        events = []
+        response = _FakeCompletion(VALID_LLM_RESPONSE)
+        response.model = "gpt-test"
+        response.usage = {
+            "prompt_tokens": 20,
+            "completion_tokens": 5,
+            "prompt_tokens_details": {"cached_tokens": 8},
+        }
+        client = AIClient(
+            lambda **kwargs: response,
+            track_event=lambda name, **fields: events.append((name, fields)),
+        )
+
+        extract_metadata_llm(
+            doc_input,
+            di_result,
+            client,
+            "Invoice",
+            loader,
+            case_id="CASE-24",
+            tenant_id="TENANT-24",
+        )
+
+        assert events[0][0] == "LLMCallCompleted"
+        assert events[0][1]["case_id"] == "CASE-24"
+        assert events[0][1]["cached_tokens"] == 8
+
     def test_returns_extracted_metadata(self, doc_input, di_result, loader):
         client = _make_openai_client(VALID_LLM_RESPONSE)
         meta, _raw = extract_metadata_llm(doc_input, di_result, client, "Invoice", loader)

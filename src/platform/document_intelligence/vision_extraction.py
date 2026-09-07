@@ -35,6 +35,8 @@ from src.platform.document_intelligence.schemas import (
     LineItem,
     TableData,
 )
+from src.platform.shared.ai_client import AIClient, as_ai_client
+from src.platform.templates.template_loader import TemplateLoader
 
 logger = logging.getLogger(__name__)
 
@@ -326,15 +328,18 @@ def _build_image_blocks(pages: list[bytes], file_name: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def extract_metadata_vision(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     doc_input: DocumentInput,
     image_data: bytes | list[bytes],
     doc_type: str,
     fields: list[str],
     *,
+    loader: TemplateLoader | None = None,
     deployment: str = "gpt-5.4",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
     """Extract structured metadata from a document image using GPT-5.4 vision.
 
@@ -342,7 +347,12 @@ def extract_metadata_vision(
     ``TemplateLoader``) instead of being fetched from
     ``document_type_fields.json``.  All algorithm logic is identical.
     """
-    system_prompt = _build_vision_extraction_prompt(doc_type, fields)
+    loader = loader or TemplateLoader.for_template("food-safety")
+    system_prompt = loader.get_prompt(
+        "vision_extraction",
+        document_type=doc_type.replace("_", " "),
+        fields=", ".join(fields),
+    )
     pages = image_data if isinstance(image_data, list) else [image_data]
     image_blocks = _build_image_blocks(pages, doc_input.file_name)
 
@@ -362,17 +372,18 @@ def extract_metadata_vision(
 
     for attempt in range(max_retries):
         try:
-            response = openai_client.chat.completions.create(
+            result = as_ai_client(openai_client).complete_sync(
                 model=deployment,
-                temperature=0.0,
-                seed=42,
+                activity="vision_extraction",
+                case_id=case_id,
+                tenant_id=tenant_id,
                 max_completion_tokens=4096,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
             )
-            raw = response.choices[0].message.content.strip()
+            raw = result.content.strip()
             json_match = re.search(r"\{.*\}", raw, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group())
@@ -420,23 +431,31 @@ def extract_metadata_vision(
 # ---------------------------------------------------------------------------
 
 def extract_metadata_hybrid(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     doc_input: DocumentInput,
     image_data: bytes | list[bytes],
     ocr_markdown: str,
     doc_type: str,
     fields: list[str],
     *,
+    loader: TemplateLoader | None = None,
     deployment: str = "gpt-5.4",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
     """Hybrid extraction: partial OCR text + image sent together to the LLM.
 
     Changed from PAFN: ``fields`` is now an explicit parameter.
     All algorithm logic is identical.
     """
-    system_prompt = _build_hybrid_extraction_prompt(doc_type, fields)
+    loader = loader or TemplateLoader.for_template("food-safety")
+    system_prompt = loader.get_prompt(
+        "hybrid_extraction",
+        document_type=doc_type.replace("_", " "),
+        fields=", ".join(fields),
+    )
     pages = image_data if isinstance(image_data, list) else [image_data]
     image_blocks = _build_image_blocks(pages, doc_input.file_name)
     truncated_ocr = ocr_markdown[:6000]
@@ -462,17 +481,18 @@ def extract_metadata_hybrid(
 
     for attempt in range(max_retries):
         try:
-            response = openai_client.chat.completions.create(
+            result = as_ai_client(openai_client).complete_sync(
                 model=deployment,
-                temperature=0.0,
-                seed=42,
+                activity="hybrid_extraction",
+                case_id=case_id,
+                tenant_id=tenant_id,
                 max_completion_tokens=4096,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
             )
-            raw = response.choices[0].message.content.strip()
+            raw = result.content.strip()
             json_match = re.search(r"\{.*\}", raw, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group())
@@ -569,17 +589,20 @@ def _merge_metadata(
 # ---------------------------------------------------------------------------
 
 def extract_metadata_ensemble(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     doc_input: DocumentInput,
     image_data: bytes | list[bytes],
     ocr_markdown: str,
     doc_type: str,
     fields: list[str],
     *,
+    loader: TemplateLoader | None = None,
     deployment: str = "gpt-5.4",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
     confidence_threshold: float = 0.6,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
     """Dual-pass ensemble extraction for difficult handwritten Arabic documents.
 
@@ -588,9 +611,12 @@ def extract_metadata_ensemble(
     """
     vision_meta, _ = extract_metadata_vision(
         openai_client, doc_input, image_data, doc_type, fields,
+        loader=loader,
         deployment=deployment,
         max_retries=max_retries,
         retry_delay_sec=retry_delay_sec,
+        case_id=case_id,
+        tenant_id=tenant_id,
     )
 
     confs = [kv.confidence for kv in vision_meta.key_value_pairs if kv.confidence > 0]
@@ -609,9 +635,12 @@ def extract_metadata_ensemble(
     )
     hybrid_meta, _ = extract_metadata_hybrid(
         openai_client, doc_input, image_data, ocr_markdown, doc_type, fields,
+        loader=loader,
         deployment=deployment,
         max_retries=max_retries,
         retry_delay_sec=retry_delay_sec,
+        case_id=case_id,
+        tenant_id=tenant_id,
     )
 
     merged = _merge_metadata(vision_meta, hybrid_meta)
@@ -634,13 +663,16 @@ def extract_metadata_ensemble(
 # ---------------------------------------------------------------------------
 
 def cross_validate_with_ocr(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     fields: dict,
     ocr_markdown: str,
     doc_type: str,
     allowed_fields: list[str],
     *,
+    loader: TemplateLoader | None = None,
     deployment: str = "gpt-5.4",
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[dict, list[str]]:
     """Cross-validate vision/hybrid extraction against OCR markdown.
 
@@ -661,26 +693,8 @@ def cross_validate_with_ocr(
 
     truncated_ocr = ocr_markdown[:5000]
 
-    system_prompt = (
-        "You are a document verification expert. You compare extracted field "
-        "values against raw OCR text from the same document to detect errors.\n\n"
-        "RULES:\n"
-        "- Use the OCR text's STRUCTURE (numbered labels, table headers, "
-        "positional context) to verify that each extracted value is assigned "
-        "to the correct field.\n"
-        "- If a value is assigned to the wrong field, output a correction "
-        "moving it to the right field.\n"
-        "- If a field is null but its value is clearly present in the OCR "
-        "text next to an identifiable label, output a correction filling it.\n"
-        "- Do NOT translate Arabic values to English. Keep values in their "
-        "original language.\n"
-        "- Do NOT invent values not present in the OCR text.\n"
-        "- Only output corrections — do not repeat correct fields.\n\n"
-        "Respond with a SINGLE JSON object (no markdown, no extra text):\n"
-        '{"corrections": {"field_name": {"value": "corrected_value", '
-        '"reason": "brief reason"}}}\n'
-        'If no corrections needed: {"corrections": {}}'
-    )
+    loader = loader or TemplateLoader.for_template("food-safety")
+    system_prompt = loader.get_prompt("ocr_cross_validation")
 
     user_msg = (
         f"Document type: {doc_type.replace('_', ' ')}\n\n"
@@ -690,17 +704,18 @@ def cross_validate_with_ocr(
 
     corrections: list[str] = []
     try:
-        response = openai_client.chat.completions.create(
+        completion = as_ai_client(openai_client).complete_sync(
             model=deployment,
-            temperature=0.0,
-            seed=42,
+            activity="ocr_cross_validation",
+            case_id=case_id,
+            tenant_id=tenant_id,
             max_completion_tokens=2048,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_msg},
             ],
         )
-        raw = response.choices[0].message.content.strip()
+        raw = completion.content.strip()
         json_match = re.search(r"\{.*\}", raw, re.DOTALL)
         if not json_match:
             logger.warning("Cross-validation: no JSON in LLM response")

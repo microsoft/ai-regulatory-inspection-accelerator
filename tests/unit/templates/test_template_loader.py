@@ -54,6 +54,10 @@ def _make_template(tmpdir: Path, template_id: str, content: dict) -> TemplateLoa
     (tdir / "evidence_types.json").write_text(
         json.dumps(content), encoding="utf-8"
     )
+    (tdir / "knowledge_pack.json").write_text(
+        json.dumps({"prompts": {"test": "Review {{document_type}} fields: {{fields}}"}}),
+        encoding="utf-8",
+    )
     # Clear lru_cache so each test starts fresh
     _load_evidence_types.cache_clear()
     return TemplateLoader(template_id, templates_root=tmpdir)
@@ -186,6 +190,31 @@ class TestGetDocNotes:
     def test_returns_none_for_unknown_type(self, tmp_path):
         loader = _make_template(tmp_path, "t", MINIMAL_EVIDENCE_TYPES)
         assert loader.get_doc_notes("Unknown") is None
+
+
+class TestKnowledgePackPrompts:
+    def test_renders_named_prompt(self, tmp_path):
+        loader = _make_template(tmp_path, "t", MINIMAL_EVIDENCE_TYPES)
+
+        prompt = loader.get_prompt(
+            "test",
+            document_type="Alpha Doc",
+            fields="field_a, field_b",
+        )
+
+        assert prompt == "Review Alpha Doc fields: field_a, field_b"
+
+    def test_rejects_missing_prompt(self, tmp_path):
+        loader = _make_template(tmp_path, "t", MINIMAL_EVIDENCE_TYPES)
+
+        with pytest.raises(KeyError, match="not defined"):
+            loader.get_prompt("missing")
+
+    def test_rejects_unresolved_placeholder(self, tmp_path):
+        loader = _make_template(tmp_path, "t", MINIMAL_EVIDENCE_TYPES)
+
+        with pytest.raises(ValueError, match="fields"):
+            loader.get_prompt("test", document_type="Alpha Doc")
 
 
 # ---------------------------------------------------------------------------

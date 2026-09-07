@@ -17,6 +17,49 @@ def _response(*, content="done", model="gpt-test", usage=None):
 
 
 class TestAIClient:
+    def test_applies_deterministic_defaults(self):
+        calls = []
+        client = AIClient(
+            lambda **kwargs: calls.append(kwargs) or _response(),
+        )
+
+        client.complete_sync(
+            messages=[],
+            activity="reasoning",
+            case_id="CASE-0",
+            tenant_id="TENANT-0",
+            model="deployment-name",
+        )
+
+        assert calls[0]["temperature"] == 0.0
+        assert calls[0]["seed"] == 42
+        assert calls[0]["response_format"] == {"type": "json_object"}
+
+    def test_sync_completion_tracks_cached_tokens(self):
+        events = []
+        usage = SimpleNamespace(
+            prompt_tokens=12,
+            completion_tokens=3,
+            total_tokens=15,
+            prompt_tokens_details=SimpleNamespace(cached_tokens=8),
+        )
+        client = AIClient(
+            lambda **kwargs: _response(usage=usage),
+            track_event=lambda name, **fields: events.append((name, fields)),
+        )
+
+        result = client.complete_sync(
+            messages=[],
+            activity="extraction",
+            case_id="CASE-SYNC",
+            tenant_id="TENANT-SYNC",
+            model="deployment-name",
+        )
+
+        assert result.usage == TokenUsage(12, 3, 15, 8)
+        assert events[0][0] == "LLMCallCompleted"
+        assert events[0][1]["cached_tokens"] == 8
+
     def test_tracks_usage_attribution_and_cached_tokens(self):
         events = []
         usage = SimpleNamespace(

@@ -116,6 +116,26 @@ def _load_normalization_config(template_id: str, templates_root: Path) -> dict:
     return data
 
 
+@lru_cache(maxsize=16)
+def _load_knowledge_pack(template_id: str, templates_root: Path) -> dict:
+    """Load an optional template-owned Knowledge Pack."""
+    knowledge_pack_path = templates_root / template_id / "knowledge_pack.json"
+    if not knowledge_pack_path.is_file():
+        return {}
+    try:
+        with open(knowledge_pack_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"knowledge_pack.json for template '{template_id}' contains invalid JSON: {exc}"
+        ) from exc
+    if not isinstance(data, dict) or not isinstance(data.get("prompts", {}), dict):
+        raise TypeError(
+            f"knowledge_pack.json for template '{template_id}' must contain a 'prompts' object."
+        )
+    return data
+
+
 def _merge_dicts(base: dict, override: dict) -> dict:
     merged = deepcopy(base)
     for key, value in override.items():
@@ -150,6 +170,7 @@ class TemplateLoader:
         root = templates_root or _templates_root()
         self._data = _load_evidence_types(template_id, root)
         self._normalization = _load_normalization_config(template_id, root)
+        self._knowledge_pack = _load_knowledge_pack(template_id, root)
         self._id_mapping: dict[str, str] = self._data.get("doc_type_id_mapping") or {}
         # Index document_types by doc_type key for O(1) lookups.
         self._by_type: dict[str, dict] = {}
@@ -272,6 +293,23 @@ class TemplateLoader:
                 f"quality_threshold for '{doc_type}' must be between 0.0 and 1.0."
             )
         return threshold
+
+    def get_prompt(self, prompt_name: str, **values: str) -> str:
+        """Render a named system prompt from the template Knowledge Pack."""
+        prompt = self._knowledge_pack.get("prompts", {}).get(prompt_name)
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise KeyError(
+                f"Prompt '{prompt_name}' is not defined in the Knowledge Pack "
+                f"for template '{self._template_id}'."
+            )
+        for name, value in values.items():
+            prompt = prompt.replace(f"{{{{{name}}}}}", value)
+        unresolved = re.findall(r"\{\{([a-z_][a-z0-9_]*)\}\}", prompt)
+        if unresolved:
+            raise ValueError(
+                f"Prompt '{prompt_name}' is missing values for: {', '.join(sorted(set(unresolved)))}"
+            )
+        return prompt
 
     def known_doc_types(self) -> list[str]:
         """Return the list of all doc_type keys defined in this template."""

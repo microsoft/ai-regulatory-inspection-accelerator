@@ -31,6 +31,10 @@ def _loader(tmp_path: Path, template_id: str, profile: dict) -> TemplateLoader:
         json.dumps({"defaults": profile, "document_types": {}}),
         encoding="utf-8",
     )
+    (template_path / "knowledge_pack.json").write_text(
+        json.dumps({"prompts": {"field_normalization": "Return corrections JSON."}}),
+        encoding="utf-8",
+    )
     _load_evidence_types.cache_clear()
     _load_normalization_config.cache_clear()
     return TemplateLoader(template_id, tmp_path)
@@ -96,6 +100,7 @@ def test_date_and_numeric_branches_are_selected_by_template(tmp_path):
         [],
         "Application",
         "application.pdf",
+        loader=loader,
         allowed_fields=loader.get_fields("Application"),
         normalization_config=loader.get_normalization_config("Application"),
     )

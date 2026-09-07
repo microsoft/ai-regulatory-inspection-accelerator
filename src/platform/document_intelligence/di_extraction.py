@@ -71,6 +71,7 @@ from src.platform.document_intelligence.vision_extraction import (
     extract_metadata_hybrid,
     extract_metadata_vision,
 )
+from src.platform.shared.ai_client import AIClient, as_ai_client
 from src.platform.templates.template_loader import TemplateLoader
 
 logger = logging.getLogger(__name__)
@@ -148,144 +149,23 @@ def _detect_languages_from_text(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _build_metadata_extraction_prompt(doc_type: str, loader: TemplateLoader) -> str:
-    """Build the GPT-5.4 system prompt for field extraction.
-
-    Replaces ``build_metadata_extraction_prompt()`` from ``shared/prompts.py``.
-    Field list, line-item fields, and doc-notes are sourced from the active
-    template's ``evidence_types.json`` via ``TemplateLoader``.
-    """
+    """Build the system prompt from the active template Knowledge Pack."""
     fields = loader.get_fields(doc_type)
     fields_text = ", ".join(fields)
     display_name = doc_type.replace("_", " ")
     line_item_fields = loader.get_line_item_fields(doc_type)
     doc_notes = loader.get_doc_notes(doc_type)
-
-    doc_notes_section = ""
-    if doc_notes:
-        doc_notes_section = (
-            "\n═══════════════════════════════════════════════════════════════\n"
-            "DOCUMENT TYPE NOTES\n"
-            "═══════════════════════════════════════════════════════════════\n\n"
-            f"{doc_notes}\n"
-        )
-
-    line_item_section = ""
-    line_item_example = ""
-    if line_item_fields:
-        li_fields_text = ", ".join(line_item_fields)
-        line_item_section = (
-            "\n═══════════════════════════════════════════════════════════════\n"
-            "LINE ITEM EXTRACTION\n"
-            "═══════════════════════════════════════════════════════════════\n\n"
-            "This document contains a table of line items (repeating product rows).\n"
-            "Extract each row as a separate object in the \"line_items\" array.\n\n"
-            f"Line item fields to extract per row:\n    {li_fields_text}\n\n"
-            "Rules for line items:\n"
-            "- One object per product/row in the table.\n"
-            "- Use the exact field names listed above as keys.\n"
-            "- Set confidence per line item (overall row confidence).\n"
-            "- If a cell is empty or not present, set the value to null.\n"
-            "- Also extract header-level (summary/total) fields into key_value_pairs\n"
-            "  as usual (e.g. total_net_weight, total_gross_weight).\n"
-        )
-        line_item_example = """,
-  "line_items": [
-                {{{{
-                        "item_description": "FROZEN CHICKEN FRANKS",
-                        "quantity": "1716",
-                        "net_weight": "14.002560",
-                        "gross_weight": "15.200000",
-                        "hs_code": "1602.32.00",
-                        "expiry_date": "2027-03-15",
-                        "country_of_origin": "UAE",
-                        "confidence": 0.95
-                }}}}
-  ]"""
-
-    return f"""You are an Arabic and English bilingual document analysis expert.
-You extract structured metadata from regulated documents according to the
-active industry template. You have strong command of Modern Standard Arabic,
-common regional dialectal wording, Arabic phonetics and transliterations
-(including Arabizi), and Arabic-English code-switching.
-
-The document type is already known: **{display_name}**
-{doc_notes_section}
-═══════════════════════════════════════════════════════════════
-TASK: FIELD EXTRACTION
-═══════════════════════════════════════════════════════════════
-
-Target fields for this document type:
-    {fields_text}
-
-Rules:
-- Extract key-value evidence from the document and return it in key_value_pairs.
-- For each extracted key-value pair, set canonical_field to ONE exact field name
-    from the target list above when the pair maps to a target field.
-- If a key-value pair does not map to a target field, set canonical_field to
-    an empty string.
-- Do NOT invent canonical field names beyond the target list.
-- Keep source keys in their original language/text in key.
-- Dates should be ISO-8601 (YYYY-MM-DD) when possible.
-- Validity period to expiry date: If the document does NOT contain an explicit
-    expiry date but DOES mention a validity duration or period (e.g., "valid for
-    2 years", "validity: 6 months from date of issue", "this certificate is valid
-    for 18 months", or any similar phrasing in any language), AND an issue date is
-    present or can be identified, compute the expiry_date as issue_date + the
-    stated validity period and return it in ISO-8601 (YYYY-MM-DD) format.
-    Do NOT invent a validity period — only compute expiry_date when the document
-    explicitly states a duration of validity.
-- Confidence should be between 0.0 and 1.0.
-- Do NOT invent or fabricate values. If a field is not visible in the document,
-    omit it entirely or set its confidence to 0.0.
-- Base all extracted values strictly on the visible document content.
-    Never guess or infer values that are not explicitly shown in the text.
-- This document may contain mixed Arabic (RTL) and English (LTR) text.
-    When extracting field values, be aware that Arabic text reads right-to-left.
-    Numeric values, dates, and English words embedded in Arabic text retain
-    left-to-right order. Reconstruct the natural reading order accordingly.
-- Preserve Arabic and English values verbatim unless a requested field requires
-    normalization. Do not translate, anglicize, or replace dialectal wording.
-- Interpret phonetic spellings and transliterations only when the intended text
-    is unambiguous from visible context. Otherwise preserve the source text,
-    lower the confidence, and do not guess.
-{line_item_section}
-═══════════════════════════════════════════════════════════════
-TABLE AND KEY-VALUE EXTRACTION
-═══════════════════════════════════════════════════════════════
-
-If the document contains key-value pairs (e.g., labelled fields), extract them
-into the key_value_pairs list.
-
-If the document contains tables, preserve them in the tables_extracted field.
-
-═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT
-═══════════════════════════════════════════════════════════════
-
-Respond with a SINGLE JSON object (no markdown, no extra text) matching this schema:
-
-{{{{
-  "tables_extracted": [],
-  "key_value_pairs": [
-                {{{{
-                        "key": "Certificate No.",
-                        "value": "ABC-123",
-                        "confidence": 0.95,
-                        "canonical_field": "certificate_number"
-                }}}}
-  ]{line_item_example},
-  "signature_detected": false,
-  "language": "en"
-}}}}
-
-IMPORTANT:
-- Return ONLY the JSON object, no surrounding text or markdown code fences.
-- Confidence should be between 0.0 and 1.0.
-- Use empty lists [] for list fields with no data.
-- signature_detected: set to true ONLY if you can visually see an actual
-    handwritten signature, ink stamp, rubber stamp, embossed seal, or official
-    certification mark in the document image.
-"""
+    return loader.get_prompt(
+        "metadata_extraction",
+        document_type=display_name,
+        fields=fields_text,
+        document_notes=f"Document notes: {doc_notes}" if doc_notes else "",
+        line_item_guidance=(
+            f"LINE ITEM EXTRACTION fields: {', '.join(line_item_fields)}."
+            if line_item_fields
+            else ""
+        ),
+    )
 
 
 def _build_user_message(filename: str, parent_folder: str, markdown_content: str) -> str:
@@ -393,9 +273,12 @@ async def run_document_intelligence(
 def extract_metadata_llm(
     doc_input: DocumentInput,
     di_result: DocumentIntelligenceResult,
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     doc_type: str,
     loader: TemplateLoader,
+    *,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
     """Extract structured metadata using GPT-5.4 (ported unchanged).
 
@@ -412,17 +295,17 @@ def extract_metadata_llm(
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = openai_client.chat.completions.create(
+            result = as_ai_client(openai_client).complete_sync(
                 model=AZURE_OPENAI_DEPLOYMENT,
-                temperature=0.0,
-                seed=42,
-                response_format={"type": "json_object"},
+                activity="metadata_extraction",
+                case_id=case_id,
+                tenant_id=tenant_id,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_message},
                 ],
             )
-            raw = response.choices[0].message.content.strip()
+            raw = result.content.strip()
 
             json_match = re.search(r"\{.*\}", raw, re.DOTALL)
             if json_match:
@@ -568,7 +451,7 @@ async def run(
     payload: dict,
     *,
     di_client: DocumentIntelligenceClient,
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     blob_service: BlobServiceClient,
     loader: TemplateLoader,
     confidence_threshold: float = DI_CONFIDENCE_THRESHOLD,
@@ -643,11 +526,13 @@ async def run(
                 # ── Step 0: Image Quality Check ───────────────────────────────
                 quality_check_result = await asyncio.to_thread(
                     check_image_quality,
-                    openai_client, blob_data, file_name,
+                    openai_client, blob_data, file_name, loader,
                     threshold=loader.get_quality_threshold(doc_type),
                     deployment=AZURE_OPENAI_DEPLOYMENT,
                     max_retries=max_retries,
                     retry_delay_sec=retry_delay_sec,
+                    case_id=request_id,
+                    tenant_id=str(payload.get("tenantId", "unattributed")),
                 )
 
                 logger.info(
@@ -726,9 +611,12 @@ async def run(
                                 openai_client, doc_input, vision_input,
                                 di_result.markdown_content, doc_type,
                                 allowed_fields,
+                                loader=loader,
                                 deployment=AZURE_OPENAI_DEPLOYMENT,
                                 max_retries=max_retries,
                                 retry_delay_sec=retry_delay_sec,
+                                case_id=request_id,
+                                tenant_id=str(payload.get("tenantId", "unattributed")),
                             )
                         else:
                             logger.info(
@@ -738,9 +626,12 @@ async def run(
                                 extract_metadata_vision,
                                 openai_client, doc_input, vision_input, doc_type,
                                 allowed_fields,
+                                loader=loader,
                                 deployment=AZURE_OPENAI_DEPLOYMENT,
                                 max_retries=max_retries,
                                 retry_delay_sec=retry_delay_sec,
+                                case_id=request_id,
+                                tenant_id=str(payload.get("tenantId", "unattributed")),
                             )
                     else:
                         if not di_result.markdown_content:
@@ -753,6 +644,8 @@ async def run(
                             metadata, _llm_raw = await asyncio.to_thread(
                                 extract_metadata_llm,
                                 doc_input, di_result, openai_client, doc_type, loader,
+                                case_id=request_id,
+                                tenant_id=str(payload.get("tenantId", "unattributed")),
                             )
                 else:
                     if not di_result.markdown_content:
@@ -764,15 +657,20 @@ async def run(
                         metadata, _llm_raw = await asyncio.to_thread(
                             extract_metadata_llm,
                             doc_input, di_result, openai_client, doc_type, loader,
+                            case_id=request_id,
+                            tenant_id=str(payload.get("tenantId", "unattributed")),
                         )
 
                 # ── Canonicalize fields (template-driven, not file-driven) ────
                 fields, line_items = canonicalize_fields_for_doc_type(
                     metadata, doc_type, openai_client,
+                    loader=loader,
                     allowed_fields=allowed_fields,
                     line_item_fields=line_item_fields,
                     normalization_config=normalization_config,
                     deployment=AZURE_OPENAI_DEPLOYMENT,
+                    case_id=request_id,
+                    tenant_id=str(payload.get("tenantId", "unattributed")),
                 )
 
                 # ── OCR cross-validation (handwritten Arabic only) ────────────
@@ -782,18 +680,24 @@ async def run(
                         cross_validate_with_ocr,
                         openai_client, fields, di_result.markdown_content, doc_type,
                         allowed_fields,
+                        loader=loader,
                         deployment=AZURE_OPENAI_DEPLOYMENT,
+                        case_id=request_id,
+                        tenant_id=str(payload.get("tenantId", "unattributed")),
                     )
 
                 # ── Step 3: LLM + Rule-Based Normalization ────────────────────
                 fields, line_items, normalization_log = await asyncio.to_thread(
                     normalize_all_fields,
                     openai_client, fields, line_items, doc_type, file_name,
+                    loader=loader,
                     allowed_fields=allowed_fields,
                     normalization_config=normalization_config,
                     deployment=AZURE_OPENAI_DEPLOYMENT,
                     max_retries=max_retries,
                     retry_delay_sec=retry_delay_sec,
+                    case_id=request_id,
+                    tenant_id=str(payload.get("tenantId", "unattributed")),
                 )
 
                 # ── Metrics ───────────────────────────────────────────────────
