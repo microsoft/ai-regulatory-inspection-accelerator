@@ -26,6 +26,9 @@ import logging
 import time
 from dataclasses import asdict, dataclass
 
+from src.platform.shared.ai_client import AIClient, as_ai_client
+from src.platform.templates.template_loader import TemplateLoader
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_QUALITY_SCORE_THRESHOLD = 0.75
@@ -155,14 +158,17 @@ def assess_quality(
 
 
 def check_image_quality(
-    openai_client,
+    openai_client: AIClient | object,
     image_data: bytes,
     file_name: str,
+    loader: TemplateLoader,
     *,
     threshold: float = DEFAULT_QUALITY_SCORE_THRESHOLD,
     deployment: str = "gpt-4.1",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> QualityCheckResult:
     """Run the PAFN-compatible soft quality check through an injected client."""
     encoded_image = base64.b64encode(image_data).decode("utf-8")
@@ -173,16 +179,18 @@ def check_image_quality(
         media_type = "image/jpeg"
     else:
         media_type = "image/png"
+    system_prompt = loader.get_prompt("quality_assessment")
 
     for attempt in range(max_retries):
         try:
-            response = openai_client.chat.completions.create(
+            result = as_ai_client(openai_client).complete_sync(
                 model=deployment,
-                temperature=0.0,
+                activity="quality_assessment",
+                case_id=case_id,
+                tenant_id=tenant_id,
                 max_completion_tokens=500,
-                response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": QUALITY_CHECK_SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
                         "content": [
@@ -204,7 +212,7 @@ def check_image_quality(
                     },
                 ],
             )
-            raw = response.choices[0].message.content.strip()
+            raw = result.content.strip()
             return evaluate_quality_response(json.loads(raw), threshold=threshold)
         except (json.JSONDecodeError, TypeError, ValueError, AttributeError) as exc:
             logger.warning(

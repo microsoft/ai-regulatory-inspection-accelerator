@@ -38,6 +38,8 @@ from src.platform.document_intelligence.field_normalization import (
     unwrap_brackets,
 )
 from src.platform.document_intelligence.schemas import ExtractedMetadata
+from src.platform.shared.ai_client import AIClient, as_ai_client
+from src.platform.templates.template_loader import TemplateLoader
 
 logger = logging.getLogger(__name__)
 
@@ -139,12 +141,15 @@ def build_field_alias_maps(
 # ---------------------------------------------------------------------------
 
 def resolve_unmatched_fields_with_llm(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     unmatched_kvs: list[dict],
     unfilled_fields: list[str],
     doc_type: str,
     *,
+    loader: TemplateLoader,
     deployment: str = "gpt-5.4",
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> dict[str, str]:
     """Use an LLM call to semantically map unmatched KV keys to target fields.
 
@@ -160,18 +165,18 @@ def resolve_unmatched_fields_with_llm(
     }, ensure_ascii=False, indent=2)
 
     try:
-        response = openai_client.chat.completions.create(
+        result = as_ai_client(openai_client).complete_sync(
             model=deployment,
-            temperature=0.0,
-            seed=42,
+            activity="semantic_field_mapping",
+            case_id=case_id,
+            tenant_id=tenant_id,
             max_completion_tokens=1000,
-            response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": LLM_SEMANTIC_FIELD_MAPPING_PROMPT},
+                {"role": "system", "content": loader.get_prompt("semantic_field_mapping")},
                 {"role": "user", "content": user_message},
             ],
         )
-        data = json.loads(response.choices[0].message.content.strip())
+        data = json.loads(result.content.strip())
         mappings = data.get("mappings", {})
         unfilled_set = set(unfilled_fields)
         used_targets: set[str] = set()
@@ -198,12 +203,15 @@ def resolve_unmatched_fields_with_llm(
 def canonicalize_fields_for_doc_type(
     metadata: ExtractedMetadata,
     doc_type: str,
-    openai_client: AzureOpenAI | None = None,
+    openai_client: AzureOpenAI | AIClient | None = None,
     *,
+    loader: TemplateLoader | None = None,
     allowed_fields: list[str],
     line_item_fields: list[str],
     normalization_config: dict | None = None,
     deployment: str = "gpt-5.4",
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[dict, list[dict]]:
     """Map raw extracted KV pairs onto the document type's canonical field schema.
 
@@ -272,6 +280,8 @@ def canonicalize_fields_for_doc_type(
 
     # 2b) LLM semantic fallback
     if openai_client is not None:
+        if loader is None:
+            raise ValueError("loader is required when semantic LLM mapping is enabled")
         matched_keys: set[str] = set()
         for kv in metadata.key_value_pairs:
             canonical = (kv.canonical_field or "").strip()
@@ -296,7 +306,10 @@ def canonicalize_fields_for_doc_type(
         if unmatched_kvs and unfilled_fields:
             semantic_map = resolve_unmatched_fields_with_llm(
                 openai_client, unmatched_kvs, unfilled_fields, doc_type,
+                loader=loader,
                 deployment=deployment,
+                case_id=case_id,
+                tenant_id=tenant_id,
             )
             kv_by_key = {(kv.key or "").strip(): kv for kv in metadata.key_value_pairs}
             for orig_key, target_field in semantic_map.items():
@@ -355,16 +368,19 @@ def canonicalize_fields_for_doc_type(
 # ---------------------------------------------------------------------------
 
 def normalize_fields_with_llm(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     fields: dict,
     line_items: list[dict],
     doc_type: str,
     file_name: str,
     *,
+    loader: TemplateLoader,
     allowed_fields: list[str],
     deployment: str = "gpt-5.4",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[dict, list[dict], dict]:
     """Apply LLM-based intelligent field normalization.
 
@@ -388,18 +404,18 @@ def normalize_fields_with_llm(
 
     for attempt in range(max_retries):
         try:
-            response = openai_client.chat.completions.create(
+            result = as_ai_client(openai_client).complete_sync(
                 model=deployment,
-                temperature=0.0,
-                seed=42,
+                activity="field_normalization",
+                case_id=case_id,
+                tenant_id=tenant_id,
                 max_completion_tokens=1500,
-                response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": LLM_NORMALIZATION_PROMPT},
+                    {"role": "system", "content": loader.get_prompt("field_normalization")},
                     {"role": "user", "content": user_message},
                 ],
             )
-            raw_response = response.choices[0].message.content.strip()
+            raw_response = result.content.strip()
             data = json.loads(raw_response)
             corrections = data.get("corrections", {})
             correction_log = {
@@ -451,17 +467,20 @@ def normalize_fields_with_llm(
 
 
 def normalize_all_fields(
-    openai_client: AzureOpenAI,
+    openai_client: AzureOpenAI | AIClient,
     fields: dict,
     line_items: list[dict],
     doc_type: str,
     file_name: str,
     *,
+    loader: TemplateLoader,
     allowed_fields: list[str],
     normalization_config: dict | None = None,
     deployment: str = "gpt-5.4",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
+    case_id: str = "unattributed",
+    tenant_id: str = "unattributed",
 ) -> tuple[dict, list[dict], dict]:
     """Apply rule-based normalization then LLM-based correction.
 
@@ -520,10 +539,13 @@ def normalize_all_fields(
 
     fields, line_items, llm_log = normalize_fields_with_llm(
         openai_client, fields, line_items, doc_type, file_name,
+        loader=loader,
         allowed_fields=allowed_fields,
         deployment=deployment,
         max_retries=max_retries,
         retry_delay_sec=retry_delay_sec,
+        case_id=case_id,
+        tenant_id=tenant_id,
     )
     normalization_log["llm"] = llm_log
     return fields, line_items, normalization_log

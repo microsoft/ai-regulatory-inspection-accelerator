@@ -12,6 +12,9 @@ from src.platform.document_intelligence.quality_assessment import (
     check_image_quality,
     evaluate_quality_response,
 )
+from src.platform.templates.template_loader import TemplateLoader
+
+LOADER = TemplateLoader.for_template("food-safety")
 
 
 class TestEvaluateQualityResponse:
@@ -92,6 +95,7 @@ class TestCheckImageQuality:
             client,
             b"image-bytes",
             "document.png",
+            LOADER,
             threshold=0.7,
             retry_delay_sec=0,
         )
@@ -107,6 +111,7 @@ class TestCheckImageQuality:
             client,
             b"image-bytes",
             "document.png",
+            LOADER,
             threshold=0.8,
             max_retries=2,
             retry_delay_sec=0,
@@ -115,3 +120,20 @@ class TestCheckImageQuality:
         assert result.passed is True
         assert result.quality_score == 0.8
         assert client.chat.completions.create.call_count == 2
+
+    def test_uses_deterministic_json_options(self):
+        client = MagicMock()
+        client.chat.completions.create.return_value = type("Response", (), {
+            "choices": [type("Choice", (), {
+                "message": type("Message", (), {
+                    "content": json.dumps({"quality_score": 0.9, "issues": []})
+                })()
+            })()]
+        })()
+
+        check_image_quality(client, b"image-bytes", "document.png", LOADER)
+
+        call = client.chat.completions.create.call_args.kwargs
+        assert call["temperature"] == 0.0
+        assert call["seed"] == 42
+        assert call["response_format"] == {"type": "json_object"}
