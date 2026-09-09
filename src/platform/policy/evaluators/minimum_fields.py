@@ -1,10 +1,8 @@
 """
 Minimum Fields Rule Logic
 
-Ported from PAFN's rules_engine/minimum_fields.py.
-Change from PAFN: the `load_document_type_fields()` call (which read
-`document_type_fields.json`) is replaced by an explicit `allowed_fields_by_doc`
-parameter. Callers source this from TemplateLoader so no file path is hardcoded.
+Required-field lists are supplied via an explicit `allowed_fields_by_doc`
+parameter; callers source this from TemplateLoader so no file path is hardcoded.
 """
 
 import logging
@@ -33,7 +31,7 @@ def validate_min_fields(
         submission:           DI submission list — each item has 'document' and 'fields'.
         allowed_fields_by_doc: {doc_type: [field_name, ...]} sourced from TemplateLoader.
                                When None, intersection filtering is skipped (all rule
-                               fields are checked, preserving the PAFN fallback behavior).
+                               fields are checked).
     """
     if isinstance(rules_input, list):
         rule = next((r for r in rules_input if r.get("id") == "MIN_FIELDS_RULES"), None)

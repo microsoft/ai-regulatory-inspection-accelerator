@@ -18,13 +18,9 @@ current_utc_datetime). This keeps the orchestration sequencing logic:
     business-rule content (see ADR-022: Agent and Stage orchestration
     architecture).
 
-Ported from PAFN's function_app.py::inspector_orchestrator with the
-sequencing/branching/retry logic unchanged. Generalized: extracted from the
-Azure Functions @app.orchestration_trigger decorator into a plain generator
-function; removed the PAFN/Raqeb-specific "PFNAI-01 callback" framing from
-comments/telemetry (the actual delivery mechanism is connector-specific -
-see connectors/sdk/base_connector.py - the orchestrator itself never
-constructs or sends a callback, it only invokes the Delivery Agent activity).
+The actual delivery mechanism is connector-specific - see
+connectors/sdk/base_connector.py - the orchestrator itself never constructs or
+sends a callback, it only invokes the Delivery Agent activity.
 """
 
 from collections.abc import Callable, Generator

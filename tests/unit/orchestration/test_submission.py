@@ -1,7 +1,7 @@
 """Unit tests for src.platform.orchestration.submission
 
-Ported from PAFN's function_app.py::inspector_http_start idempotency checks
-(duplicate in-flight orchestration + already-completed case guards).
+Idempotency checks: duplicate in-flight orchestration + already-completed
+case guards.
 """
 
 from src.platform.orchestration.submission import SubmissionDecision, evaluate_submission
@@ -35,8 +35,7 @@ class TestDuplicateInProgress:
 
     def test_in_progress_takes_priority_over_completed_case(self):
         """If (unusually) both signals are present, in-flight orchestration
-        wins - matches PAFN's original check order (orchestration status
-        checked before case status)."""
+        wins - orchestration status is checked before case status."""
         assert evaluate_submission("Running", "COMPLETED") == SubmissionDecision.DUPLICATE_IN_PROGRESS
 
 

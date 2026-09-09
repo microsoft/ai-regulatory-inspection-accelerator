@@ -4,10 +4,9 @@ Core Platform — Document Intelligence — Schemas
 
 Pydantic models shared across the DI extraction pipeline.
 
-Ported unchanged from PAFN's ``models/schemas.py``.  The ``LineItem`` and
-``ExtractedMetadata`` models use ``extra='allow'`` so that different document
-types can define their own field sets in ``evidence_types.json`` without
-requiring code changes to the model layer.
+The ``LineItem`` and ``ExtractedMetadata`` models use ``extra='allow'`` so that
+different document types can define their own field sets in
+``evidence_types.json`` without requiring code changes to the model layer.
 """
 
 from __future__ import annotations

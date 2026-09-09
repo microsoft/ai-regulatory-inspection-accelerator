@@ -1,17 +1,10 @@
 """
 Rules Engine Executor
 
-Ported from PAFN's rules_engine/rule_executor.py.
-Changes from PAFN:
-  - Removed shared.telemetry and shared.pii_redaction imports.
-  - All imports changed from rules_engine.X to src.platform.policy.evaluators.X.
-  - run_rules() gains an optional `allowed_fields_by_doc` parameter that is
-    forwarded to validate_min_fields() so callers can source field lists from
-    TemplateLoader instead of document_type_fields.json.
-    - Agency and jurisdiction HS values are sourced from template rule documents.
-
-Logic, step ordering, confidence cutoff, and finding normalization are
-identical to PAFN production.
+Sequences the rule evaluators and normalizes their findings. Agency and
+jurisdiction HS values are sourced from template rule documents, and
+`allowed_fields_by_doc` is forwarded to validate_min_fields() so callers can
+source field lists from TemplateLoader.
 """
 
 import logging

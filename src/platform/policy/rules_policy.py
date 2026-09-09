@@ -1,16 +1,10 @@
 """
 Activity: Rules & Policy Engine
 
-Ported from PAFN's activities/rules_policy.py.
-Changes from PAFN:
-  - Removed Cosmos DB, telemetry, and PII redaction infrastructure.
-  - All infrastructure (rules_list, track_event, PII data) is now injected
-    by the caller, matching the Core Platform dependency injection pattern
-    established by pipeline.py and quality_assessment.py.
-  - run() returns the full result dict; caller handles delivery/storage.
-
-Verdict escalation, confidence computation, AI risk level, and summary
-text are identical to PAFN production.
+All infrastructure (rules_list, track_event, PII data) is injected by the
+caller, matching the Core Platform dependency injection pattern established by
+pipeline.py and quality_assessment.py. run() returns the full result dict; the
+caller handles delivery/storage.
 """
 
 import logging
@@ -161,7 +155,7 @@ async def run(
 
 
 # ---------------------------------------------------------------------------
-# Helpers (identical to PAFN)
+# Helpers
 # ---------------------------------------------------------------------------
 
 def _escalate(current: str, candidate: str) -> str:

@@ -151,10 +151,7 @@ def resolve_unmatched_fields_with_llm(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> dict[str, str]:
-    """Use an LLM call to semantically map unmatched KV keys to target fields.
-
-    Ported unchanged from PAFN's di_normalization.py.
-    """
+    """Use an LLM call to semantically map unmatched KV keys to target fields."""
     if not unmatched_kvs or not unfilled_fields:
         return {}
 
@@ -215,10 +212,8 @@ def canonicalize_fields_for_doc_type(
 ) -> tuple[dict, list[dict]]:
     """Map raw extracted KV pairs onto the document type's canonical field schema.
 
-    Ported from PAFN's di_normalization.py.  The sole change is that
-    ``allowed_fields`` and ``line_item_fields`` are now explicit parameters
-    (sourced from the active ``TemplateLoader``) instead of being looked up
-    from ``document_type_fields.json``.
+    ``allowed_fields`` and ``line_item_fields`` are sourced from the active
+    ``TemplateLoader`` by the caller.
 
     Args:
         metadata: Structured metadata from the LLM extraction step.
@@ -384,10 +379,7 @@ def normalize_fields_with_llm(
 ) -> tuple[dict, list[dict], dict]:
     """Apply LLM-based intelligent field normalization.
 
-    Ported from PAFN's di_normalization.py.  The sole change is that
-    ``allowed_fields`` is now an explicit parameter (sourced from
-    ``TemplateLoader``) instead of being fetched from
-    ``document_type_fields.json``.
+    ``allowed_fields`` is sourced from ``TemplateLoader`` by the caller.
     """
     fields_summary = {
         k: v.get("value") for k, v in fields.items() if v.get("value") is not None
@@ -484,9 +476,7 @@ def normalize_all_fields(
 ) -> tuple[dict, list[dict], dict]:
     """Apply rule-based normalization then LLM-based correction.
 
-    Ported from PAFN's di_normalization.py.  ``allowed_fields`` is now an
-    explicit parameter instead of being fetched from
-    ``document_type_fields.json``.
+    ``allowed_fields`` is sourced from ``TemplateLoader`` by the caller.
     """
     normalization_config = normalization_config or {}
     normalization_log: dict = {}

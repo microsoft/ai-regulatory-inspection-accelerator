@@ -43,7 +43,7 @@ ARIA is an **AI Evidence-to-Decision Platform** - a reusable, configuration-driv
 
 The platform sits at the decision layer above document extraction. Every industry that makes consequential decisions on document bundles - food safety, customs, KYC, insurance, healthcare, environmental permitting, licensing - shares the same five-stage problem: intake → extract → reconcile → evaluate → decide. ARIA solves this problem once, at platform level, and configures it for any domain through templates.
 
-ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
+ARIA is not a product built for any single adopter. ARIA is the platform; each deployment is a reference implementation of it.
 
 ### 1.2 Architecture Principles
 
@@ -54,7 +54,7 @@ ARIA is not a product built for PAFN. ARIA is the platform that PAFN proved.
 | **AP-03** | **Decision traceability as a first-class concern** | Every decision traceable to field → document → rule → ETag. Point-in-time reproducibility always. |
 | **AP-04** | **Security by architecture, not configuration** | Managed Identity, private endpoints, PII redaction at write boundary - foundational, not optional. |
 | **AP-05** | **Token efficiency by design** | Structured pre-processing before every LLM call. LLM receives minimum structured information, not raw documents. |
-| **AP-06** | **Human override, always** | No fully autonomous decisions. Human-in-the-loop escalation is first-class (manual queue, Phase 1); the Chat Agent, built in PAFN's reference deployment, adds a conversational interface to that same review step - not an add-on capability, though not yet generalized into the Core Platform. |
+| **AP-06** | **Human override, always** | No fully autonomous decisions. Human-in-the-loop escalation is first-class (manual queue, Phase 1); the Chat Agent, built in the reference deployment, adds a conversational interface to that same review step - not an add-on capability, though not yet generalized into the Core Platform. |
 | **AP-07** | **Durable, resumable orchestration** | Durable Functions checkpoint-based state persistence. Zero case loss on host restart. |
 | **AP-08** | **Runtime configurability** | Rules, thresholds, vocabularies, and risk weights take effect immediately - no deployment cycle. |
 | **AP-09** | **Isolation of reference implementations** | All customer-specific code lives in `reference-implementations/`. Platform code is provably clean. |
@@ -315,7 +315,7 @@ flowchart TB
         end
         subgraph DecisionGroup["Decision and Review"]
             PI9["Decision Engine<br/>(Verdict · Evidence Chain)"]:::platformStyle
-            PI10["Chat Agent<br/>(Built in PAFN · Grounded Agent · Override)"]:::platformStyle
+            PI10["Chat Agent<br/>(Reference Deployment · Grounded Agent · Override)"]:::platformStyle
         end
         subgraph GovernGroup["Governance and Audit"]
             PI11["Audit Framework<br/>(Immutable · ETag · Lineage)"]:::platformStyle
@@ -795,7 +795,7 @@ Each component is specified across six dimensions:
 **Outputs:**
 - Structured decision: `{verdict, confidenceScore, riskGrade, holdFlag, topFindings[], evidenceChain[]}`
 - PII redaction at write to Cosmos DB:
-  - `verdicts` container: evidence chain with PII field values replaced by `[REDACTED: {fieldName}]` labels (default, matches PAFN)
+  - `verdicts` container: evidence chain with PII field values replaced by `[REDACTED: {fieldName}]` labels (default)
   - Optional secured container (per-customer opt-in only, see ADR-021): full evidence chain including PII values
 - Delivery callback (HMAC-signed HTTP POST to configured endpoint)
 - Delivery audit log entry in Cosmos DB (`callback-log` container)
@@ -817,7 +817,7 @@ Each component is specified across six dimensions:
 
 ---
 
-### C-13: Human Review Framework - Chat Agent (built in PAFN's SCEN-02 reference deployment; not yet generalized into the Core Platform)
+### C-13: Human Review Framework - Chat Agent (built in the SCEN-02 reference deployment; not yet generalized into the Core Platform)
 
 **Purpose:** Provides a grounded, evidence-citing conversational AI interface for human reviewers. The agent answers questions using only case evidence retrieved from Azure AI Search - never from general knowledge. Supports override workflow with mandatory rationale capture.
 
@@ -997,7 +997,7 @@ ARIA's pipeline is five sequential agents sequenced across five Durable Function
 | **Reasoning Agent** | Cross-document consistency and conflict detection | Activity 3 | Reasoning Agent (C-09) |
 | **Rules & Policy Agent** | Rule evaluation against evidence; risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
 | **Delivery Agent** | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation already included | Activity 5 | Delivery Agent (C-12) |
-| **Chat Agent** | Evidence Q&A for human reviewers, via direct Cosmos DB tool lookups *(built in PAFN reference deployment; not yet generalized - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
+| **Chat Agent** | Evidence Q&A for human reviewers, via direct Cosmos DB tool lookups *(built in the reference deployment; not yet generalized - see Roadmap)* | Async / On-Demand | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-Demand | Audit Framework (C-15) |
 | **Knowledge Pack Stage** | Template knowledge compression and caching | Background / Event-Driven | Knowledge Pack Generator (C-07) |
 
@@ -1050,7 +1050,7 @@ sequenceDiagram
     AUD->>AUD: Immutable event stream append
     AUD->>AUD: Token usage capture (prompt + completion + cached)
 
-    Note over REV: Async - triggered on HOLD or reviewer request (built in PAFN, not yet generalized)
+    Note over REV: Async - triggered on HOLD or reviewer request (built in the reference deployment, not yet generalized)
     REC-->>REV: Case routed to human review queue
     REV->>REV: Retrieve top-3 evidence chunks (AI Search)
     REV->>REV: Assemble context (chunks + Knowledge Pack ≤ 1,800 tokens)
@@ -1249,7 +1249,7 @@ Effective saving: ~16,800 tokens (70%) for large document extraction
 
 ### 6.6 Strategy: Knowledge Packs
 
-**Where it applies:** Activities 3, 4, and the Chat Agent (built in PAFN, not yet generalized).
+**Where it applies:** Activities 3, 4, and the Chat Agent (built in the reference deployment, not yet generalized).
 
 **Knowledge Pack JSON schema:**
 ```json
@@ -1281,7 +1281,7 @@ Effective saving: ~16,800 tokens (70%) for large document extraction
 
 ### 6.7 Strategy: Retrieval-Augmented Human Review
 
-**Where it applies:** Chat Agent (C-13) - every reviewer query. Note: PAFN's real Chat Agent uses direct Cosmos DB tool lookups, not this retrieval-augmented design (ADR-017 is proposed, not implemented).
+**Where it applies:** Chat Agent (C-13) - every reviewer query. Note: the as-built Chat Agent uses direct Cosmos DB tool lookups, not this retrieval-augmented design (ADR-017 is proposed, not implemented).
 
 **Without retrieval (anti-pattern):**
 ```
@@ -1334,7 +1334,7 @@ Session saving: 194,400 tokens (84%)
 
 ### 6.9 Strategy: Reference Data via Tool Calls (Not Context)
 
-**Where it applies:** Chat Agent - domain reference data queries. Note: not yet implemented this way in PAFN's real Chat Agent (direct Cosmos DB tool lookups today).
+**Where it applies:** Chat Agent - domain reference data queries. Note: not yet implemented this way in the as-built Chat Agent (direct Cosmos DB tool lookups today).
 
 **Anti-pattern (never do this):**
 ```python
@@ -1429,7 +1429,7 @@ def _track_tokens(self, **kwargs):
 |  Policy Evaluation Engine (framework + 8 rule categories)    |
 |  Risk Assessment Engine (algorithm + HOLD logic)             |
 |  Delivery Agent                                                |
-|  Chat Agent (grounded agent + override, built in PAFN)         |
+|  Chat Agent (grounded agent + override, reference impl.)      |
 |  Explainability Framework                                     |
 |  Audit Framework (immutable event stream)                     |
 |  Connector Framework (SDK + built-in connectors)             |
@@ -1470,7 +1470,7 @@ def _track_tokens(self, **kwargs):
 
 | Industry | Template Name | Primary Evidence Types | Key Rules | Decision Vocabulary |
 |---|---|---|---|---|
-| **Food Safety Inspection** (PAFN reference) | `food-safety` | Invoice · Health Cert · Halal Cert · CoO · Packing List · Lab Analysis | Mandatory certs by category · HS code restrictions · Halal issuer allowlist · Temporal validity (90 days) | PASS · HOLD · FAIL → Release / Hold for Review / Reject |
+| **Food Safety Inspection** | `food-safety` | Invoice · Health Cert · Halal Cert · CoO · Packing List · Lab Analysis | Mandatory certs by category · HS code restrictions · Halal issuer allowlist · Temporal validity (90 days) | PASS · HOLD · FAIL → Release / Hold for Review / Reject |
 | **Customs Clearance** | `customs-trade` | Commercial Invoice · Bill of Lading · CoO · Customs Declaration · Import License | Tariff classification · Sanctions screening · Valuation rules · Controlled goods | CLEAR · HOLD · DETAIN → Released / Held / Detained |
 | **Healthcare Compliance** | `healthcare-compliance` | Clinical Notes · Imaging Report · Lab Results · Treatment Plan · Prior Auth Form | Medical necessity criteria · Coverage formulary · Evidence-based guidelines · ICD/CPT code validation | AUTHORIZE · PEER REVIEW · DENY → Authorized / Peer Review Required / Denied |
 | **Licensing and Certification** | `licensing-cert` | License Application · Board Certificates · CME Records · Background Check · Malpractice History | Qualification requirements · CE credit hours · Specialty board criteria · License validity | APPROVE · PROVISIONAL · DENY → License Granted / Provisional / Denied |
@@ -1711,7 +1711,7 @@ erDiagram
 ```
 +------------------+   HMAC-SHA256 signed POST  +------------------+
 |  Decision Engine |  ─────────────────────────>|  External System |
-|  (ARIA)          |  payload: decision JSON     |  (Raqeb/CRM/ERP) |
+|  (ARIA)          |  payload: decision JSON     |  (Case Mgmt/CRM/ERP) |
 |                  |                            |                  |
 |  retry × 3       |  <─────────────────────────|                  |
 |  audit all       |  200 OK + acknowledgement  |                  |
@@ -1817,7 +1817,7 @@ No polling. No message queue. Change Feed provides exactly-once delivery for ind
                                                         | NOT in platform connectors/
 ```
 
-Regulatory system connectors are always Customer-Specific (Tier 3). The Raqeb connector (PAFN) is the reference example.
+Regulatory system connectors are always Customer-Specific (Tier 3). A case-management system connector is the reference example.
 
 ---
 
@@ -2165,29 +2165,29 @@ For classified government, defense, and critical infrastructure with zero public
 
 ## Output 12 - Final Validation
 
-### Proof 1: ARIA Remains Valuable if PAFN Is Removed
+### Proof 1: ARIA Remains Valuable if Any Single Reference Implementation Is Removed
 
-**Test:** Remove all PAFN-specific artifacts from the repository. What remains?
+**Test:** Remove all artifacts belonging to one adopter from the repository. What remains?
 
-**Tier 1 (Core Platform) - 100% survives PAFN removal:**
+**Tier 1 (Core Platform) - 100% survives:**
 - All 17 platform components survive intact
-- No PAFN-specific logic in `src/platform/`
-- All ADRs remain valid (none are PAFN-specific)
+- No adopter-specific logic in `src/platform/`
+- All ADRs remain valid (none are adopter-specific)
 - All deployment topologies remain valid
 - Token efficiency layer is domain-neutral
 
-**Tier 2 (Industry Templates) - PAFN food safety template removed; platform template framework survives:**
+**Tier 2 (Industry Templates) - the adopter's domain template is removed; the platform template framework survives:**
 - `templates/_schema/` validation schema: intact
 - `install_template.py`: intact
 - Template lifecycle management: intact
 - 5 additional industry templates (customs, healthcare, licensing, environmental, KYC) immediately deployable
 
-**Tier 3 (Reference Implementations) - PAFN removed:**
-- `reference-implementations/pafn-food-inspection/`: deleted
-- `connectors/raqeb/` was already isolated in Tier 3 per Document 13 correction
+**Tier 3 (Reference Implementations) - the adopter's deployment removed:**
+- `reference-implementations/{name}/`: deleted
+- Adopter connectors were already isolated in Tier 3
 - Platform `connectors/` (REST, File, SharePoint, Dynamics): intact
 
-**Verdict: PAFN removal leaves a fully functional, production-ready platform with 5 deployable industry templates and 4 built-in connectors. PAFN was the proof, not the product. ✓**
+**Verdict: Removing a reference implementation leaves a fully functional platform with 5 deployable industry templates and 4 built-in connectors. A reference implementation is the proof, not the product. ✓**
 
 ---
 
@@ -2241,22 +2241,22 @@ All optimizations are architectural decisions designed into platform components 
 
 ---
 
-### Proof 4: PAFN Is a Reference Implementation, Not the Product
+### Proof 4: A Reference Implementation Is Not the Product
 
 **Evidence inventory:**
 
 | Claim | Evidence |
 |---|---|
-| PAFN code is isolated in `reference-implementations/` | Document 13 architecture enforcement; Raqeb moved from `connectors/` to `reference-implementations/pafn-food-inspection/connectors/raqeb/` |
-| PAFN agency code and Bayan format removed from platform | Architecture Readiness Checklist (Section 13, PAFN-specific items: Remove disposition) |
-| Platform code contains no Kuwait/PAFN vocabulary | CI lint enforcement (banned word list in `src/platform/`) |
+| Adopter code is isolated in `reference-implementations/` | Document 13 architecture enforcement; adopter connectors live under `reference-implementations/{name}/connectors/` |
+| Adopter-specific agency codes and declaration formats removed from platform | Architecture Readiness Checklist (Section 13, adopter-specific items: Remove disposition) |
+| Platform code contains no adopter or locale vocabulary | CI lint enforcement (banned word list in `src/platform/`) |
 | Food safety is one of 6 industry templates | Template framework (Output 7): food-safety · customs-trade · healthcare · licensing · environmental · kyc-aml |
-| PAFN rules are template data, not platform logic | `templates/food-safety/rules.json` - platform rules engine framework is generic |
+| Domain rules are template data, not platform logic | `templates/food-safety/rules.json` - platform rules engine framework is generic |
 | ARIA supports 8 industries without code changes | Proof 2 above (insurance claims onboarding - zero platform code) |
-| Product name "ARIA" is independent of PAFN | Document 09/10 product definition; "AI Regulatory Inspection Accelerator" predates PAFN as product |
+| Product name "ARIA" is independent of any adopter | Document 09/10 product definition |
 | Executive positioning names E2D platform, not inspection authority | Product Definition (Document 10): "AI Evidence-to-Decision Platform" |
 
-**Verdict: PAFN is the proof of concept and reference implementation. ARIA is the product. The architecture enforces this separation. ✓**
+**Verdict: A reference implementation is a proof of concept. ARIA is the product. The architecture enforces this separation. ✓**
 
 ---
 
@@ -2273,17 +2273,16 @@ All optimizations are architectural decisions designed into platform components 
 | **Microsoft strategic fit** | Azure AI Services consumption · Government Cloud expansion · Azure Marketplace · Well-Architected Framework alignment |
 | **Governance quality** | 8 accepted ADRs · 15 architecture constraints · CI enforcement of domain neutrality · evaluation gate before production |
 | **Security posture** | Managed Identity zero-secrets · Private Endpoint network topology · PII redaction at write boundary · HMAC-signed delivery |
-| **Reusability score** | 19/34 PAFN components score ≥ 8/10 reusability (56% directly deployable, zero modification) |
-| **Generalization cost** | ~35 developer-days to convert from PAFN-specific to fully domain-agnostic accelerator |
+| **Reusability score** | 19/34 components score ≥ 8/10 reusability (56% directly deployable, zero modification) |
+| **Generalization cost** | ~35 developer-days to convert a single-adopter implementation into a fully domain-agnostic accelerator |
 | **Competitive differentiation** | No competitor offers: multi-document cross-reasoning + config-driven + runtime rules + field-level audit trail + token efficiency |
-| **Production proof** | PAFN deployed to Azure production · 100+ cases/day · <2 minutes processing · Arabic + English documents |
 
 **Architecture suitability for each audience:**
 - **Engineering:** Component specifications (Output 4) · Agent interaction diagram (Output 5) · Data architecture ERD (Output 8)
 - **Leadership:** Executive summary (Output 1) · Business capability map (Output 2) · Validation proofs (Output 12)
-- **Architecture governance review:** Three-tier reusability model (Output 7) · Final validation (Output 12) · PAFN mapping (Section 6 of Input Pack)
+- **Architecture governance review:** Three-tier reusability model (Output 7) · Final validation (Output 12)
 
-**Verdict: ARIA meets the bar for a Microsoft Solution Accelerator with Azure Marketplace listing, GSI partner ecosystem delivery, and cross-industry IP claim. Architecture is complete, enforced, and production-validated. ✓**
+**Verdict: ARIA meets the bar for a Microsoft Solution Accelerator with Azure Marketplace listing, GSI partner ecosystem delivery, and cross-industry IP claim. Architecture is complete and enforced. ✓**
 
 ---
 

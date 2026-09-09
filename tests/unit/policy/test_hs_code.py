@@ -56,7 +56,7 @@ class TestCheckJurisdictionHsCode:
         assert len(findings) == 1
         assert findings[0]["ruleCode"] == "OUTSIDE_SCOPE"
 
-    def test_empty_pafn_lookup_skips(self):
+    def test_empty_jurisdiction_lookup_skips(self):
         findings = check_jurisdiction_hs_code("1602.90", "ITEM1", set())
         assert findings == []
 
@@ -67,7 +67,7 @@ class TestValidateHsCodes:
             {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"}
         ],
         "jurisdictionCodes": [{"hsCode": "16"}, {"hsCode": "02"}],
-        "outsideJurisdictionRuleCode": "NON_PAFN_HS_CODE",
+        "outsideJurisdictionRuleCode": "NON_FOOD_SAFETY_HS_CODE",
     }
 
     def test_rejected_code_in_payload(self):
@@ -75,10 +75,10 @@ class TestValidateHsCodes:
         findings = validate_hs_codes(self.RULES, payload)
         assert any(f["ruleCode"] == "REJECTED_HS_CODE" for f in findings)
 
-    def test_non_pafn_code_in_payload(self):
+    def test_outside_jurisdiction_code_in_payload(self):
         payload = {"items": [{"hsCode": "0901.21", "itemCode": "IT1"}]}
         findings = validate_hs_codes(self.RULES, payload)
-        assert any(f["ruleCode"] == "NON_PAFN_HS_CODE" for f in findings)
+        assert any(f["ruleCode"] == "NON_FOOD_SAFETY_HS_CODE" for f in findings)
 
     def test_valid_code_no_finding(self):
         payload = {"items": [{"hsCode": "1602.90.10", "itemCode": "IT1"}]}

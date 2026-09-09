@@ -1,8 +1,7 @@
 """
 HS Code Rule Logic
 
-Ported from PAFN's rules_engine/hs_code.py — unchanged (pure algorithm,
-all HS code values come from the rule config).
+Pure algorithm; all HS code values come from the rule config.
 """
 
 

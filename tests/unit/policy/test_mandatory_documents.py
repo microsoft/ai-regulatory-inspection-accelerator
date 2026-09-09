@@ -52,10 +52,10 @@ class TestValidateMandatoryDocs:
             rules.extend(extra)
         return rules
 
-    def _payload(self, doc_ids, items=None, bayan="TIM/1234/SHU25"):
+    def _payload(self, doc_ids, items=None, declaration="TIM/1234/SHU25"):
         return {
             "requestId": "REQ-001",
-            "bayanNumber": bayan,
+            "declarationNumber": declaration,
             "documents": [{"documentTypeId": did, "documentType": f"Type_{did}"} for did in doc_ids],
             "items": items or [],
         }
@@ -75,7 +75,7 @@ class TestValidateMandatoryDocs:
         assert len(missing) == 1
 
     def test_personal_tdr(self):
-        payload = self._payload(["42", "43"], bayan="TDR/5678/KWI26")
+        payload = self._payload(["42", "43"], declaration="TDR/5678/KWI26")
         findings, _ = validate_mandatory_docs(self._rules(), payload, self._submission(["Declaration_Document", "Other_Documents"]))
         assert not any(f["ruleCode"] == "MANDATORY_DOC_MISSING" for f in findings)
 
@@ -105,7 +105,7 @@ class TestValidateMandatoryDocs:
 
     def test_name_normalization(self):
         payload = {
-            "requestId": "R1", "bayanNumber": "T/1/S",
+            "requestId": "R1", "declarationNumber": "T/1/S",
             "documents": [{"documentTypeId": "50", "documentType": "Invoice"}, {"documentTypeId": "51", "documentType": "Certificate_Of_Origin"}],
             "items": [],
         }
@@ -130,7 +130,7 @@ class TestValidateMandatoryDocs:
             {"id": "HALAL_HS_CODES", "hsCodes": ["0202"]},
         ]
         payload = {
-            "requestId": "R1", "bayanNumber": "T/1/S",
+            "requestId": "R1", "declarationNumber": "T/1/S",
             "documents": [{"documentTypeId": "50", "documentType": "Invoice"}],
             "items": [{"hsCode": "0202.10.00", "countryOfOrigin": "AE"}],
         }

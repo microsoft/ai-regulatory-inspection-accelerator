@@ -1,9 +1,7 @@
 """Unit tests for src.platform.orchestration.pipeline.run_pipeline
 
-Ported/derived from PAFN's function_app.py::inspector_orchestrator behavior.
-PAFN has no direct unit tests for the orchestrator itself (Durable Functions
-orchestrators are hard to unit test without driving the generator manually),
-so this test suite is new - it drives the orchestrator generator directly
+Durable Functions orchestrators are hard to unit test without driving the
+generator manually, so this suite drives the orchestrator generator directly
 with a FakeContext, asserting the exact sequence and payload of
 call_activity_with_retry calls without requiring azure-functions or
 azure-durable-functions to be installed.
@@ -261,7 +259,7 @@ class TestActivityNameOverride:
 
     def test_default_names_are_domain_neutral(self):
         names = " ".join(DEFAULT_ACTIVITY_NAMES.values()).lower()
-        assert all(term not in names for term in ("food", "pafn", "customs", "halal"))
+        assert all(term not in names for term in ("food", "customs", "halal"))
 
     def test_partial_override_falls_back_to_defaults(self):
         ctx = FakeContext(_PAYLOAD)

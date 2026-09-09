@@ -1,7 +1,7 @@
 {
   "name": "food-safety",
   "version": "1.0.0",
-  "description": "Food Safety Inspection Template — validates multi-document food import submissions against regulatory requirements including mandatory certificate presence, product classification, cross-document consistency, and certificate validity. Production-validated on the PAFN (Kuwait Public Authority for Food and Nutrition) deployment.",
+  "description": "Food Safety Inspection Template — validates multi-document food import submissions against regulatory requirements including mandatory certificate presence, product classification, cross-document consistency, and certificate validity.",
   "decisionType": "inspection",
   "decisionLabels": {
     "approve": "PASS",

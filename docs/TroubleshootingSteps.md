@@ -1,6 +1,6 @@
 # Troubleshooting Steps
 
-**Status: Planned.** There is no deployed environment yet, so there are no real-world failure modes to document today. This guide will be filled in once the [Core Platform port from PAFN](../README.md#roadmap) lands and the first deployments happen.
+**Status: Planned.** There is no deployed environment yet, so there are no real-world failure modes to document today. This guide will be filled in once the [Core Platform implementation](../README.md#roadmap) lands and the first deployments happen.
 
 ## What this guide will cover
 

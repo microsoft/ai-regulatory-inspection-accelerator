@@ -1,8 +1,7 @@
 """
 Signature / Stamp Verification Rule
 
-Ported from PAFN's rules_engine/signature_stamp.py — unchanged (pure algorithm,
-document lists come from the SIGNATURE_STAMP_RULES rule document).
+Pure algorithm; document lists come from the SIGNATURE_STAMP_RULES rule document.
 """
 
 import logging

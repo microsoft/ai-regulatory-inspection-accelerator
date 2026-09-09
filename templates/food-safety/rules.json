@@ -6,7 +6,7 @@
     "documentType": "Declaration_Document",
     "fieldName": "agency_code",
     "missingRuleCode": "AGENCY_CODE_MISSING",
-    "mismatchRuleCode": "AGENCY_CODE_NOT_PAFN"
+    "mismatchRuleCode": "AGENCY_CODE_MISMATCH"
   },
 
   {
@@ -134,18 +134,18 @@
   {
     "id": "REJECTED_HS_CODES",
     "category": "HsCodeValidation",
-    "validJurisdictionRuleId": "PAFN_HS_CODES",
-    "outsideJurisdictionRuleCode": "NON_PAFN_HS_CODE",
+    "validJurisdictionRuleId": "FOOD_SAFETY_HS_CODES",
+    "outsideJurisdictionRuleCode": "NON_FOOD_SAFETY_HS_CODE",
     "rejectedCodes": [
       {"hsCode": "0301", "sectionDescription": "Live Animals", "chapterDescription": "Live fish", "hsdescription": "Live fish — prohibited food import"},
       {"hsCode": "0901.21", "sectionDescription": "Foodstuffs", "chapterDescription": "Coffee, tea", "hsdescription": "Roasted coffee — requires special import permit"},
-      {"hsCode": "2402", "sectionDescription": "Tobacco", "chapterDescription": "Cigars, cigarettes", "hsdescription": "Tobacco products — not under PAFN jurisdiction"},
-      {"hsCode": "2401", "sectionDescription": "Tobacco", "chapterDescription": "Unmanufactured tobacco", "hsdescription": "Raw tobacco — not under PAFN jurisdiction"}
+      {"hsCode": "2402", "sectionDescription": "Tobacco", "chapterDescription": "Cigars, cigarettes", "hsdescription": "Tobacco products — outside food safety jurisdiction"},
+      {"hsCode": "2401", "sectionDescription": "Tobacco", "chapterDescription": "Unmanufactured tobacco", "hsdescription": "Raw tobacco — outside food safety jurisdiction"}
     ]
   },
 
   {
-    "id": "PAFN_HS_CODES",
+    "id": "FOOD_SAFETY_HS_CODES",
     "category": "HsCodeValidation",
     "acceptedCodes": [
       {"hsCode": "02"},

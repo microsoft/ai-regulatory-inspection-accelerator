@@ -8,32 +8,26 @@ resolution, and expiry-date computation. All functions here are pure
 (no I/O, no LLM calls) and config-driven — no document-type assumptions or
 field vocabulary are hardcoded.
 
-Ported from PAFN's di/di_normalization.py, generalized:
-  - Removed the hardcoded `FIELD_ALIASES` dict (customs/food-safety field
-    names such as `bill_awb_manifest_number`, `net_weight`, `tin_number`).
-    Field aliases are now a caller-supplied `alias_overrides` parameter —
-    this is template config (see EPIC-11/Template Framework's
-    `alias_pairs.json` artifact), not Core Platform content.
-  - Removed the hardcoded `KNOWN_COUNTRIES` list (Gulf/Middle-East-biased).
-    `extract_country` now requires the caller to supply the candidate
-    country list.
-  - Removed the hardcoded `_DATE_FIELDS` / `_NUMERIC_FIELDS` sets and
-    `_ISSUE_DATE_FIELDS` tuple used by PAFN's rule-based normalization and
-    expiry computation — these are now caller-supplied field-name
-    collections, defaulting to empty (no-op) rather than assuming any
-    particular document schema.
-  - Removed direct `AzureOpenAI` client usage (`normalize_fields_with_llm`,
-    `resolve_unmatched_fields_with_llm`). LLM-based field correction and
+Design notes:
+  - There is no hardcoded `FIELD_ALIASES` dict. Field aliases are a
+    caller-supplied `alias_overrides` parameter — this is template config
+    (see EPIC-11/Template Framework's `alias_pairs.json` artifact), not
+    Core Platform content.
+  - There is no hardcoded country list. `extract_country` requires the
+    caller to supply the candidate country list.
+  - Date/numeric/issue-date field-name collections are caller-supplied,
+    defaulting to empty (no-op) rather than assuming any particular
+    document schema.
+  - No direct `AzureOpenAI` client usage. LLM-based field correction and
     semantic field mapping require a token-tracking AI client, which is a
     separate Core Platform component (see the AI client port issue) not yet
     available. `canonicalize_fields` accepts an optional injectable
-    `semantic_resolver` callback with the same contract PAFN's LLM step
-    used, so a template/deployment can wire in real LLM resolution later
-    without changing this module.
-  - Kept the currency-code allow-list as an overridable default (ISO 4217
+    `semantic_resolver` callback so a template/deployment can wire in real
+    LLM resolution later without changing this module.
+  - The currency-code allow-list is an overridable default (ISO 4217
     codes are a global standard, not customer-specific content) and the
-    BiDi-mark-stripping logic (Unicode control characters, not business
-    content).
+    BiDi-mark-stripping logic handles Unicode control characters, not
+    business content.
 """
 
 import re

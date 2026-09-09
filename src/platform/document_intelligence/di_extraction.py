@@ -2,34 +2,26 @@
 ARIA — AI Regulatory Inspection Accelerator
 Core Platform — Document Intelligence — DI Extraction Activity
 
-Four-step document processing pipeline (ported from PAFN's
-``activities/di_extraction.py``):
+Four-step document processing pipeline:
 
   Step 0 – Image Quality Check (LLM Vision)
   Step 1 – Azure Document Intelligence (OCR + Layout → Markdown)
   Step 2 – LLM Metadata Extraction (GPT-5.4)
   Step 3 – LLM Field Normalization + Rule-Based Normalization
 
-Changes from PAFN:
-  - ``DI_MODEL_MAP`` dict replaced by ``TemplateLoader.get_di_model()``.
-  - ``resolve_doc_type()`` replaced by ``TemplateLoader.resolve_doc_type()``.
-  - ``build_metadata_extraction_prompt()`` / ``get_fields_for_doc_type()``
-    replaced by the generic ``_build_metadata_extraction_prompt()`` helper
-    that takes a ``TemplateLoader``.
-  - Azure service clients (DI, OpenAI, Blob) are now passed as parameters
+Design notes:
+  - DI model selection and document-type resolution come from
+    ``TemplateLoader`` rather than hardcoded maps.
+  - Metadata extraction prompts are built by the generic
+    ``_build_metadata_extraction_prompt()`` helper from a ``TemplateLoader``.
+  - Azure service clients (DI, OpenAI, Blob) are passed as parameters
     rather than being constructed internally so the function is testable
     without Azure credentials.
-  - Cosmos DB writes, PII redaction, and telemetry (PAFN-specific delivery /
-    observability concerns) are removed.  The caller receives a pure
-    extraction result and is responsible for storing it.
+  - Persistence, PII redaction, and telemetry are the caller's concern. The
+    caller receives a pure extraction result and is responsible for storing it.
   - ``allowed_fields`` and ``line_item_fields`` are passed explicitly to
     ``canonicalize_fields_for_doc_type``, ``normalize_all_fields``, and
-    ``cross_validate_with_ocr`` so those functions no longer read from
-    ``document_type_fields.json``.
-
-All algorithm logic — quality check routing, DI model selection, handwriting
-detection, vision/hybrid/OCR paths, field canonicalization and normalization,
-OCR cross-validation, and the output contract — is identical to PAFN.
+    ``cross_validate_with_ocr`` so those functions read no config files.
 """
 
 import asyncio
@@ -77,7 +69,7 @@ from src.platform.templates.template_loader import TemplateLoader
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Configuration (read from environment, same as PAFN)
+# Configuration (read from environment)
 # ---------------------------------------------------------------------------
 
 RAW_UPLOADS_CONTAINER = os.environ.get("RAW_UPLOADS_CONTAINER", "raw-uploads")
@@ -190,8 +182,7 @@ async def run_document_intelligence(
 ) -> DocumentIntelligenceResult:
     """Analyse a single document with Azure Document Intelligence.
 
-    Changed from PAFN: ``DI_MODEL_MAP`` dict replaced by
-    ``loader.get_di_model(doc_type)``.  All algorithm logic is identical.
+    The DI model is resolved per document type via ``loader.get_di_model()``.
     """
     model_id = loader.get_di_model(doc_type)
 
@@ -280,11 +271,10 @@ def extract_metadata_llm(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Extract structured metadata using GPT-5.4 (ported unchanged).
+    """Extract structured metadata using GPT-5.4.
 
-    Changed from PAFN: prompt is built via ``_build_metadata_extraction_prompt``
-    (which uses the ``TemplateLoader``) instead of ``build_metadata_extraction_prompt``
-    from ``shared/prompts.py``.
+    The prompt is built via ``_build_metadata_extraction_prompt``, which
+    sources document-type fields from the ``TemplateLoader``.
     """
     system_prompt = _build_metadata_extraction_prompt(doc_type, loader)
     user_message = _build_user_message(

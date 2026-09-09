@@ -5,13 +5,13 @@ Core Platform — Template Loader
 Generic loader for the ARIA template contract.  Given a template ID
 (e.g. "food-safety"), loads ``evidence_types.json`` and the optional
 ``normalization.json`` profile from the template directory. It provides
-document-type field and normalization lookups that replace hardcoded PAFN
+document-type field and normalization lookups that replace hardcoded
 configuration.
 
 The caller is responsible for providing a ``template_root`` path (defaults
 to the ``templates/`` directory adjacent to this package's workspace root).
 
-Changes from PAFN's ``shared/prompts.py``:
+Design notes:
   - ``_DOC_TYPE_ID_TO_NAME`` dict migrated to ``doc_type_id_mapping``
     inside ``evidence_types.json`` so adding a new ID requires only a
     JSON edit, no code change.

@@ -1,9 +1,7 @@
 """
 Item Check Rule Engine
 
-Ported from PAFN's rules_engine/item_check.py.
-Changes from PAFN: removed shared.telemetry; changed from rules_engine import llm_mapper
-to relative import.
+Compares declared payload items against extracted document line items.
 """
 
 import logging

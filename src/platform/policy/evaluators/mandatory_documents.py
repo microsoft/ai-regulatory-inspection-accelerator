@@ -1,8 +1,8 @@
 """
 Mandatory Fields Rule Logic
 
-Ported from PAFN's rules_engine/mandatory_documents.py. Personal-shipment and
-conditional-document criteria are supplied by template rule configuration.
+Personal-shipment and conditional-document criteria are supplied by template
+rule configuration.
 """
 
 import re
@@ -65,12 +65,12 @@ def validate_mandatory_docs(rules, payload, submission):
     def _entry_type(entry) -> str:
         return entry["documentType"] if isinstance(entry, dict) else entry
 
-    bayan_number = payload.get("bayanNumber", "") or ""
+    declaration_number = payload.get("declarationNumber", "") or ""
     personal_config = rule.get("personalShipment", {})
     personal_prefixes = tuple(
         prefix.upper() for prefix in personal_config.get("declarationPrefixes", [])
     )
-    is_personal = bool(personal_prefixes) and bayan_number.upper().startswith(
+    is_personal = bool(personal_prefixes) and declaration_number.upper().startswith(
         personal_prefixes
     )
 

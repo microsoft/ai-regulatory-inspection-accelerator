@@ -1,7 +1,6 @@
 """
 Agency Code Verification Rule
 
-Ported from PAFN's rules_engine/agency_code.py.
 Agency value, source document, source field, and finding codes are supplied by
 the active template's agency rule.
 """

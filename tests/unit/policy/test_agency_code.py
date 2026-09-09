@@ -7,7 +7,7 @@ AGENCY_CONFIG = {
     "document_type": "Declaration_Document",
     "field_name": "agency_code",
     "missing_rule_code": "AGENCY_CODE_MISSING",
-    "mismatch_rule_code": "AGENCY_CODE_NOT_PAFN",
+    "mismatch_rule_code": "AGENCY_CODE_MISMATCH",
 }
 
 
@@ -23,18 +23,18 @@ def _submission(agency_codes_in_line_items=None, top_level_value=None, doc_type=
 
 
 class TestValidateAgencyCode:
-    def test_passes_when_pafn_code_present_in_line_items(self):
+    def test_passes_when_expected_code_present_in_line_items(self):
         result = validate_agency_code(_submission(agency_codes_in_line_items=["2"]), **AGENCY_CONFIG)
         assert result == []
 
-    def test_passes_when_pafn_code_in_comma_separated_list(self):
+    def test_passes_when_expected_code_in_comma_separated_list(self):
         result = validate_agency_code(_submission(agency_codes_in_line_items=["2, 5"]), **AGENCY_CONFIG)
         assert result == []
 
-    def test_fails_when_no_pafn_code(self):
+    def test_fails_when_expected_code_absent(self):
         result = validate_agency_code(_submission(agency_codes_in_line_items=["5"]), **AGENCY_CONFIG)
         assert len(result) == 1
-        assert result[0]["ruleCode"] == "AGENCY_CODE_NOT_PAFN"
+        assert result[0]["ruleCode"] == "AGENCY_CODE_MISMATCH"
         assert result[0]["result"] == "FAIL"
 
     def test_fails_when_no_agency_code_at_all(self):

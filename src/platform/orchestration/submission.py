@@ -8,9 +8,8 @@ already completed. Decoupled from the Azure Functions HTTP request/response
 types and the Durable Functions client SDK so it can be unit tested without
 either dependency, and reused by any connector's HTTP starter.
 
-Ported from PAFN's function_app.py::inspector_http_start (idempotency checks
-only - schema validation and the HTTP response construction are connector/
-API-layer concerns, not orchestration).
+Idempotency checks only - schema validation and the HTTP response construction
+are connector/API-layer concerns, not orchestration.
 """
 
 from enum import Enum

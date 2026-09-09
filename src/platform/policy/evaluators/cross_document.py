@@ -1,9 +1,7 @@
 """
 Cross-Document Rule Logic
 
-Ported from PAFN's rules_engine/cross_document.py.
-Changes from PAFN: removed shared.telemetry import; changed
-`from rules_engine import llm_mapper` to relative import.
+Field comparison rules come from the CROSS_DOC_RULES rule document.
 """
 
 import logging

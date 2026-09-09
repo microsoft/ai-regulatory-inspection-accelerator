@@ -1,9 +1,9 @@
-"""Token-reduction benchmark for representative PAFN DI Markdown."""
+"""Token-reduction benchmark for representative DI Markdown."""
 
 from src.platform.document_intelligence.content_normalization import normalize_markdown
 
 
-def _representative_pafn_markdown() -> str:
+def _representative_di_markdown() -> str:
     pages = []
     for page_number in range(1, 6):
         pages.append(
@@ -20,7 +20,7 @@ def _representative_pafn_markdown() -> str:
                     "## Shipment Evidence",
                     f"Document reference: REF-{page_number:03d}",
                     "Importer: Example Trading Company",
-                    "Country of origin: Kuwait",
+                    "Country of origin: Brazil",
                     "Net weight: 1250 kg",
                     "",
                     "---",
@@ -34,8 +34,8 @@ def _representative_pafn_markdown() -> str:
     return "\n<!-- PageBreak -->\n".join(pages)
 
 
-def test_representative_pafn_markdown_reduces_tokens_by_at_least_twenty_percent():
-    normalized, report = normalize_markdown(_representative_pafn_markdown())
+def test_representative_di_markdown_reduces_tokens_by_at_least_twenty_percent():
+    normalized, report = normalize_markdown(_representative_di_markdown())
 
     assert report.token_reduction_ratio >= 0.20
     assert "Document reference: REF-001" in normalized

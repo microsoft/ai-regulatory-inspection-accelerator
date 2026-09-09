@@ -1,8 +1,6 @@
 """
 Pure data helpers for the Rules Engine.
 
-Ported from PAFN's rules_engine/llm_mapper.py.
-Changes from PAFN: removed shared.telemetry dependency.
 All content (country maps, document name map) is domain-neutral algorithm data.
 """
 

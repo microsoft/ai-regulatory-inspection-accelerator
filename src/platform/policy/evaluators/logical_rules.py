@@ -1,8 +1,7 @@
 """
 Logical Consistency Rule Logic
 
-Ported from PAFN's rules_engine/logical_rules.py — unchanged (pure algorithm,
-rule configuration comes from the LOGICAL_RULES rule document).
+Pure algorithm; rule configuration comes from the LOGICAL_RULES rule document.
 """
 
 from datetime import date, datetime, timezone

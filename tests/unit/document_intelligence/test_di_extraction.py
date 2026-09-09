@@ -3,9 +3,9 @@ Unit tests for the DI extraction pipeline:
   - Prompt building via TemplateLoader (field list, line-item notes, doc_notes)
   - run_document_intelligence: DI model selection comes from loader, not DI_MODEL_MAP
   - extract_metadata_llm: retries, JSON normalisation, empty metadata on exhaustion
-  - Parity check: given the same raw OCR markdown and fake LLM response, the
-    Core Platform ``extract_metadata_llm`` produces the same field structure
-    as the PAFN extraction would have (field names, confidence, canonical_field).
+  - Field-structure check: given the same raw OCR markdown and fake LLM response,
+    ``extract_metadata_llm`` produces the expected field structure (field names,
+    confidence, canonical_field).
 
 All tests are offline — Azure DI, Blob, and OpenAI calls are faked.
 """
@@ -140,7 +140,7 @@ class TestBuildMetadataExtractionPrompt:
 
     def test_prompt_is_domain_neutral(self, loader):
         prompt = _build_metadata_extraction_prompt("Invoice", loader).lower()
-        assert all(term not in prompt for term in ("food-safety", "pafn", "kuwait customs"))
+        assert all(term not in prompt for term in ("food-safety", "pafn", "kuwait", "raqeb", "bayan"))
 
     def test_prompt_targets_verified_bilingual_behavior(self, loader):
         prompt = _build_metadata_extraction_prompt("Invoice", loader).lower()
@@ -278,7 +278,7 @@ class TestDIModelSelection:
 # ---------------------------------------------------------------------------
 
 class TestResolveDocTypeParity:
-    """``loader.resolve_doc_type`` must behave identically to PAFN's ``resolve_doc_type``."""
+    """``loader.resolve_doc_type`` must resolve IDs, names, and unknown values."""
 
     def test_known_id_resolved(self, loader):
         assert loader.resolve_doc_type("50") == "Invoice"

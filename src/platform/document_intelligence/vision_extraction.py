@@ -4,13 +4,8 @@ Core Platform — Document Intelligence — Vision Extraction
 
 Vision-based field extraction for handwritten Arabic documents.
 
-Ported from PAFN's ``di/vision_extraction.py``.  The sole change is that
-``get_fields_for_doc_type(doc_type)`` calls in the prompt-builder
-functions are replaced by an explicit ``fields: list[str]`` parameter
-propagated from the caller (which sources the list from
-``TemplateLoader``).  All algorithm logic, prompt text, retry semantics,
-JSON parsing, ensemble merge strategy, and cross-validation LLM call are
-identical to the PAFN production implementation.
+The prompt-builder functions take an explicit ``fields: list[str]`` parameter
+propagated from the caller (which sources the list from ``TemplateLoader``).
 
 Provides three extraction modes:
   1. Pure vision  — for fully handwritten docs where OCR is useless.
@@ -113,12 +108,7 @@ def _normalize_response(data: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def _build_vision_extraction_prompt(doc_type: str, fields: list[str]) -> str:
-    """Build system prompt for pure-vision field extraction.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter instead of
-    being fetched from ``document_type_fields.json`` via
-    ``get_fields_for_doc_type(doc_type)``.
-    """
+    """Build system prompt for pure-vision field extraction."""
     fields_text = ", ".join(fields)
     display_name = doc_type.replace("_", " ")
 
@@ -126,7 +116,7 @@ def _build_vision_extraction_prompt(doc_type: str, fields: list[str]) -> str:
 specialized capability in reading handwritten Arabic documents.
 
 You extract structured metadata from customs, trade, and food-safety documents
-used by Kuwait Customs / PAFN (Public Authority for Food and Nutrition).
+submitted to regulatory authorities.
 
 The document type is already known: **{display_name}**
 
@@ -189,10 +179,7 @@ IMPORTANT:
 
 
 def _build_hybrid_extraction_prompt(doc_type: str, fields: list[str]) -> str:
-    """Build system prompt for hybrid OCR+vision extraction.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter.
-    """
+    """Build system prompt for hybrid OCR+vision extraction."""
     fields_text = ", ".join(fields)
     display_name = doc_type.replace("_", " ")
 
@@ -200,7 +187,7 @@ def _build_hybrid_extraction_prompt(doc_type: str, fields: list[str]) -> str:
 in reading documents that contain BOTH printed and handwritten text.
 
 You extract structured metadata from customs, trade, and food-safety documents
-used by Kuwait Customs / PAFN (Public Authority for Food and Nutrition).
+submitted to regulatory authorities.
 
 The document type is already known: **{display_name}**
 
@@ -343,9 +330,7 @@ def extract_metadata_vision(
 ) -> tuple[ExtractedMetadata, str]:
     """Extract structured metadata from a document image using GPT-5.4 vision.
 
-    Changed from PAFN: ``fields`` is now an explicit parameter (sourced from
-    ``TemplateLoader``) instead of being fetched from
-    ``document_type_fields.json``.  All algorithm logic is identical.
+    ``fields`` is sourced from ``TemplateLoader`` by the caller.
     """
     loader = loader or TemplateLoader.for_template("food-safety")
     system_prompt = loader.get_prompt(
@@ -445,11 +430,7 @@ def extract_metadata_hybrid(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Hybrid extraction: partial OCR text + image sent together to the LLM.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter.
-    All algorithm logic is identical.
-    """
+    """Hybrid extraction: partial OCR text + image sent together to the LLM."""
     loader = loader or TemplateLoader.for_template("food-safety")
     system_prompt = loader.get_prompt(
         "hybrid_extraction",
@@ -604,11 +585,7 @@ def extract_metadata_ensemble(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Dual-pass ensemble extraction for difficult handwritten Arabic documents.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter.
-    All algorithm logic is identical.
-    """
+    """Dual-pass ensemble extraction for difficult handwritten Arabic documents."""
     vision_meta, _ = extract_metadata_vision(
         openai_client, doc_input, image_data, doc_type, fields,
         loader=loader,
@@ -676,9 +653,7 @@ def cross_validate_with_ocr(
 ) -> tuple[dict, list[str]]:
     """Cross-validate vision/hybrid extraction against OCR markdown.
 
-    Changed from PAFN: ``allowed_fields`` is now an explicit parameter
-    (sourced from ``TemplateLoader``) instead of being fetched via
-    ``get_fields_for_doc_type(doc_type)``.  All algorithm logic is identical.
+    ``allowed_fields`` is sourced from ``TemplateLoader`` by the caller.
     """
     if not ocr_markdown or not fields:
         return fields, []
