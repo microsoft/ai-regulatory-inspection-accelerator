@@ -82,18 +82,3 @@ class ExtractedMetadata(BaseModel):
     line_items: list[LineItem] = Field(default_factory=list)
     signature_detected: bool = False
     language: str = ""
-
-
-# ---------------------------------------------------------------------------
-# Serialization helpers
-# ---------------------------------------------------------------------------
-
-_TRAILING_KEYS = ("tables_extracted", "key_value_pairs")
-
-
-def dump_metadata(model: ExtractedMetadata) -> dict:
-    """Serialize to dict with ``exclude_none=True``, trailing structural keys."""
-    d = model.model_dump(exclude_none=True)
-    trailing = {k: d.pop(k) for k in _TRAILING_KEYS if k in d}
-    d.update(trailing)
-    return d

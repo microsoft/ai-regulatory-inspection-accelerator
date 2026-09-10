@@ -45,27 +45,6 @@ _ENGLISH_ALIAS_MAP: dict[str, str] = {
     "UK": "GB",
 }
 
-DOCUMENT_NAME_MAP = {
-    "HouseBill": "House_Bill",
-    "DeliveryOrders": "Delivery_Orders",
-    "PackingList": "Packing_List",
-    "StretchingList": "Stretching_List",
-    "Invoice": "Invoice",
-    "CertificateOfOrigin": "Certificate_Of_Origin",
-    "IssuingCountryOfOriginCertificate": "Issuing_Country_Of_Origin_Certificate",
-    "HealthCertificateFromCountryOfOrigin": "Health_Certificate_from_Country_of_Origin",
-    "HealthLicense": "Health_License",
-    "HalalSlaughterCertificate": "Halal_Slaughter_Certificate",
-    "StatisticalDeclarationGCC": "Statistical_Declaration",
-    "GCCDeclaration": "GCC_Declaration",
-    "CommercialLicense": "Commercial_License",
-    "ImportLicense": "Import_License",
-    "SignatureAuthorization": "Signature_Authorization",
-    "FishImportLicense": "Fish_Import_License",
-    "ShrimpImportLicense": "Shrimp_Import_License",
-    "ZubaidiImportLicense": "Zubaidi_Import_License",
-}
-
 
 def normalize_country(value: str) -> str:
     """Resolve a country value to a canonical ISO alpha-2 code."""
@@ -107,11 +86,15 @@ def normalize_country(value: str) -> str:
     return stripped.lower()
 
 
-def resolve_document_name(rule_doc_name) -> str:
-    """Map a rule-side document name (PascalCase) to its submission-side equivalent."""
+def resolve_document_name(rule_doc_name, aliases: dict | None = None) -> str:
+    """Map a rule-side document name to its submission-side equivalent.
+
+    ``aliases`` comes from the active template's ``doc_type_aliases``; without it
+    the name is returned unchanged.
+    """
     if not isinstance(rule_doc_name, str):
         return str(rule_doc_name)
-    return DOCUMENT_NAME_MAP.get(rule_doc_name, rule_doc_name)
+    return (aliases or {}).get(rule_doc_name, rule_doc_name)
 
 
 def build_doc_field_index(submission: list, min_confidence: float = 0.0) -> dict:
@@ -149,29 +132,3 @@ def get_field_value(
     if rule_field in doc_fields:
         return doc_fields[rule_field]
     return None
-
-
-def build_comparison_tasks(cross_doc_rules: list, doc_field_index: dict, field_resolution: dict) -> list:
-    """Build a list of comparison tasks for fuzzy/semantic LLM checks."""
-    tasks = []
-    for rule in cross_doc_rules:
-        if rule.get("comparisonType") not in ("fuzzyMatch", "semanticMatch"):
-            continue
-        doc_values = {}
-        for rule_doc_name in rule.get("documents", []):
-            sub_doc_name = resolve_document_name(rule_doc_name)
-            fields = doc_field_index.get(sub_doc_name, {})
-            value = get_field_value(fields, rule["field"], field_resolution, sub_doc_name)
-            if value:
-                doc_values[sub_doc_name] = value
-        if len(doc_values) >= 2:
-            tasks.append({
-                "ruleId": rule["ruleId"],
-                "field": rule["field"],
-                "comparisonType": rule["comparisonType"],
-                "threshold": rule.get("threshold", 0.85),
-                "severity": rule.get("severity", "Warning"),
-                "description": rule.get("description", ""),
-                "docValues": doc_values,
-            })
-    return tasks

@@ -69,7 +69,7 @@ def food_safety_rules() -> list:
 def reference_payload() -> dict:
     return {
         "requestId": "REFERENCE-CHICKEN-001",
-        "declarationNumber": "TIM/1234/SHU25",
+        "caseReference": "TIM/1234/SHU25",
         "items": [
             {
                 "itemCode": "CHICKEN-001",
@@ -149,24 +149,24 @@ class TestRulesJsonLoads:
     def test_all_required_rule_ids_present(self, food_safety_rules):
         rule_ids = {r["id"] for r in food_safety_rules}
         expected = {
-            "AGENCY_CODE_RULES",
+            "EXPECTED_VALUE_RULES",
             "MANDATORY_DOC_RULES",
             "MIN_FIELDS_RULES",
-            "REJECTED_HS_CODES",
+            "DENIED_CODES",
             "FOOD_SAFETY_HS_CODES",
             "HALAL_HS_CODES",
             "FISH_HS_CODES",
             "SHRIMP_HS_CODES",
             "SIGNATURE_STAMP_RULES",
             "CROSS_DOC_RULES",
-            "LOGICAL_RULES",
+            "TEMPORAL_RULES",
         }
         missing = expected - rule_ids
         assert not missing, f"Missing rule IDs in rules.json: {missing}"
 
-    def test_agency_code_rules_has_agency_code(self, food_safety_rules):
-        rule = next(r for r in food_safety_rules if r["id"] == "AGENCY_CODE_RULES")
-        assert rule["agencyCode"] == "2"
+    def test_expected_value_rule_has_expected_value(self, food_safety_rules):
+        rule = next(r for r in food_safety_rules if r["id"] == "EXPECTED_VALUE_RULES")
+        assert rule["expectedValue"] == "2"
 
 
 class TestReferenceCase:

@@ -10,11 +10,10 @@ src/platform/orchestration/pipeline.py) short-circuits straight to the
 Delivery Agent with status "PRE_VALIDATION_FAILED".
 
 Generalized from a domain-specific intake validator:
-  - Removed customs-declaration-number parsing and the Individual/Commercial
-    request-type classification derived from it (business content, not
-    reusable platform logic). Submission classification is a
-    template-specific concern; a template that needs it can layer its own
-    check on top of this module's result.
+  - Removed case-identifier parsing and the request-type classification derived
+    from it (business content, not reusable platform logic). Submission
+    classification is a template-specific concern; a template that needs it can
+    layer its own check on top of this module's result.
   - Removed direct Azure Blob Storage / Cosmos DB SDK calls (`get_blob_client`,
     `upsert_case_status`, `persist_inbound_request`). Core Platform has no
     dependency on a specific storage backend. Storage-backed checks (blob

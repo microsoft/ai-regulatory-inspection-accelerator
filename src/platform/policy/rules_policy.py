@@ -23,10 +23,8 @@ async def run(
     *,
     reasoning_findings: list[dict] | None = None,
     reasoning_document_checks: list[dict] | None = None,
+    reasoning: dict | None = None,
     allowed_fields_by_doc: dict | None = None,
-    llm_comparison_fn=None,
-    item_type_check_fn=None,
-    managed_identity_client_id: str = "",
     track_event=None,
 ) -> dict:
     """Run the rules & policy engine and return a verdict dict.
@@ -37,11 +35,10 @@ async def run(
         rules_list:            Rule documents loaded from Cosmos DB or rules.json.
         reasoning_findings:    Generic findings produced by the Reasoning Agent.
         reasoning_document_checks: Per-document checks produced by the Reasoning Agent.
+        reasoning:             Cross-document reasoning result from the Reasoning Agent
+                               (see src/platform/cross_document/reasoning_agent.py).
         allowed_fields_by_doc: {doc_type: [field_name]} from TemplateLoader.
                                Forwarded to validate_min_fields for field intersection.
-        llm_comparison_fn:     Injectable async callable for cross-doc LLM checks.
-        item_type_check_fn:    Injectable async callable for LLM item type checks.
-        managed_identity_client_id: Passed through to LLM injectable callables.
         track_event:           Optional telemetry callback
                                (name, request_id=..., properties=..., measurements=...).
 
@@ -89,10 +86,8 @@ async def run(
     try:
         executor_findings = await run_rules(
             rules_list, payload, submission,
-            managed_identity_client_id=managed_identity_client_id,
-            llm_comparison_fn=llm_comparison_fn,
-            item_type_check_fn=item_type_check_fn,
             allowed_fields_by_doc=allowed_fields_by_doc,
+            reasoning=reasoning,
         )
     except Exception as exc:  # noqa: BLE001 - convert executor failure to a HOLD verdict
         logger.error("run_rules failed unexpectedly | %s", exc)
@@ -193,14 +188,14 @@ def _build_summary(verdict: str, findings: list[dict]) -> str:
     fail_count = sum(1 for f in findings if f.get("result") == "FAIL")
     warn_count = sum(1 for f in findings if f.get("result") == "WARN")
     if verdict == "PASS":
-        return "All inspection checks passed. Shipment may proceed to clearance."
+        return "All checks passed. The case may proceed."
     if verdict == "FAIL":
         return (
             f"Inspection failed with {fail_count} blocking issue(s)"
             + (f" and {warn_count} document warning(s)" if warn_count > 0 else "")
-            + ". Shipment has been rejected. See findings for details."
+            + ". The case has been rejected. See findings for details."
         )
     return (
-        f"Shipment held for manual inspector review "
+        f"Case held for manual reviewer attention "
         f"({warn_count} warning(s) require human judgement)."
     )

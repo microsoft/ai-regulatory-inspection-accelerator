@@ -1,89 +1,102 @@
-"""Unit tests for src/platform/policy/evaluators/hs_code.py"""
+"""Unit tests for src/platform/policy/evaluators/classification_code.py"""
 
 from typing import ClassVar
 
-from src.platform.policy.evaluators.hs_code import (
-    _normalize_hs,
-    check_jurisdiction_hs_code,
-    check_rejected_hs_code,
-    validate_hs_codes,
+from src.platform.policy.evaluators.classification_code import (
+    _normalize_code,
+    check_denied_code,
+    check_in_scope_code,
+    validate_classification_codes,
 )
 
 
-class TestNormalizeHs:
-    def test_strips_dots_and_trailing_zeros(self):
-        assert _normalize_hs("1602.90.10.00.00") == "16029010"
+class TestNormalizeCode:
+    def test_strips_separators_and_trailing_padding(self):
+        assert _normalize_code("1602.90.10.00.00") == "16029010"
 
-    def test_strips_dots_only(self):
-        assert _normalize_hs("0302.11") == "030211"
+    def test_strips_separators_only(self):
+        assert _normalize_code("0302.11") == "030211"
 
     def test_empty_returns_zero(self):
-        assert _normalize_hs("") == "0"
+        assert _normalize_code("") == "0"
+
+    def test_padding_segment_is_configurable(self):
+        assert _normalize_code("A1-B2-XX", separator="-", padding_segment="XX") == "A1B2"
+
+    def test_padding_stripping_can_be_disabled(self):
+        assert _normalize_code("1602.00", padding_segment=None) == "160200"
 
 
-class TestCheckRejectedHsCode:
-    LOOKUP: ClassVar[list] = [("0301", {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"})]
+class TestCheckDeniedCode:
+    LOOKUP: ClassVar[list] = [("0301", {"code": "0301", "sectionDescription": "S", "chapterDescription": "C", "description": "D"})]
 
     def test_match_returns_finding(self):
-        findings = check_rejected_hs_code("0301.10.00", "ITEM1", self.LOOKUP)
+        findings = check_denied_code("0301.10.00", "ITEM1", self.LOOKUP)
         assert len(findings) == 1
-        assert findings[0]["ruleCode"] == "REJECTED_HS_CODE"
+        assert findings[0]["ruleCode"] == "DENIED_CLASSIFICATION_CODE"
         assert findings[0]["result"] == "FAIL"
 
     def test_no_match_returns_empty(self):
-        findings = check_rejected_hs_code("1602.90.10", "ITEM1", self.LOOKUP)
+        findings = check_denied_code("1602.90.10", "ITEM1", self.LOOKUP)
         assert findings == []
 
     def test_prefix_match(self):
         # 0301.99 starts with 0301 → match
-        findings = check_rejected_hs_code("0301.99.00", "ITEM1", self.LOOKUP)
+        findings = check_denied_code("0301.99.00", "ITEM1", self.LOOKUP)
         assert len(findings) == 1
 
 
-class TestCheckJurisdictionHsCode:
-    JURISDICTION_LOOKUP: ClassVar[set] = {"16029010", "0203"}
+class TestCheckInScopeCode:
+    IN_SCOPE_LOOKUP: ClassVar[set] = {"16029010", "0203"}
 
     def test_valid_code_passes(self):
-        findings = check_jurisdiction_hs_code(
-            "1602.90.10.00", "ITEM1", self.JURISDICTION_LOOKUP
+        findings = check_in_scope_code(
+            "1602.90.10.00", "ITEM1", self.IN_SCOPE_LOOKUP
         )
         assert findings == []
 
     def test_invalid_code_fails(self):
-        findings = check_jurisdiction_hs_code(
-            "0901.21", "ITEM1", self.JURISDICTION_LOOKUP, "OUTSIDE_SCOPE"
+        findings = check_in_scope_code(
+            "0901.21", "ITEM1", self.IN_SCOPE_LOOKUP, "OUTSIDE_SCOPE"
         )
         assert len(findings) == 1
         assert findings[0]["ruleCode"] == "OUTSIDE_SCOPE"
 
-    def test_empty_jurisdiction_lookup_skips(self):
-        findings = check_jurisdiction_hs_code("1602.90", "ITEM1", set())
+    def test_empty_in_scope_lookup_skips(self):
+        findings = check_in_scope_code("1602.90", "ITEM1", set())
         assert findings == []
 
 
-class TestValidateHsCodes:
+class TestValidateClassificationCodes:
     RULES: ClassVar[dict] = {
-        "rejectedCodes": [
-            {"hsCode": "0301", "sectionDescription": "S", "chapterDescription": "C", "hsdescription": "D"}
+        "codeField": "hsCode",
+        "deniedCodes": [
+            {"code": "0301", "sectionDescription": "S", "chapterDescription": "C", "description": "D"}
         ],
-        "jurisdictionCodes": [{"hsCode": "16"}, {"hsCode": "02"}],
-        "outsideJurisdictionRuleCode": "NON_FOOD_SAFETY_HS_CODE",
+        "inScopeCodes": [{"code": "16"}, {"code": "02"}],
+        "outOfScopeRuleCode": "NON_FOOD_SAFETY_HS_CODE",
     }
 
-    def test_rejected_code_in_payload(self):
+    def test_denied_code_in_payload(self):
         payload = {"items": [{"hsCode": "0301.10.00", "itemCode": "IT1"}]}
-        findings = validate_hs_codes(self.RULES, payload)
-        assert any(f["ruleCode"] == "REJECTED_HS_CODE" for f in findings)
+        findings = validate_classification_codes(self.RULES, payload)
+        assert any(f["ruleCode"] == "DENIED_CLASSIFICATION_CODE" for f in findings)
 
-    def test_outside_jurisdiction_code_in_payload(self):
+    def test_out_of_scope_code_in_payload(self):
         payload = {"items": [{"hsCode": "0901.21", "itemCode": "IT1"}]}
-        findings = validate_hs_codes(self.RULES, payload)
+        findings = validate_classification_codes(self.RULES, payload)
         assert any(f["ruleCode"] == "NON_FOOD_SAFETY_HS_CODE" for f in findings)
 
     def test_valid_code_no_finding(self):
         payload = {"items": [{"hsCode": "1602.90.10", "itemCode": "IT1"}]}
-        findings = validate_hs_codes(self.RULES, payload)
+        findings = validate_classification_codes(self.RULES, payload)
         assert findings == []
 
     def test_empty_payload_no_findings(self):
-        assert validate_hs_codes(self.RULES, {"items": []}) == []
+        assert validate_classification_codes(self.RULES, {"items": []}) == []
+
+    def test_code_field_is_configurable(self):
+        rules = {**self.RULES, "codeField": "diagnosisCode"}
+        payload = {"items": [{"diagnosisCode": "0301.10", "itemCode": "IT1"}]}
+        findings = validate_classification_codes(rules, payload)
+        assert any(f["ruleCode"] == "DENIED_CLASSIFICATION_CODE" for f in findings)

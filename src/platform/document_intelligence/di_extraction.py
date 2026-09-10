@@ -93,18 +93,18 @@ _RTL_MARK = '\u200F'
 
 
 # ---------------------------------------------------------------------------
-# BiDi post-processing (ported unchanged)
+# BiDi post-processing
 # ---------------------------------------------------------------------------
 
 def _add_bidi_marks(text: str) -> str:
-    """Insert RTL marks around Arabic runs in mixed-script text (ported unchanged)."""
+    """Insert RTL marks around Arabic runs in mixed-script text."""
     if not text:
         return text
     return _ARABIC_RUN_RE.sub(lambda m: f'{_RTL_MARK}{m.group()}{_RTL_MARK}', text)
 
 
 def _detect_languages_from_text(text: str) -> list[str]:
-    """Heuristic language detection based on Unicode script analysis (ported unchanged)."""
+    """Heuristic language detection based on Unicode script analysis."""
     import unicodedata
     sample = text[:10_000]
     arabic_count = 0
@@ -161,7 +161,7 @@ def _build_metadata_extraction_prompt(doc_type: str, loader: TemplateLoader) -> 
 
 
 def _build_user_message(filename: str, parent_folder: str, markdown_content: str) -> str:
-    """Build the user-turn message for the LLM extraction call (ported unchanged)."""
+    """Build the user-turn message for the LLM extraction call."""
     return (
         f"File: {filename}\n"
         f"Document category: {parent_folder}\n\n"
@@ -170,7 +170,7 @@ def _build_user_message(filename: str, parent_folder: str, markdown_content: str
 
 
 # ---------------------------------------------------------------------------
-# Step 1: Document Intelligence (ported unchanged apart from no DI_MODEL_MAP)
+# Step 1: Document Intelligence
 # ---------------------------------------------------------------------------
 
 async def run_document_intelligence(
@@ -258,7 +258,7 @@ async def run_document_intelligence(
 
 
 # ---------------------------------------------------------------------------
-# Step 2: LLM metadata extraction (ported unchanged apart from prompt source)
+# Step 2: LLM metadata extraction
 # ---------------------------------------------------------------------------
 
 def extract_metadata_llm(
@@ -415,7 +415,7 @@ def _is_pdf(file_name: str) -> bool:
 
 
 async def _preprocess_for_vision(blob_data: bytes, file_name: str) -> list[bytes]:
-    """Rasterize PDF or lightly denoise images for GPT-5.4 vision (ported unchanged).
+    """Rasterize PDF or lightly denoise images for GPT-5.4 vision.
 
     Requires ``pymupdf`` and ``opencv-python`` at runtime.  Returns empty
     list on failure; caller handles the fallback.

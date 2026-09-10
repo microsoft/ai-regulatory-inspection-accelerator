@@ -1,9 +1,9 @@
-"""Unit tests for src/platform/policy/evaluators/agency_code.py"""
+"""Unit tests for src/platform/policy/evaluators/expected_value.py"""
 
-from src.platform.policy.evaluators.agency_code import validate_agency_code
+from src.platform.policy.evaluators.expected_value import validate_expected_value
 
-AGENCY_CONFIG = {
-    "agency_code": "2",
+EXPECTED_VALUE_CONFIG = {
+    "expected_value": "2",
     "document_type": "Declaration_Document",
     "field_name": "agency_code",
     "missing_rule_code": "AGENCY_CODE_MISSING",
@@ -22,48 +22,48 @@ def _submission(agency_codes_in_line_items=None, top_level_value=None, doc_type=
     return [{"document": doc_type, "documentTypeId": "20", "fields": fields, "lineItems": line_items}]
 
 
-class TestValidateAgencyCode:
+class TestValidateExpectedValue:
     def test_passes_when_expected_code_present_in_line_items(self):
-        result = validate_agency_code(_submission(agency_codes_in_line_items=["2"]), **AGENCY_CONFIG)
+        result = validate_expected_value(_submission(agency_codes_in_line_items=["2"]), **EXPECTED_VALUE_CONFIG)
         assert result == []
 
     def test_passes_when_expected_code_in_comma_separated_list(self):
-        result = validate_agency_code(_submission(agency_codes_in_line_items=["2, 5"]), **AGENCY_CONFIG)
+        result = validate_expected_value(_submission(agency_codes_in_line_items=["2, 5"]), **EXPECTED_VALUE_CONFIG)
         assert result == []
 
     def test_fails_when_expected_code_absent(self):
-        result = validate_agency_code(_submission(agency_codes_in_line_items=["5"]), **AGENCY_CONFIG)
+        result = validate_expected_value(_submission(agency_codes_in_line_items=["5"]), **EXPECTED_VALUE_CONFIG)
         assert len(result) == 1
         assert result[0]["ruleCode"] == "AGENCY_CODE_MISMATCH"
         assert result[0]["result"] == "FAIL"
 
     def test_fails_when_no_agency_code_at_all(self):
-        result = validate_agency_code(_submission(), **AGENCY_CONFIG)
+        result = validate_expected_value(_submission(), **EXPECTED_VALUE_CONFIG)
         assert len(result) == 1
         assert result[0]["ruleCode"] == "AGENCY_CODE_MISSING"
 
     def test_skips_when_no_declaration_doc(self):
-        result = validate_agency_code(_submission(doc_type="Invoice"), **AGENCY_CONFIG)
+        result = validate_expected_value(_submission(doc_type="Invoice"), **EXPECTED_VALUE_CONFIG)
         assert result == []
 
     def test_fallback_to_top_level_field(self):
-        result = validate_agency_code(_submission(top_level_value="2"), **AGENCY_CONFIG)
+        result = validate_expected_value(_submission(top_level_value="2"), **EXPECTED_VALUE_CONFIG)
         assert result == []
 
     def test_configurable_agency_code(self):
         """Core Platform change: agency code is now a parameter."""
-        result = validate_agency_code(
+        result = validate_expected_value(
             _submission(agency_codes_in_line_items=["7"]),
-            agency_code="7",
+            expected_value="7",
             document_type="Declaration_Document",
             field_name="agency_code",
         )
         assert result == []
 
     def test_configurable_code_fails_with_wrong_code(self):
-        result = validate_agency_code(
+        result = validate_expected_value(
             _submission(agency_codes_in_line_items=["2"]),
-            agency_code="7",
+            expected_value="7",
             document_type="Declaration_Document",
             field_name="agency_code",
             mismatch_rule_code="AGENCY_CODE_MISMATCH",
@@ -77,9 +77,9 @@ class TestValidateAgencyCode:
             "lineItems": [],
         }]
 
-        result = validate_agency_code(
+        result = validate_expected_value(
             submission,
-            agency_code="XYZ",
+            expected_value="XYZ",
             document_type="Permit",
             field_name="authority_id",
             mismatch_rule_code="WRONG_AUTHORITY",

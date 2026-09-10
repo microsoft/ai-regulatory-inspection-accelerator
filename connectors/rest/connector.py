@@ -1,4 +1,4 @@
-"""Generic REST connector used by the ARIA hackathon demo."""
+"""Generic REST connector."""
 
 from __future__ import annotations
 

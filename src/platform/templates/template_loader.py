@@ -151,7 +151,7 @@ class TemplateLoader:
 
     Usage::
 
-        loader = TemplateLoader.for_template("food-safety")
+        loader = TemplateLoader.for_template("my-template")
         doc_type = loader.resolve_doc_type("50", fallback="Invoice")
         fields = loader.get_fields(doc_type)
         di_model = loader.get_di_model(doc_type)
