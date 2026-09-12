@@ -115,3 +115,17 @@ class TestValidateMinFields:
         }}]
         findings = validate_min_fields(self.RULE, submission, allowed_fields_by_doc=None)
         assert len(findings) == 1
+
+    def test_unmapped_document_schema_emits_review_warning(self):
+        submission = [{"document": "Invoice", "fields": {}}]
+
+        findings = validate_min_fields(
+            self.RULE,
+            submission,
+            allowed_fields_by_doc={"Other": ["company_name"]},
+        )
+
+        assert len(findings) == 1
+        assert findings[0]["ruleCode"] == "DOCUMENT_SCHEMA_UNMAPPED"
+        assert findings[0]["result"] == "WARN"
+        assert findings[0]["severity"] == "high"

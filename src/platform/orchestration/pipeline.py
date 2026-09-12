@@ -179,6 +179,8 @@ def run_pipeline(
             ),
             "reasoningFindings": reasoning_result.get("findings", []),
             "reasoningDocumentChecks": reasoning_result.get("documentChecks", []),
+            "templateId": payload.get("templateId"),
+            "evaluatedAt": context.current_utc_datetime.isoformat(),
         }
     )
 
@@ -192,8 +194,13 @@ def run_pipeline(
             "documentChecks": rules_policy_result.get("documentChecks", []),
             "errors": [],
             "recommendation": rules_policy_result["recommendation"],
+            "recommendationStatus": rules_policy_result.get("recommendationStatus"),
             "confidence": rules_policy_result["confidence"],
             "aiRiskLevel": rules_policy_result.get("aiRiskLevel"),
+            "compositeRiskScore": rules_policy_result.get("compositeRiskScore"),
+            "riskScore": rules_policy_result.get("riskScore"),
+            "riskEvaluation": rules_policy_result.get("riskEvaluation"),
+            "riskAssessment": rules_policy_result.get("riskAssessment"),
             "summary": rules_policy_result["summary"],
             "verdictId": rules_policy_result.get("verdictId"),
             "pipelineStartedAt": pipeline_started_at,

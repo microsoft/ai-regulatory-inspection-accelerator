@@ -728,6 +728,7 @@ async def run(
                     "lineItems": line_items,
                     "lowConfidenceFields": low_confidence,
                     "ocrConfidence": avg_confidence,
+                    "qualityCheck": quality_check_result.to_dict(),
                     "detectedLanguage": detected_language,
                     "normalization": normalization_log,
                     "ocrCrossValidation": ocr_xval_log if ocr_xval_log else None,

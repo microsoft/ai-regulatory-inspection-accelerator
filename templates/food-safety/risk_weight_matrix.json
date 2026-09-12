@@ -1,0 +1,25 @@
+{
+  "policy_version": "pafn-enhanced-risk-v1",
+  "quality": {
+    "threshold": 0.75,
+    "impact": 0.6
+  },
+  "extraction": {
+    "threshold": 0.85,
+    "impact": 0.45
+  },
+  "rule_weights": {
+    "MANDATORY_DOC_MISSING": 1.0,
+    "REJECTED_HS_CODE": 1.0,
+    "DEACTIVATED_HALAL_BODY": 1.0,
+    "CRITICAL_MISMATCH": 0.9,
+    "NON_FOOD_ITEM": 0.9,
+    "MIN_FIELDS_MISSING": 0.85,
+    "CERTIFICATE_EXPIRED": 0.8,
+    "DO_WEIGHT_MISMATCH": 0.75,
+    "MINOR_VARIANCE": 0.4
+  },
+  "rule_actions": {
+    "REJECTED_HS_CODE": "REJECT"
+  }
+}

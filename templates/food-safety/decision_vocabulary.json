@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "internal_to_public": {
+    "PASS": {
+      "recommendation": "ACCEPT",
+      "label": "Accept"
+    },
+    "HOLD": {
+      "recommendation": "ACCEPT_WITH_WARNING",
+      "label": "Accept with warnings"
+    },
+    "FAIL": {
+      "recommendation": "REJECT",
+      "label": "Reject"
+    }
+  }
+}

@@ -72,11 +72,34 @@ def validate_min_fields(
                 )
             required_by_doc[doc_name] = intersected
 
-    severity = rule.get("severity", "Warning")
     findings = []
+    unmapped_documents: set[str] = set()
+    if allowed_fields_by_doc is not None:
+        configured_documents = {_norm(name) for name in allowed_fields_by_doc}
+        for doc in submission:
+            doc_name = str(doc.get("document", ""))
+            normalized_name = _norm(doc_name)
+            if normalized_name in required_by_doc and normalized_name not in configured_documents:
+                findings.append({
+                    "ruleId": "MIN_FIELDS_RULES",
+                    "ruleCode": "DOCUMENT_SCHEMA_UNMAPPED",
+                    "documentName": doc_name,
+                    "result": "WARN",
+                    "severity": "high",
+                    "message": (
+                        f"{doc_name.replace('_', ' ')} has minimum-field rules but no "
+                        "field schema in the active template. Manual review is required."
+                    ),
+                })
+                unmapped_documents.add(normalized_name)
+
+    severity = rule.get("severity", "Warning")
     for doc in submission:
         doc_name = doc.get("document", "")
-        required_fields = required_by_doc.get(_norm(doc_name))
+        normalized_name = _norm(doc_name)
+        if normalized_name in unmapped_documents:
+            continue
+        required_fields = required_by_doc.get(normalized_name)
         if not required_fields:
             continue
 

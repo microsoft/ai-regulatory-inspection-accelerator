@@ -91,6 +91,11 @@ class TestSuccessPath:
             "recommendation": "PASS",
             "confidence": 0.9,
             "aiRiskLevel": "LOW",
+            "compositeRiskScore": 0.45,
+            "riskScore": 0.45,
+            "riskEvaluation": {"id": "REQ-1-risk"},
+            "riskAssessment": {"id": "REQ-1-risk"},
+            "recommendationStatus": "ELIGIBLE",
             "summary": "OK",
             "verdictId": "V-1",
         }
@@ -102,6 +107,11 @@ class TestSuccessPath:
         assert delivery_input["status"] == "COMPLETED"
         assert delivery_input["recommendation"] == "PASS"
         assert delivery_input["confidence"] == 0.9
+        assert delivery_input["compositeRiskScore"] == 0.45
+        assert delivery_input["riskScore"] == 0.45
+        assert delivery_input["riskEvaluation"] == {"id": "REQ-1-risk"}
+        assert delivery_input["riskAssessment"] == {"id": "REQ-1-risk"}
+        assert delivery_input["recommendationStatus"] == "ELIGIBLE"
         assert delivery_input["verdictId"] == "V-1"
         # Pre-validation warnings and policy findings are merged
         assert delivery_input["findings"] == [{"code": "DUP_WARN"}, {"ruleCode": "R1", "result": "PASS"}]

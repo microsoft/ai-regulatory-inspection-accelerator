@@ -89,8 +89,11 @@ class BaseConnector(ABC):
             aria_decision: ARIA-standard structured decision including:
                 - caseId: str
                 - verdict: str (domain vocabulary label)
+                - recommendationStatus: str (ELIGIBLE | REVIEW_REQUIRED)
                 - confidenceScore: float (0.0-1.0)
                 - riskGrade: str
+                - compositeRiskScore: float (0.0-1.0)
+                - riskEvaluation: dict (PII-safe calculation tree or reference)
                 - topFindings: list[dict]
                 - naturalLanguageSummary: str
                 - displayEvidenceChain: dict

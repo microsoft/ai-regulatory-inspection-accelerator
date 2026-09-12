@@ -10,6 +10,7 @@ caller handles delivery/storage.
 import logging
 
 from src.platform.policy.rule_executor import run_rules
+from src.platform.risk import assess_risk
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,8 @@ async def run(
     reasoning_document_checks: list[dict] | None = None,
     reasoning: dict | None = None,
     allowed_fields_by_doc: dict | None = None,
+    risk_config: dict | None = None,
+    evaluated_at: str | None = None,
     track_event=None,
 ) -> dict:
     """Run the rules & policy engine and return a verdict dict.
@@ -55,15 +58,7 @@ async def run(
     """
     request_id: str = payload["requestId"]
     findings: list[dict] = list(reasoning_findings or [])
-    verdict = "PASS"
-
-    for finding in findings:
-        if finding.get("result") in ("FAIL", "WARN"):
-            verdict = _escalate(verdict, "HOLD")
-
     document_checks = list(reasoning_document_checks or [])
-    if any(check.get("result") == "FAIL" for check in document_checks):
-        verdict = _escalate(verdict, "HOLD")
 
     logger.info(
         "Starting rules engine | requestId=%s | itemCount=%d | ruleDocs=%d",
@@ -98,20 +93,22 @@ async def run(
             "severity": "high",
             "message": f"Rules engine encountered an unexpected error: {exc}",
         })
-        verdict = _escalate(verdict, "HOLD")
 
     logger.info("Rule executor returned %d finding(s)", len(executor_findings))
 
     for f in executor_findings:
         findings.append(f)
-        if f.get("ruleCode") == "REJECTED_HS_CODE":
-            verdict = _escalate(verdict, "FAIL")
-        elif f.get("result") in ("FAIL", "WARN"):
-            verdict = _escalate(verdict, "HOLD")
-
     confidence = _compute_confidence(findings)
-    ai_risk_level = _compute_ai_risk_level(findings, confidence)
-    summary = _build_summary(verdict, findings)
+    risk_evaluation = assess_risk(
+        request_id,
+        findings,
+        extracted_fields,
+        config=risk_config,
+        evaluated_at=evaluated_at,
+    )
+    verdict = risk_evaluation["platformRecommendation"]
+    ai_risk_level = risk_evaluation["aiRiskLevel"]
+    summary = _build_summary(verdict, findings, risk_evaluation)
     verdict_id = f"{request_id}-verdict"
 
     fail_count = sum(1 for f in findings if f.get("result") == "FAIL")
@@ -135,13 +132,23 @@ async def run(
                 "failCount": str(fail_count),
                 "warnCount": str(warn_count),
             },
-            measurements={"confidence": confidence},
+            measurements={
+                "confidence": confidence,
+                "riskScore": risk_evaluation["compositeRiskScore"],
+            },
         )
 
     return {
         "recommendation": verdict,
+        "publicRecommendation": risk_evaluation["recommendation"],
+        "recommendationLabel": risk_evaluation["recommendationLabel"],
+        "recommendationStatus": "ELIGIBLE",
         "confidence": confidence,
         "aiRiskLevel": ai_risk_level,
+        "compositeRiskScore": risk_evaluation["compositeRiskScore"],
+        "riskScore": risk_evaluation["compositeRiskScore"],
+        "riskEvaluation": risk_evaluation,
+        "riskAssessment": risk_evaluation,
         "summary": summary,
         "findings": findings,
         "documentChecks": document_checks,
@@ -170,21 +177,7 @@ def _compute_confidence(findings: list[dict]) -> float:
     return round(deterministic / len(findings), 4)
 
 
-def _compute_ai_risk_level(findings: list[dict], confidence: float) -> str:
-    has_fail = any(f.get("result") == "FAIL" for f in findings)
-    has_warn = any(f.get("result") == "WARN" for f in findings)
-    if has_fail:
-        return "High"
-    if has_warn:
-        return "Medium"
-    if confidence <= 0.4:
-        return "High"
-    if confidence <= 0.7:
-        return "Medium"
-    return "Low"
-
-
-def _build_summary(verdict: str, findings: list[dict]) -> str:
+def _build_summary(verdict: str, findings: list[dict], risk_evaluation: dict) -> str:
     fail_count = sum(1 for f in findings if f.get("result") == "FAIL")
     warn_count = sum(1 for f in findings if f.get("result") == "WARN")
     if verdict == "PASS":
