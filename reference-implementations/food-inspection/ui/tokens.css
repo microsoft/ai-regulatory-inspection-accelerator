@@ -105,6 +105,32 @@ h1 { margin-bottom: 5px; font-size: 28px; color: var(--ink); } h2 { margin-botto
 
 .analytics-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; }
 .panel { min-width: 0; padding: 20px; background: white; border-radius: 8px; border: 1px solid var(--line); box-shadow: var(--shadow); }
+
+/* ARIA Efficiency Proof Banner */
+.efficiency-banner { margin-bottom: 14px; background: linear-gradient(135deg, #06231b 0%, #0d3d30 100%) !important; color: white !important; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 22px 26px; }
+.efficiency-banner-content h2 { color: white !important; font: 800 20px "Manrope"; margin: 6px 0 8px; display: flex; align-items: center; gap: 10px; }
+.efficiency-banner-content h2 span { font-size: 13px; font-weight: 500; color: #a7f3d0; }
+.efficiency-badge-tag { display: inline-block; padding: 3px 8px; background: rgba(250, 204, 21, 0.2); border: 1px solid #facc15; color: #fef08a; font-size: 10px; font-weight: 800; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.efficiency-banner-content p { color: #cbd5e1 !important; font-size: 12px; max-width: 900px; line-height: 1.5; margin-bottom: 16px; }
+.efficiency-banner-content p strong { color: #34d399 !important; }
+
+/* Performance Governance Section */
+.perf-explainer { margin-top: 14px; background: #faf5ff; border-left: 4px solid #8b5cf6; }
+.perf-badge { padding: 4px 10px; background: #f3e8ff; color: #6b21a8; font-size: 10px; font-weight: 800; border-radius: 12px; text-transform: uppercase; }
+.perf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+.perf-card { padding: 14px 16px; border: 1px solid #e9d5ff; border-radius: 6px; background: white; }
+.perf-step { display: inline-block; padding: 2px 7px; background: #f3e8ff; color: #7e22ce; font-size: 9px; font-weight: 800; border-radius: 4px; text-transform: uppercase; margin-bottom: 6px; }
+.perf-card h3 { font: 700 13px "Manrope", sans-serif; margin: 0 0 6px 0; color: #581c87; }
+.perf-card p { font-size: 10px; color: var(--muted); line-height: 1.5; margin: 0; }
+
+/* Production Scale Roadmap Section */
+.production-roadmap { margin-top: 14px; background: #f0f9ff; border-left: 4px solid #0284c7; }
+.prod-badge { padding: 4px 10px; background: #e0f2fe; color: #0369a1; font-size: 10px; font-weight: 800; border-radius: 12px; text-transform: uppercase; }
+.roadmap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+.roadmap-item { padding: 14px; border: 1px solid #bae6fd; border-radius: 6px; background: white; }
+.roadmap-tag { display: inline-block; padding: 2px 6px; background: #e0f2fe; color: #0369a1; font-size: 9px; font-weight: 700; border-radius: 3px; margin-bottom: 6px; }
+.roadmap-item h4 { font: 700 12px "Manrope"; margin: 0 0 6px; color: #0c4a6e; }
+.roadmap-item p { font-size: 10px; color: var(--muted); margin: 0; line-height: 1.45; }
 .usage-panel { grid-column: span 2; }
 .activity-panel { grid-column: span 1; }
 .model-panel { grid-column: span 1; }

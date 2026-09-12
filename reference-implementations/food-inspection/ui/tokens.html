@@ -35,7 +35,6 @@
         <p>Persisted Cosmos DB telemetry & usage attribution across cases, activities, and models.</p>
       </div>
       <div class="filters" aria-label="Dashboard filters">
-        <a href="https://ai.azure.com/resource/deployments/%2Fsubscriptions%2F40f8a183-12f2-4c39-8f9c-821d0b6716c6%2FresourceGroups%2Frg-aria-infra%2Fproviders%2FMicrosoft.CognitiveServices%2Faccounts%2Foai-aria-infra%2Fdeployments%2Faria-text-mini?wsid=/subscriptions/40f8a183-12f2-4c39-8f9c-821d0b6716c6/resourceGroups/rg-aria-infra/providers/Microsoft.CognitiveServices/accounts/oai-aria-infra&tid=39f2d6ee-e025-4721-835f-effde1aa499d" target="_blank" class="azure-metrics-btn">⚡ Live Azure OpenAI Metrics</a>
         <label>Preset
           <select id="periodFilter">
             <option value="7" selected>Last 7 days</option>
@@ -87,7 +86,7 @@
       <article class="kpi cost-savings">
         <span>Net Cost Savings</span>
         <strong id="costSaved">$0.0000</strong>
-        <small id="costSavingsPct">0% vs unoptimized GPT-4.1</small>
+        <small id="costSavingsPct">0% vs unoptimized GPT-4o</small>
       </article>
 
       <article class="kpi accent">
@@ -102,10 +101,10 @@
       <div class="efficiency-banner-content">
         <div class="efficiency-badge-tag">🏆 ARIA TOKENOMICS EFFICIENCY PROOF</div>
         <h2>How Efficient Is ARIA? <span>(Savings vs. Naive LLM Implementations)</span></h2>
-        <p>Unoptimized multi-agent document checkers route all OCR & extraction requests to full <strong>GPT-4.1 ($2.50/1M tokens)</strong> without prefix caching. ARIA's <strong>hybrid mini-routing (aria-text-mini @ $0.15/1M)</strong> + <strong>prompt caching</strong> reduces execution cost by <strong id="bannerSavingsPct">~94.2%</strong>.</p>
+        <p>Unoptimized multi-agent document checkers route all OCR & extraction requests to full <strong>GPT-4o ($2.50/1M tokens)</strong> without prefix caching. ARIA's <strong>hybrid mini-routing (aria-text-mini @ $0.15/1M)</strong> + <strong>prompt caching</strong> reduces execution cost by <strong id="bannerSavingsPct">~80.1%</strong>.</p>
         <div class="efficiency-comparison-bar">
           <div class="cmp-box baseline">
-            <span>Naive GPT-4.1 Baseline</span>
+            <span>Naive GPT-4o Baseline</span>
             <strong id="baselineCost">$0.0000</strong>
             <small>No caching · Full model tier</small>
           </div>
@@ -118,7 +117,7 @@
           <div class="cmp-box saved">
             <span>Net Money Saved</span>
             <strong id="ariaMoneySaved">$0.0000</strong>
-            <small id="ariaPctSaved">94.2% Cost Reduction</small>
+            <small id="ariaPctSaved">80.1% Cost Reduction</small>
           </div>
         </div>
       </div>
@@ -137,24 +136,62 @@
       <small>Cached tokens are still measured for traceability, but the dashboard estimates their cost separately from uncached input tokens.</small>
     </section>
 
-    <section class="panel vision-explainer">
+    <section class="panel perf-explainer">
       <div class="panel-title">
         <div>
-          <span class="eyebrow">Multimodal Architecture Decision</span>
-          <h2>Why AI Vision vs Deterministic Python Libraries (PyPDF2, pdfplumber, Tesseract)?</h2>
+          <span class="eyebrow">Cost & Accuracy Governance</span>
+          <h2>How ARIA Guarantees High Accuracy While Remaining Cost-Efficient</h2>
         </div>
-        <span class="vision-badge">Hybrid Fallback Strategy</span>
+        <span class="perf-badge">Dynamic Confidence Validation</span>
       </div>
-      <div class="vision-grid">
-        <div class="vision-card python-lib">
-          <h3>🐍 Deterministic Python Libraries (PyPDF / pdfplumber)</h3>
-          <p><strong>Best for:</strong> $0 token cost, ultra-fast text extraction from native digital PDFs.</p>
-          <p><strong>Critical Blind Spots:</strong> Fail completely on scanned/photocopied documents, physical seals/stamps (Halal, Health Authority stamps), handwritten signatures/dates, or complex multi-column table layouts where raw text streams scramble columns.</p>
+      <div class="perf-grid">
+        <div class="perf-card">
+          <div class="perf-step">Step 1</div>
+          <h3>⚡ Micro-Tier First (`aria-text-mini`)</h3>
+          <p>Extracts fields using high-throughput, low-latency micro models ($0.15/1M). Computes a visual & structural confidence score for every extracted field.</p>
         </div>
-        <div class="vision-card ai-vision">
-          <h3>👁️ AI Vision (Multimodal GPT-4o / Azure DI)</h3>
-          <p><strong>Best for:</strong> Understanding visual seals, handwritten text, complex layout geometry, Arabic/RTL visual alignment, and stamped certifications.</p>
-          <p><strong>Cost Protection in ARIA:</strong> ARIA uses a <strong>hybrid fallback architecture</strong>. Digital text is processed via <code>aria-text-mini</code> ($0.15/1M tokens). Vision models (<code>aria-vision</code>) are invoked <strong>only when OCR confidence is &lt;80% or visual stamp verification is explicitly required</strong>.</p>
+        <div class="perf-card">
+          <div class="perf-step">Step 2</div>
+          <h3>🎯 Dynamic Fallback to Vision (`aria-vision`)</h3>
+          <p>If any field's extraction confidence falls below <strong>80%</strong>, ARIA automatically escalates that specific document section to multimodal <code>aria-vision</code> (GPT-4o).</p>
+        </div>
+        <div class="perf-card">
+          <div class="perf-step">Step 3</div>
+          <h3>🛡️ 100% Deterministic Policy Validation</h3>
+          <p>Extracted values undergo strict code-level rule evaluation (unit normalization, alias mapping, authority lists) to ensure <strong>zero hallucinated risk verdicts</strong>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Production Scale & React Architecture Roadmap -->
+    <section class="panel production-roadmap">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">Production Scaling Roadmap (Phase 2)</span>
+          <h2>Enterprise Micro-Frontend Architecture & React Telemetry Engine</h2>
+        </div>
+        <span class="prod-badge">Target Scale: 10,000+ Cases/Day</span>
+      </div>
+      <div class="roadmap-grid">
+        <div class="roadmap-item">
+          <div class="roadmap-tag">React + TypeScript</div>
+          <h4>Micro-Frontend Shell</h4>
+          <p>Modular UI components for Inspector Workbench, Case Reviewer, and Governance Dashboard built with React 19 & Tailwind CSS.</p>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-tag">WebSockets / SignalR</div>
+          <h4>Real-Time Telemetry Streaming</h4>
+          <p>Live push of token events, prompt cache hits, and execution stage updates direct from Durable Function instances.</p>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-tag">Cosmos DB Change Feed</div>
+          <h4>Automated AI Search Indexing</h4>
+          <p>Background indexing of verified cases into Azure AI Search vector store for instant historical case RAG retrieval.</p>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-tag">Pytest / Benchmark Framework</div>
+          <h4>Continuous Eval Suite</h4>
+          <p>Automated accuracy benchmarking against 500+ gold-standard test cases on every model deployment release.</p>
         </div>
       </div>
     </section>
