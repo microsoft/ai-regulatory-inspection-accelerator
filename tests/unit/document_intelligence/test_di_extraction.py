@@ -140,7 +140,7 @@ class TestBuildMetadataExtractionPrompt:
 
     def test_prompt_is_domain_neutral(self, loader):
         prompt = _build_metadata_extraction_prompt("Invoice", loader).lower()
-        assert all(term not in prompt for term in ("food-safety", "pafn", "kuwait", "raqeb", "bayan"))
+        assert all(term not in prompt for term in ("food-safety", "customer-domain", "kuwait", "raqeb", "bayan"))
 
     def test_prompt_targets_verified_bilingual_behavior(self, loader):
         prompt = _build_metadata_extraction_prompt("Invoice", loader).lower()

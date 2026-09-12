@@ -1,6 +1,6 @@
-"""PAFN reference 0-100 risk scoring policy.
+"""Reference 0-100 risk scoring policy.
 
-This module preserves the PAFN reference model separately from ARIA's
+This module preserves the configurable reference model separately from ARIA's
 normalized 0.00-1.00 platform scorer. It is deterministic and policy-driven.
 """
 
@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from fnmatch import fnmatchcase
 from typing import Any
 
-DEFAULT_PAFN_POLICY = {
+DEFAULT_REFERENCE_POLICY = {
     "id": "RISK_SCORING_THRESHOLDS",
     "version": "1.0",
     "qualityScoreThreshold": 0.75,
@@ -40,7 +40,7 @@ DEFAULT_RULE_RISK_POLICY = {
 
 
 @dataclass(frozen=True)
-class PafnRiskPolicy:
+class ReferenceRiskPolicy:
     thresholds: dict[str, Any]
     rule_scores: dict[str, Any]
 
@@ -94,7 +94,7 @@ def _band(score: int, thresholds: dict) -> str:
     raise ValueError("riskBands must include a band with minimum 0")
 
 
-def assess_pafn_risk(
+def assess_reference_risk(
     request_id: str,
     documents: list[dict],
     findings: list[dict],
@@ -103,8 +103,8 @@ def assess_pafn_risk(
     rule_scores: dict | None = None,
     evaluated_at: str | None = None,
 ) -> dict:
-    """Calculate the PAFN reference document, item, rule, and case scores."""
-    threshold_policy = deepcopy(DEFAULT_PAFN_POLICY)
+    """Calculate reference document, item, rule, and case scores."""
+    threshold_policy = deepcopy(DEFAULT_REFERENCE_POLICY)
     threshold_policy.update(thresholds or {})
     rule_policy = deepcopy(DEFAULT_RULE_RISK_POLICY)
     rule_policy.update(rule_scores or {})

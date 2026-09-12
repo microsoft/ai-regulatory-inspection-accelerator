@@ -267,7 +267,7 @@ class TestFoodSafetyTemplate:
     def test_risk_configuration_is_template_owned(self):
         risk_config = self._get_loader().get_risk_config()
 
-        assert risk_config["policy_version"] == "pafn-enhanced-risk-v1"
+        assert risk_config["policy_version"] == "enhanced-risk-v1"
         assert risk_config["quality"] == {"threshold": 0.75, "impact": 0.6}
         assert risk_config["extraction"] == {"threshold": 0.85, "impact": 0.45}
         assert risk_config["rule_weights"]["REJECTED_HS_CODE"] == 1.0

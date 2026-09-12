@@ -10,7 +10,7 @@ ms.topic: reference
 This document preserves the PAFN reference policy that informed ARIA. It is
 not a platform default. ARIA uses a normalized 0.00-1.00 model; the PAFN
 compatibility implementation is available in
-`src/platform/policy/pafn_risk_assessment.py`.
+`src/platform/policy/reference_risk_assessment.py`.
 
 ## Threshold policy
 

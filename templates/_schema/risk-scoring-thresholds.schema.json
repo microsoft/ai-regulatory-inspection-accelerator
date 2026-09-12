@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "PAFN-compatible risk scoring thresholds",
+  "title": "Reference risk scoring thresholds",
   "type": "object",
   "required": ["id", "version", "qualityScoreThreshold", "fieldConfidenceThreshold", "riskBands"],
   "properties": {

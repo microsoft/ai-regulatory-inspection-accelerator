@@ -1,10 +1,10 @@
-"""Tests for the PAFN-compatible 0-100 risk model."""
+"""Tests for the configurable reference 0-100 risk model."""
 
-from src.platform.policy.pafn_risk_assessment import assess_pafn_risk
+from src.platform.policy.reference_risk_assessment import assess_reference_risk
 
 
-def test_pafn_scores_document_item_rule_and_case_maxima():
-    result = assess_pafn_risk(
+def test_reference_scores_document_item_rule_and_case_maxima():
+    result = assess_reference_risk(
         "CASE-100",
         [{
             "documentId": "doc-1",
@@ -29,7 +29,7 @@ def test_pafn_scores_document_item_rule_and_case_maxima():
 
 
 def test_explicit_reject_rule_overrides_score_based_warning():
-    result = assess_pafn_risk(
+    result = assess_reference_risk(
         "CASE-REJECT",
         [],
         [{"ruleCode": "REJECTED_HS_CODE", "result": "FAIL"}],
@@ -40,7 +40,7 @@ def test_explicit_reject_rule_overrides_score_based_warning():
 
 
 def test_low_quality_requires_manual_review_without_rejection():
-    result = assess_pafn_risk(
+    result = assess_reference_risk(
         "CASE-QUALITY",
         [{"documentId": "doc-1", "qualityScore": 0.50, "fields": {}}],
         [],

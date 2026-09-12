@@ -1,5 +1,5 @@
 {
-  "policy_version": "pafn-enhanced-risk-v1",
+  "policy_version": "enhanced-risk-v1",
   "quality": {
     "threshold": 0.75,
     "impact": 0.6

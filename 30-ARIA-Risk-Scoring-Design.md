@@ -7,10 +7,8 @@ ms.topic: concept
 
 ## Status and scope
 
-ARIA provides a domain-neutral normalized risk model. This document ports the
-PAFN scoring lessons into ARIA without embedding PAFN vocabulary in platform
-code. Templates own thresholds, rule scores, actions, bands, and public
-recommendations.
+ARIA provides a domain-neutral normalized risk model. Templates own
+thresholds, rule scores, actions, bands, and public recommendations.
 
 The canonical ARIA score is `0.00` to `1.00`:
 
@@ -83,11 +81,11 @@ An override requires actor identity, field, old value, new value, rationale,
 and authorization. It appends an immutable event and never changes the
 computed score or policy snapshot.
 
-## PAFN compatibility model
+## Reference 0-100 model
 
-The PAFN reference model is implemented separately in
-`src/platform/policy/pafn_risk_assessment.py`. It retains the exact 0-100
-reference semantics:
+The configurable reference model is implemented separately in
+`src/platform/policy/reference_risk_assessment.py`. It retains the exact
+0-100 reference semantics:
 
 ```text
 DocumentConfidenceScore = 100 * PassedFieldCount / PopulatedFieldCount
@@ -98,7 +96,7 @@ OverallRuleRiskScore = maximum violated non-item rule score
 CaseRiskScore = maximum(MaxDocumentRiskScore, OverallItemRiskScore, OverallRuleRiskScore)
 ```
 
-PAFN rule actions are explicit. An explicit `REJECT` rule returns `REJECT`;
+Rule actions are explicit. An explicit `REJECT` rule returns `REJECT`;
 otherwise a score of 40 or greater returns `ACCEPT_WITH_WARNING`, and zero
 returns `ACCEPT`. This compatibility scorer is deterministic and does not
 replace ARIA's normalized platform score.
