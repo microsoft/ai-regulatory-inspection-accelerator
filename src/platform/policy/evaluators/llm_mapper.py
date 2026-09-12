@@ -5,49 +5,13 @@ All content (country maps, document name map) is domain-neutral algorithm data.
 """
 
 import re as _re
+from collections.abc import Mapping
 
 import pycountry
 
-_ARABIC_COUNTRY_MAP: dict[str, str] = {
-    "الإمارات": "AE",
-    "الإمارات العربية المتحدة": "AE",
-    "امارات": "AE",
-    "السعودية": "SA",
-    "المملكة العربية السعودية": "SA",
-    "الكويت": "KW",
-    "البحرين": "BH",
-    "عمان": "OM",
-    "قطر": "QA",
-    "العراق": "IQ",
-    "مصر": "EG",
-    "الأردن": "JO",
-    "لبنان": "LB",
-    "سوريا": "SY",
-    "اليمن": "YE",
-    "تركيا": "TR",
-    "الهند": "IN",
-    "الصين": "CN",
-    "برازيل": "BR",
-    "ألمانيا": "DE",
-    "فرنسا": "FR",
-    "إيطاليا": "IT",
-    "أستراليا": "AU",
-    "باكستان": "PK",
-    "إيران": "IR",
-    "تايلاند": "TH",
-    "أمريكا": "US",
-}
 
-_ENGLISH_ALIAS_MAP: dict[str, str] = {
-    "UAE": "AE",
-    "KSA": "SA",
-    "USA": "US",
-    "UK": "GB",
-}
-
-
-def normalize_country(value: str) -> str:
-    """Resolve a country value to a canonical ISO alpha-2 code."""
+def normalize_country(value: str, aliases: Mapping[str, str] | None = None) -> str:
+    """Resolve a country value to ISO alpha-2 using injected aliases."""
     if not value:
         return value
     stripped = value.strip()
@@ -59,10 +23,16 @@ def normalize_country(value: str) -> str:
     )
     if country:
         return country.alpha_2
-    if upper in _ENGLISH_ALIAS_MAP:
-        return _ENGLISH_ALIAS_MAP[upper]
-    for arabic_name, code in _ARABIC_COUNTRY_MAP.items():
-        if arabic_name in stripped:
+    configured_aliases = {
+        str(alias).strip().casefold(): str(code).strip().upper()
+        for alias, code in (aliases or {}).items()
+        if str(alias).strip() and str(code).strip()
+    }
+    alias_code = configured_aliases.get(stripped.casefold())
+    if alias_code:
+        return alias_code
+    for alias, code in configured_aliases.items():
+        if alias in stripped.casefold():
             return code
     tokens = _re.split(r"[\s\-,/]+", stripped)
     for token in tokens:
@@ -75,8 +45,9 @@ def normalize_country(value: str) -> str:
         )
         if c:
             return c.alpha_2
-        if tok_upper in _ENGLISH_ALIAS_MAP:
-            return _ENGLISH_ALIAS_MAP[tok_upper]
+        token_alias = configured_aliases.get(tok_upper.casefold())
+        if token_alias:
+            return token_alias
     try:
         results = pycountry.countries.search_fuzzy(stripped)
         if results:

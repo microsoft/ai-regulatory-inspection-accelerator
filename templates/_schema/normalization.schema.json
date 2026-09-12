@@ -27,6 +27,7 @@
         "unwrap_bracket_fields": {"$ref": "#/definitions/stringArray"},
         "country_fields": {"$ref": "#/definitions/stringArray"},
         "known_countries": {"$ref": "#/definitions/stringArray"},
+        "country_aliases": {"$ref": "#/definitions/stringMap"},
         "currency_codes": {"$ref": "#/definitions/stringArray"},
         "currency_field": {"type": "string"},
         "currency_source_fields": {"$ref": "#/definitions/stringArray"},
@@ -58,6 +59,10 @@
       "type": "array",
       "items": {"type": "string"},
       "uniqueItems": true
+    },
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
     }
   }
 }

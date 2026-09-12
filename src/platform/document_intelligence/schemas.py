@@ -82,3 +82,12 @@ class ExtractedMetadata(BaseModel):
     line_items: list[LineItem] = Field(default_factory=list)
     signature_detected: bool = False
     language: str = ""
+
+
+def dump_metadata(model: ExtractedMetadata) -> dict:
+    """Serialize extracted metadata while preserving legacy key ordering."""
+    data = model.model_dump(exclude_none=True)
+    trailing_keys = ("tables_extracted", "key_value_pairs")
+    trailing = {key: data.pop(key) for key in trailing_keys if key in data}
+    data.update(trailing)
+    return data
