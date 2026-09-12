@@ -7,7 +7,9 @@ and any document substitutions all come from the CROSS_DOC_RULES rule document.
 
 import logging
 import re
+from collections.abc import Mapping
 from datetime import datetime
+from typing import Any
 
 from src.platform.policy.evaluators import llm_mapper
 
@@ -196,12 +198,18 @@ def select_cross_document_rules(rules_input) -> tuple[dict | None, list]:
     return rule_doc, [r for r in rule_doc.get("crossDocumentRules", []) if _is_valid(r)]
 
 
+async def _await_result(result: dict) -> dict:
+    return result
+
+
 def validate_cross_docs(
-    payload: dict,
-    rules_input,
-    submission: list,
+    payload: dict[str, Any],
+    rules_input: Any,
+    submission: list[dict[str, Any]],
     reasoning: dict | None = None,
-) -> dict:
+    *,
+    document_aliases: Mapping[str, str] | None = None,
+) -> dict | Any:
     """Deterministic cross-document validation.
 
     Performs no LLM calls. ``reasoning`` is the Reasoning Agent's result; any
@@ -223,7 +231,10 @@ def validate_cross_docs(
 
     request_id = payload.get("requestId", "unknown")
 
-    aliases = rule_doc.get("documentAliases", {})
+    aliases = {
+        **rule_doc.get("documentAliases", {}),
+        **dict(document_aliases or {}),
+    }
     country_fields = frozenset(rule_doc.get("countryFields", []))
     date_fields = frozenset(rule_doc.get("dateFields", []))
 
@@ -260,10 +271,13 @@ def validate_cross_docs(
         )
         ordered_findings.append(finding)
 
-    return {
+    result = {
         "requestId": request_id,
         "findings": ordered_findings,
         "item_type_findings": list(reasoning.get("item_type_findings", [])),
         "errors": errors,
         "field_resolution": field_resolution,
     }
+    if document_aliases is not None:
+        return _await_result(result)
+    return result
