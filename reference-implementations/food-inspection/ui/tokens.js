@@ -594,6 +594,28 @@ $("#modalCloseBtn").addEventListener("click", () => {
   $("#caseModal").hidden = true;
 });
 
+// Floating Insights Toolbar & Modals Handler
+document.querySelectorAll(".insight-tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.getAttribute("data-target");
+    const modal = document.getElementById(targetId);
+    if (modal) modal.hidden = false;
+  });
+});
+
+document.querySelectorAll(".insight-modal-close").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const modal = btn.closest(".insight-modal");
+    if (modal) modal.hidden = true;
+  });
+});
+
+document.querySelectorAll(".insight-modal").forEach(modal => {
+  modal.addEventListener("click", event => {
+    if (event.target === modal) modal.hidden = true;
+  });
+});
+
 if ($("#btnDailyGranular")) {
   $("#btnDailyGranular").addEventListener("click", () => {
     state.chartMode = "daily";

@@ -259,42 +259,6 @@
       <div id="heatmapGrid" class="heatmap-grid"></div>
     </section>
 
-    <section class="panel tips-panel">
-      <div class="panel-title">
-        <div>
-          <span class="eyebrow">Cost reduction guide</span>
-          <h2>Token optimization & saving strategies</h2>
-        </div>
-        <span class="savings-badge">Up to 94% cost reduction</span>
-      </div>
-      <div class="tips-grid">
-        <article class="tip-card">
-          <div class="tip-icon">⚡</div>
-          <h3>Mini model tier routing</h3>
-          <p>Route 95% of standard document text extractions to <strong>aria-text-mini</strong> ($0.15/1M tokens) instead of full gpt-4.1 ($2.50/1M). Fall back to vision models only when visual OCR confidence is &lt;80%.</p>
-          <div class="tip-impact"><strong>94% savings</strong> on text extraction</div>
-        </article>
-        <article class="tip-card">
-          <div class="tip-icon">🔄</div>
-          <h3>Prefix prompt caching</h3>
-          <p>Structure static system instructions, field schemas, and inspection policy rules at the very front of the prompt. Providers auto-cache prefixes &gt;1024 tokens for a 50% input discount.</p>
-          <div class="tip-impact"><strong>50% discount</strong> on input prefix</div>
-        </article>
-        <article class="tip-card">
-          <div class="tip-icon">🎯</div>
-          <h3>Strict JSON schema responses</h3>
-          <p>Use JSON response format mode to eliminate conversational preamble, reasoning text, and verbose markdown, cutting completion token overhead drastically.</p>
-          <div class="tip-impact"><strong>65% reduction</strong> in output tokens</div>
-        </article>
-        <article class="tip-card">
-          <div class="tip-icon">📦</div>
-          <h3>Document hash deduplication</h3>
-          <p>Compute SHA-256 hashes of incoming document pages before submission. Identical pages across multi-page evidence bundles are skipped, preventing duplicate extraction calls.</p>
-          <div class="tip-impact"><strong>100% bypass</strong> on duplicate pages</div>
-        </article>
-      </div>
-    </section>
-
     <section class="panel cases-panel">
       <div class="panel-title">
         <div><span class="eyebrow">Traceable spend & per-case breakdown</span><h2>Case token usage</h2></div>
@@ -322,6 +286,135 @@
         </div>
       </div>
     </section>
+
+    <!-- Floating Insights Toolbar & Modals at Bottom -->
+    <div class="insights-floating-bar">
+      <span class="insights-bar-label">Architecture & Tokenomics Insights:</span>
+      <button class="insight-tab-btn" data-target="modalCaching" type="button">🔄 Prompt Caching</button>
+      <button class="insight-tab-btn" data-target="modalAccuracy" type="button">🎯 Accuracy Governance</button>
+      <button class="insight-tab-btn" data-target="modalRoadmap" type="button">🚀 Production Scaling</button>
+      <button class="insight-tab-btn" data-target="modalTips" type="button">💡 Token Saving Strategies</button>
+    </div>
+
+    <!-- Modal 1: Caching Explainer -->
+    <div id="modalCaching" class="modal-backdrop insight-modal" hidden>
+      <div class="modal-content">
+        <div class="modal-header">
+          <div><span class="eyebrow">How Caching Works</span><h2>Why Cached Tokens Save Money</h2></div>
+          <button class="modal-close insight-modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="wiki-links" style="margin-bottom:14px">
+            <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/pafn-di-poc/wiki/Architecture.md" target="_blank" class="wiki-btn">📖 How Caching Works in ARIA (Wiki)</a>
+            <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
+          </div>
+          <p>ARIA keeps the stable instruction prefix, template vocabulary, and policy context reusable. The model reuses that prefix across calls instead of processing identical input tokens again.</p>
+          <div class="cache-flow"><span>Stable template context</span><b>→</b><span>Provider prefix cache</span><b>→</b><span>Only new evidence costs input tokens</span></div>
+          <small style="display:block;margin-top:12px;color:var(--muted)">Cached tokens are still measured for traceability, but the dashboard estimates their cost separately from uncached input tokens.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Cost & Accuracy Governance -->
+    <div id="modalAccuracy" class="modal-backdrop insight-modal" hidden>
+      <div class="modal-content">
+        <div class="modal-header">
+          <div><span class="eyebrow">Cost & Accuracy Governance</span><h2>How ARIA Guarantees High Accuracy While Remaining Cost-Efficient</h2></div>
+          <button class="modal-close insight-modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="perf-grid">
+            <div class="perf-card">
+              <div class="perf-step">Step 1</div>
+              <h3>⚡ Micro-Tier First (`aria-text-mini`)</h3>
+              <p>Extracts fields using high-throughput, low-latency micro models ($0.15/1M). Computes a visual & structural confidence score for every extracted field.</p>
+            </div>
+            <div class="perf-card">
+              <div class="perf-step">Step 2</div>
+              <h3>🎯 Dynamic Fallback to Vision (`aria-vision`)</h3>
+              <p>If any field's extraction confidence falls below <strong>80%</strong>, ARIA automatically escalates that specific document section to multimodal <code>aria-vision</code> (GPT-4o).</p>
+            </div>
+            <div class="perf-card">
+              <div class="perf-step">Step 3</div>
+              <h3>🛡️ 100% Deterministic Policy Validation</h3>
+              <p>Extracted values undergo strict code-level rule evaluation (unit normalization, alias mapping, authority lists) to ensure <strong>zero hallucinated risk verdicts</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 3: Production Scaling Roadmap (Phase 2) -->
+    <div id="modalRoadmap" class="modal-backdrop insight-modal" hidden>
+      <div class="modal-content">
+        <div class="modal-header">
+          <div><span class="eyebrow">Production Scaling Roadmap (Phase 2)</span><h2>Enterprise Micro-Frontend Architecture & React Telemetry Engine</h2></div>
+          <button class="modal-close insight-modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="roadmap-grid">
+            <div class="roadmap-item">
+              <div class="roadmap-tag">React + TypeScript</div>
+              <h4>Micro-Frontend Shell</h4>
+              <p>Modular UI components for Inspector Workbench, Case Reviewer, and Governance Dashboard built with React 19 & Tailwind CSS.</p>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-tag">WebSockets / SignalR</div>
+              <h4>Real-Time Telemetry Streaming</h4>
+              <p>Live push of token events, prompt cache hits, and execution stage updates direct from Durable Function instances.</p>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-tag">Cosmos DB Change Feed</div>
+              <h4>Automated AI Search Indexing</h4>
+              <p>Background indexing of verified cases into Azure AI Search vector store for instant historical case RAG retrieval.</p>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-tag">Pytest / Benchmark Framework</div>
+              <h4>Continuous Eval Suite</h4>
+              <p>Automated accuracy benchmarking against 500+ gold-standard test cases on every model deployment release.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 4: Token Optimization & Saving Strategies -->
+    <div id="modalTips" class="modal-backdrop insight-modal" hidden>
+      <div class="modal-content">
+        <div class="modal-header">
+          <div><span class="eyebrow">Cost Reduction Guide</span><h2>Token Optimization & Saving Strategies</h2></div>
+          <button class="modal-close insight-modal-close" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tips-grid">
+            <article class="tip-card">
+              <div class="tip-icon">⚡</div>
+              <h3>Mini model tier routing</h3>
+              <p>Route 95% of standard document text extractions to <strong>aria-text-mini</strong> ($0.15/1M tokens) instead of full gpt-4o ($2.50/1M). Fall back to vision models only when visual OCR confidence is &lt;80%.</p>
+              <div class="tip-impact"><strong>94% savings</strong> on text extraction</div>
+            </article>
+            <article class="tip-card">
+              <div class="tip-icon">🔄</div>
+              <h3>Prefix prompt caching</h3>
+              <p>Structure static system instructions, field schemas, and inspection policy rules at the very front of the prompt. Providers auto-cache prefixes &gt;1024 tokens for a 50% input discount.</p>
+              <div class="tip-impact"><strong>50% discount</strong> on input prefix</div>
+            </article>
+            <article class="tip-card">
+              <div class="tip-icon">🎯</div>
+              <h3>Strict JSON schema responses</h3>
+              <p>Use JSON response format mode to eliminate conversational preamble, reasoning text, and verbose markdown, cutting completion token overhead drastically.</p>
+              <div class="tip-impact"><strong>65% reduction</strong> in output tokens</div>
+            </article>
+            <article class="tip-card">
+              <div class="tip-icon">📦</div>
+              <h3>Document hash deduplication</h3>
+              <p>Compute SHA-256 hashes of incoming document pages before submission. Identical pages across multi-page evidence bundles are skipped, preventing duplicate extraction calls.</p>
+              <div class="tip-impact"><strong>100% bypass</strong> on duplicate pages</div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <footer><span>Cosmos DB persistent telemetry metadata</span><span>No prompts · No responses · No document content</span></footer>
   </main>
