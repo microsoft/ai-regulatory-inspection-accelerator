@@ -11,9 +11,10 @@ The current Azure-hosted browser demo is:
 
 <https://stariainfra.z13.web.core.windows.net/>
 
-It is a browser-local demonstration. It does not send uploaded sample files to
-Azure. The public configuration points at the deployed ARIA APIM gateway for
-future backend mode:
+It is a browser-local synthetic demonstration. The scenario fields, cross-
+document outcomes, and recommendation are deterministic demo data in the
+browser. It does not send sample files to Azure. The public configuration
+points at the deployed ARIA APIM gateway for future backend mode:
 
 * APIM base: `https://apim-aria-infra.azure-api.net`
 * Inspection API: `POST https://apim-aria-infra.azure-api.net/inspections`
