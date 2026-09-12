@@ -9,8 +9,8 @@ The banned list deliberately excludes generic business words such as "invoice",
 false-positive class.
 """
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import pytest
 

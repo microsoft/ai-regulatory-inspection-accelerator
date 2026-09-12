@@ -18,7 +18,7 @@ def build_decision(delivery_input: dict, vocabulary: dict) -> dict:
     internal = str(delivery_input.get("recommendation") or "HOLD")
     mapped = vocabulary.get(internal)
     if not isinstance(mapped, dict):
-        raise ValueError(f"Decision vocabulary does not define '{internal}'.")
+        raise TypeError(f"Decision vocabulary does not define '{internal}'.")
     risk_evaluation = delivery_input.get("riskEvaluation") or delivery_input.get(
         "riskAssessment", {}
     )

@@ -96,8 +96,7 @@ async def run(
 
     logger.info("Rule executor returned %d finding(s)", len(executor_findings))
 
-    for f in executor_findings:
-        findings.append(f)
+    findings.extend(executor_findings)
     confidence = _compute_confidence(findings)
     risk_evaluation = assess_risk(
         request_id,

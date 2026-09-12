@@ -183,7 +183,7 @@ tests/                        Unit and future integration tests
 | [Local Development Setup](docs/LocalDevelopmentSetup.md) | Check current local development readiness |
 | [Transparency FAQ](TRANSPARENCY_FAQ.md) | Review responsible AI considerations |
 | [ARIA Risk Scoring Design](30-ARIA-Risk-Scoring-Design.md) | Review normalized scoring, persistence, review, and override behavior |
-| [PAFN Risk Scoring Reference](docs/reference/Pafn-Risk-Scoring-Design.md) | Review the compatible 0-100 reference policy |
+| [Reference 0-100 Risk Scoring](docs/reference/Reference-Risk-Scoring-Design.md) | Review the compatible 0-100 reference policy |
 | [Contributing](CONTRIBUTING.md) | Contribute code, templates, tests, or documentation |
 
 ---
