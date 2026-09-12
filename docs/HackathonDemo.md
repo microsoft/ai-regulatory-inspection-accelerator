@@ -41,3 +41,17 @@ inspection walkthrough.
 
 The hackathon demo uses deterministic browser-local sample data. Azure backend
 integration remains an optional authenticated deployment path.
+
+## Vision strategy
+
+AI vision is not the default path for ordinary printed documents. ARIA uses a
+hybrid strategy:
+
+* Python preprocessing and deterministic quality checks run first.
+* Azure Document Intelligence handles OCR and layout for printed evidence.
+* Template-driven extraction and normalization fill structured fields.
+* Vision is reserved for handwritten, mixed-script, low-quality, or ambiguous
+	evidence where OCR confidence is insufficient.
+
+This keeps the common path cheaper and more reproducible while preserving a
+fallback for evidence that conventional OCR cannot read reliably.
