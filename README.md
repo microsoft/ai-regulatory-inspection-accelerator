@@ -6,6 +6,8 @@ Use ARIA when a decision depends on **several documents that must agree**, not w
 
 > **Incubation status:** ARIA is under active implementation. The browser demo, architecture, orchestration, intake validation, document normalization, quality decision logic, and token tracking are available. Azure deployment automation and the complete end-to-end Core Platform are not yet ready.
 
+The post-hackathon production work is tracked in the [Phase 2 Backlog](docs/Phase2-Backlog.md). The demo is intentionally a deterministic browser walkthrough; Phase 2 covers labelled-case calibration, durable Azure integrations, reviewer operations, connector expansion, and deployment hardening.
+
 <div align="center">
 
 [**TRY THE DEMO**](#try-the-demo) | [**SOLUTION OVERVIEW**](#solution-overview) | [**BUSINESS USE CASE**](#business-use-case) | [**WHERE ARIA DELIVERS VALUE**](#where-aria-delivers-value) | [**ADOPTION PATH**](#adoption-path)
@@ -181,6 +183,7 @@ tests/                        Unit and future integration tests
 | [Customize an Industry Template](docs/CustomizeIndustryTemplate.md) | Define evidence types, fields, rules, and decisions for a new domain |
 | [Deployment Guide](docs/DeploymentGuide.md) | Check deployment readiness and planned Azure setup |
 | [Local Development Setup](docs/LocalDevelopmentSetup.md) | Check current local development readiness |
+| [Phase 2 Backlog](docs/Phase2-Backlog.md) | Track post-hackathon production implementation and exit evidence |
 | [Transparency FAQ](TRANSPARENCY_FAQ.md) | Review responsible AI considerations |
 | [ARIA Risk Scoring Design](30-ARIA-Risk-Scoring-Design.md) | Review normalized scoring, persistence, review, and override behavior |
 | [Reference 0-100 Risk Scoring](docs/reference/Reference-Risk-Scoring-Design.md) | Review the compatible 0-100 reference policy |
