@@ -1,4 +1,4 @@
-"""Minimal OOXML-to-Markdown normalization for the hackathon demo path."""
+"""Minimal OOXML-to-Markdown normalization."""
 
 from __future__ import annotations
 

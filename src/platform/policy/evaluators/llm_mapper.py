@@ -1,76 +1,17 @@
 """
 Pure data helpers for the Rules Engine.
 
-Ported from PAFN's rules_engine/llm_mapper.py.
-Changes from PAFN: removed shared.telemetry dependency.
 All content (country maps, document name map) is domain-neutral algorithm data.
 """
 
 import re as _re
+from collections.abc import Mapping
 
 import pycountry
 
-_ARABIC_COUNTRY_MAP: dict[str, str] = {
-    "الإمارات": "AE",
-    "الإمارات العربية المتحدة": "AE",
-    "امارات": "AE",
-    "السعودية": "SA",
-    "المملكة العربية السعودية": "SA",
-    "الكويت": "KW",
-    "البحرين": "BH",
-    "عمان": "OM",
-    "قطر": "QA",
-    "العراق": "IQ",
-    "مصر": "EG",
-    "الأردن": "JO",
-    "لبنان": "LB",
-    "سوريا": "SY",
-    "اليمن": "YE",
-    "تركيا": "TR",
-    "الهند": "IN",
-    "الصين": "CN",
-    "برازيل": "BR",
-    "ألمانيا": "DE",
-    "فرنسا": "FR",
-    "إيطاليا": "IT",
-    "أستراليا": "AU",
-    "باكستان": "PK",
-    "إيران": "IR",
-    "تايلاند": "TH",
-    "أمريكا": "US",
-}
 
-_ENGLISH_ALIAS_MAP: dict[str, str] = {
-    "UAE": "AE",
-    "KSA": "SA",
-    "USA": "US",
-    "UK": "GB",
-}
-
-DOCUMENT_NAME_MAP = {
-    "HouseBill": "House_Bill",
-    "DeliveryOrders": "Delivery_Orders",
-    "PackingList": "Packing_List",
-    "StretchingList": "Stretching_List",
-    "Invoice": "Invoice",
-    "CertificateOfOrigin": "Certificate_Of_Origin",
-    "IssuingCountryOfOriginCertificate": "Issuing_Country_Of_Origin_Certificate",
-    "HealthCertificateFromCountryOfOrigin": "Health_Certificate_from_Country_of_Origin",
-    "HealthLicense": "Health_License",
-    "HalalSlaughterCertificate": "Halal_Slaughter_Certificate",
-    "StatisticalDeclarationGCC": "Statistical_Declaration",
-    "GCCDeclaration": "GCC_Declaration",
-    "CommercialLicense": "Commercial_License",
-    "ImportLicense": "Import_License",
-    "SignatureAuthorization": "Signature_Authorization",
-    "FishImportLicense": "Fish_Import_License",
-    "ShrimpImportLicense": "Shrimp_Import_License",
-    "ZubaidiImportLicense": "Zubaidi_Import_License",
-}
-
-
-def normalize_country(value: str) -> str:
-    """Resolve a country value to a canonical ISO alpha-2 code."""
+def normalize_country(value: str, aliases: Mapping[str, str] | None = None) -> str:
+    """Resolve a country value to ISO alpha-2 using injected aliases."""
     if not value:
         return value
     stripped = value.strip()
@@ -82,10 +23,16 @@ def normalize_country(value: str) -> str:
     )
     if country:
         return country.alpha_2
-    if upper in _ENGLISH_ALIAS_MAP:
-        return _ENGLISH_ALIAS_MAP[upper]
-    for arabic_name, code in _ARABIC_COUNTRY_MAP.items():
-        if arabic_name in stripped:
+    configured_aliases = {
+        str(alias).strip().casefold(): str(code).strip().upper()
+        for alias, code in (aliases or {}).items()
+        if str(alias).strip() and str(code).strip()
+    }
+    alias_code = configured_aliases.get(stripped.casefold())
+    if alias_code:
+        return alias_code
+    for alias, code in configured_aliases.items():
+        if alias in stripped.casefold():
             return code
     tokens = _re.split(r"[\s\-,/]+", stripped)
     for token in tokens:
@@ -98,8 +45,9 @@ def normalize_country(value: str) -> str:
         )
         if c:
             return c.alpha_2
-        if tok_upper in _ENGLISH_ALIAS_MAP:
-            return _ENGLISH_ALIAS_MAP[tok_upper]
+        token_alias = configured_aliases.get(tok_upper.casefold())
+        if token_alias:
+            return token_alias
     try:
         results = pycountry.countries.search_fuzzy(stripped)
         if results:
@@ -109,11 +57,15 @@ def normalize_country(value: str) -> str:
     return stripped.lower()
 
 
-def resolve_document_name(rule_doc_name) -> str:
-    """Map a rule-side document name (PascalCase) to its submission-side equivalent."""
+def resolve_document_name(rule_doc_name, aliases: dict | None = None) -> str:
+    """Map a rule-side document name to its submission-side equivalent.
+
+    ``aliases`` comes from the active template's ``doc_type_aliases``; without it
+    the name is returned unchanged.
+    """
     if not isinstance(rule_doc_name, str):
         return str(rule_doc_name)
-    return DOCUMENT_NAME_MAP.get(rule_doc_name, rule_doc_name)
+    return (aliases or {}).get(rule_doc_name, rule_doc_name)
 
 
 def build_doc_field_index(submission: list, min_confidence: float = 0.0) -> dict:
@@ -151,29 +103,3 @@ def get_field_value(
     if rule_field in doc_fields:
         return doc_fields[rule_field]
     return None
-
-
-def build_comparison_tasks(cross_doc_rules: list, doc_field_index: dict, field_resolution: dict) -> list:
-    """Build a list of comparison tasks for fuzzy/semantic LLM checks."""
-    tasks = []
-    for rule in cross_doc_rules:
-        if rule.get("comparisonType") not in ("fuzzyMatch", "semanticMatch"):
-            continue
-        doc_values = {}
-        for rule_doc_name in rule.get("documents", []):
-            sub_doc_name = resolve_document_name(rule_doc_name)
-            fields = doc_field_index.get(sub_doc_name, {})
-            value = get_field_value(fields, rule["field"], field_resolution, sub_doc_name)
-            if value:
-                doc_values[sub_doc_name] = value
-        if len(doc_values) >= 2:
-            tasks.append({
-                "ruleId": rule["ruleId"],
-                "field": rule["field"],
-                "comparisonType": rule["comparisonType"],
-                "threshold": rule.get("threshold", 0.85),
-                "severity": rule.get("severity", "Warning"),
-                "description": rule.get("description", ""),
-                "docValues": doc_values,
-            })
-    return tasks

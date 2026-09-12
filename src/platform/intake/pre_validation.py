@@ -9,13 +9,11 @@ cost to it. On failure, the orchestrator (see
 src/platform/orchestration/pipeline.py) short-circuits straight to the
 Delivery Agent with status "PRE_VALIDATION_FAILED".
 
-Ported from PAFN's activities/pre_validation.py, generalized:
-  - Removed PAFN/Kuwait Customs-specific Bayan number parsing and the
-    Individual/Commercial request-type classification derived from it
-    (business content, not reusable platform logic — Bayan numbers are a
-    Kuwait Customs artifact). Submission classification is a
-    template-specific concern; a template that needs it can layer its own
-    check on top of this module's result.
+Generalized from a domain-specific intake validator:
+  - Removed case-identifier parsing and the request-type classification derived
+    from it (business content, not reusable platform logic). Submission
+    classification is a template-specific concern; a template that needs it can
+    layer its own check on top of this module's result.
   - Removed direct Azure Blob Storage / Cosmos DB SDK calls (`get_blob_client`,
     `upsert_case_status`, `persist_inbound_request`). Core Platform has no
     dependency on a specific storage backend. Storage-backed checks (blob
@@ -27,8 +25,8 @@ Ported from PAFN's activities/pre_validation.py, generalized:
   - Removed the hardcoded RAW_UPLOADS_CONTAINER env var (storage location is
     a connector/deployment concern).
   - Mandatory-document-set validation is intentionally NOT performed here —
-    in the reference PAFN implementation this is the Policy Agent's job
-    (config-driven `requiredWhen` rules), not pre-validation's.
+    it is the Policy Agent's job (config-driven `requiredWhen` rules), not
+    pre-validation's.
 
 Checks performed by this module (all pure / metadata-only — no I/O, no
 external service dependency, fully deterministic):

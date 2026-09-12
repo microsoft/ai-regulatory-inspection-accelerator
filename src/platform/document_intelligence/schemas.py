@@ -4,10 +4,9 @@ Core Platform — Document Intelligence — Schemas
 
 Pydantic models shared across the DI extraction pipeline.
 
-Ported unchanged from PAFN's ``models/schemas.py``.  The ``LineItem`` and
-``ExtractedMetadata`` models use ``extra='allow'`` so that different document
-types can define their own field sets in ``evidence_types.json`` without
-requiring code changes to the model layer.
+The ``LineItem`` and ``ExtractedMetadata`` models use ``extra='allow'`` so that
+different document types can define their own field sets in
+``evidence_types.json`` without requiring code changes to the model layer.
 """
 
 from __future__ import annotations
@@ -85,16 +84,10 @@ class ExtractedMetadata(BaseModel):
     language: str = ""
 
 
-# ---------------------------------------------------------------------------
-# Serialization helpers
-# ---------------------------------------------------------------------------
-
-_TRAILING_KEYS = ("tables_extracted", "key_value_pairs")
-
-
 def dump_metadata(model: ExtractedMetadata) -> dict:
-    """Serialize to dict with ``exclude_none=True``, trailing structural keys."""
-    d = model.model_dump(exclude_none=True)
-    trailing = {k: d.pop(k) for k in _TRAILING_KEYS if k in d}
-    d.update(trailing)
-    return d
+    """Serialize extracted metadata while preserving legacy key ordering."""
+    data = model.model_dump(exclude_none=True)
+    trailing_keys = ("tables_extracted", "key_value_pairs")
+    trailing = {key: data.pop(key) for key in trailing_keys if key in data}
+    data.update(trailing)
+    return data

@@ -18,19 +18,15 @@ current_utc_datetime). This keeps the orchestration sequencing logic:
     business-rule content (see ADR-022: Agent and Stage orchestration
     architecture).
 
-Ported from PAFN's function_app.py::inspector_orchestrator with the
-sequencing/branching/retry logic unchanged. Generalized: extracted from the
-Azure Functions @app.orchestration_trigger decorator into a plain generator
-function; removed the PAFN/Raqeb-specific "PFNAI-01 callback" framing from
-comments/telemetry (the actual delivery mechanism is connector-specific -
-see connectors/sdk/base_connector.py - the orchestrator itself never
-constructs or sends a callback, it only invokes the Delivery Agent activity).
+The actual delivery mechanism is connector-specific - see
+connectors/sdk/base_connector.py - the orchestrator itself never constructs or
+sends a callback, it only invokes the Delivery Agent activity.
 """
 
 from collections.abc import Callable, Generator
 from typing import Any
 
-# Default Durable Functions activity names for the five pipeline agents.
+# Default Durable Functions activity names for the pipeline agents.
 # A reference implementation's function_app.py registers its activities
 # under these names by default; override via `activity_names` if a
 # deployment needs different Durable Functions activity names.
@@ -39,6 +35,7 @@ DEFAULT_ACTIVITY_NAMES: dict[str, str] = {
     "di_extraction": "di_extraction_activity",
     "reasoning": "reasoning_activity",
     "rules_policy": "rules_policy_activity",
+    "risk_persistence": "risk_persistence_activity",
     "delivery": "delivery_activity",
 }
 
@@ -183,7 +180,19 @@ def run_pipeline(
             ),
             "reasoningFindings": reasoning_result.get("findings", []),
             "reasoningDocumentChecks": reasoning_result.get("documentChecks", []),
+            "templateId": payload.get("templateId"),
+            "evaluatedAt": context.current_utc_datetime.isoformat(),
         }
+    )
+
+    # Persist the canonical risk evaluation before any completed decision is delivered.
+    yield context.call_activity_with_retry(
+        names["risk_persistence"], retry_policy,
+        {
+            "payload": payload,
+            "riskEvaluation": rules_policy_result.get("riskEvaluation"),
+            "findings": rules_policy_result.get("findings", []),
+        },
     )
 
     # ── Delivery Agent ─────────────────────────────────────────────────────
@@ -196,8 +205,13 @@ def run_pipeline(
             "documentChecks": rules_policy_result.get("documentChecks", []),
             "errors": [],
             "recommendation": rules_policy_result["recommendation"],
+            "recommendationStatus": rules_policy_result.get("recommendationStatus"),
             "confidence": rules_policy_result["confidence"],
             "aiRiskLevel": rules_policy_result.get("aiRiskLevel"),
+            "compositeRiskScore": rules_policy_result.get("compositeRiskScore"),
+            "riskScore": rules_policy_result.get("riskScore"),
+            "riskEvaluation": rules_policy_result.get("riskEvaluation"),
+            "riskAssessment": rules_policy_result.get("riskAssessment"),
             "summary": rules_policy_result["summary"],
             "verdictId": rules_policy_result.get("verdictId"),
             "pipelineStartedAt": pipeline_started_at,

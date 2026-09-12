@@ -1,6 +1,49 @@
 {
   "schemaVersion": "1.0",
   "templateId": "food-safety",
+  "field_vocabulary": {
+    "document_aliases": {
+      "HouseBill": "House_Bill",
+      "DeliveryOrders": "Delivery_Orders",
+      "PackingList": "Packing_List",
+      "StretchingList": "Stretching_List",
+      "CertificateOfOrigin": "Certificate_Of_Origin",
+      "IssuingCountryOfOriginCertificate": "Issuing_Country_Of_Origin_Certificate",
+      "HealthCertificateFromCountryOfOrigin": "Health_Certificate_from_Country_of_Origin",
+      "HealthLicense": "Health_License",
+      "HalalSlaughterCertificate": "Halal_Slaughter_Certificate",
+      "StatisticalDeclarationGCC": "Statistical_Declaration",
+      "GCCDeclaration": "GCC_Declaration",
+      "CommercialLicense": "Commercial_License",
+      "ImportLicense": "Import_License",
+      "SignatureAuthorization": "Signature_Authorization",
+      "FishImportLicense": "Fish_Import_License",
+      "ShrimpImportLicense": "Shrimp_Import_License",
+      "ZubaidiImportLicense": "Zubaidi_Import_License"
+    },
+    "field_aliases": {
+      "importerName": ["importer_name", "consignee_name", "company_name", "buyer_name"],
+      "exporterName": ["exporter_name", "shipper_name", "seller_name", "supplier"],
+      "invoiceNumber": ["invoice_number", "invoice_no", "ref_number", "document_number"],
+      "netWeight": ["net_weight", "weight", "nett_weight", "total_net_weight", "total_weight"],
+      "grossWeight": ["gross_weight", "total_weight", "totalWeight"],
+      "blNumber": ["bl_number", "bill_of_lading", "b_l_number", "lading_number"],
+      "hsCode": ["hs_code", "tariff_code", "commodity_code"],
+      "countryOfOrigin": ["country_of_origin", "origin_country"],
+      "itemDescription": ["item_description", "goods_description", "product_description"],
+      "invoiceDate": ["invoice_date", "document_date", "date"],
+      "portOfLoading": ["port_of_loading", "loading_port"],
+      "portOfDischarge": ["port_of_discharge", "discharge_port"],
+      "quantity": ["qty", "number_of_packages", "package_count"],
+      "packaging": ["package_type", "pack_type", "unit_type"],
+      "expiryDate": ["expiry_date", "expire_date", "valid_until"]
+    },
+    "item_description_fields": [
+      "item_description",
+      "product_description",
+      "goods_description"
+    ]
+  },
   "prompts": {
     "metadata_extraction": "You are an Arabic and English bilingual document extraction expert with command of Modern Standard Arabic, dialectal wording, Arabizi, and code-switching. The known document type is {{document_type}}. Extract only these canonical fields: {{fields}}. Preserve source-language values, use ISO-8601 dates when clear, never invent missing values, and lower the confidence for unclear text. {{document_notes}} {{line_item_guidance}} Return one JSON object with tables_extracted, key_value_pairs, line_items, signature_detected, and language. Each key_value_pair must include key, value, confidence, and canonical_field. Return JSON only.",
     "semantic_field_mapping": "You map multilingual source keys to a supplied list of canonical target fields. Map only when meaning clearly aligns, return null when uncertain, use each target at most once, and never invent fields. Return one JSON object named mappings and no other text.",
@@ -8,6 +51,9 @@
     "quality_assessment": "Assess whether the supplied document image is readable enough for OCR. Consider blur, lighting, contrast, resolution, skew, perspective, crop, obstruction, handwriting, table readability, artifacts, and merged pages. Return one JSON object with passed, quality_score from 0.0 to 1.0, issues, and recommendation. Return JSON only.",
     "vision_extraction": "You are a bilingual Arabic and English document extraction expert reading an image directly. The known document type is {{document_type}}. Extract only these canonical fields: {{fields}}. Preserve source-language values, never invent unreadable values, and assign confidence from 0.0 to 1.0. Return one JSON object with tables_extracted, key_value_pairs, line_items, signature_detected, and language. Return JSON only.",
     "hybrid_extraction": "You are a bilingual Arabic and English document extraction expert. The known document type is {{document_type}} and the target fields are {{fields}}. Use OCR structure first, then use the image to recover handwriting or correct clearly garbled OCR. Preserve source-language values and never invent values. Return one JSON object with tables_extracted, key_value_pairs, line_items, signature_detected, and language. Return JSON only.",
-    "ocr_cross_validation": "Compare extracted field values with OCR text from the same document. Correct assignments only when the OCR structure or labels provide clear evidence. Preserve source-language values, never invent values, and omit unchanged fields. Return one JSON object named corrections and no other text."
+    "ocr_cross_validation": "Compare extracted field values with OCR text from the same document. Correct assignments only when the OCR structure or labels provide clear evidence. Preserve source-language values, never invent values, and omit unchanged fields. Return one JSON object named corrections and no other text.",
+    "cross_document_field_resolution": "You are a semantic field resolver. For each <semantic field>__IN__<document> key, select the best matching field from the supplied candidate list. Use the template vocabulary supplied in the user payload. Return null when meaning is uncertain. Never return a field outside the candidate list. Return only a JSON object with the same composite keys.",
+    "cross_document_comparison": "Evaluate every supplied cross-document comparison task and return exactly one finding per task. For fuzzyMatch, allow transliteration, abbreviations, punctuation, and legal-entity suffix variation. For semanticMatch, determine whether descriptions refer to the same item. Use FAIL only for clear differences, WARN for material ambiguity, PASS for alignment, and NOT_APPLICABLE when evidence is insufficient. Use only supplied values. Return a JSON object named findings containing ruleId, result, confidence, explanation, evidence, and affectedDocs.",
+    "item_type_comparison": "Evaluate whether each declared item type is semantically compatible with its supplied document description. Return exactly one finding per task using PASS, FAIL, WARN, or NOT_APPLICABLE. Use only supplied values and return a JSON object named findings containing ruleId, itemCode, result, confidence, and explanation."
   }
 }

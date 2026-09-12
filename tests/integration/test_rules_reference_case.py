@@ -69,7 +69,7 @@ def food_safety_rules() -> list:
 def reference_payload() -> dict:
     return {
         "requestId": "REFERENCE-CHICKEN-001",
-        "bayanNumber": "TIM/1234/SHU25",
+        "caseReference": "TIM/1234/SHU25",
         "items": [
             {
                 "itemCode": "CHICKEN-001",
@@ -149,24 +149,24 @@ class TestRulesJsonLoads:
     def test_all_required_rule_ids_present(self, food_safety_rules):
         rule_ids = {r["id"] for r in food_safety_rules}
         expected = {
-            "AGENCY_CODE_RULES",
+            "EXPECTED_VALUE_RULES",
             "MANDATORY_DOC_RULES",
             "MIN_FIELDS_RULES",
-            "REJECTED_HS_CODES",
-            "PAFN_HS_CODES",
+            "DENIED_CODES",
+            "FOOD_SAFETY_HS_CODES",
             "HALAL_HS_CODES",
             "FISH_HS_CODES",
             "SHRIMP_HS_CODES",
             "SIGNATURE_STAMP_RULES",
             "CROSS_DOC_RULES",
-            "LOGICAL_RULES",
+            "TEMPORAL_RULES",
         }
         missing = expected - rule_ids
         assert not missing, f"Missing rule IDs in rules.json: {missing}"
 
-    def test_agency_code_rules_has_agency_code(self, food_safety_rules):
-        rule = next(r for r in food_safety_rules if r["id"] == "AGENCY_CODE_RULES")
-        assert rule["agencyCode"] == "2"
+    def test_expected_value_rule_has_expected_value(self, food_safety_rules):
+        rule = next(r for r in food_safety_rules if r["id"] == "EXPECTED_VALUE_RULES")
+        assert rule["expectedValue"] == "2"
 
 
 class TestReferenceCase:
@@ -175,7 +175,7 @@ class TestReferenceCase:
     Expected deterministic findings:
     - AGENCY_CODE_MISSING: Declaration_Document has no agency_code field (empty fields)
     - MANDATORY_DOC_MISSING: Many mandatory docs are missing from the 5-doc submission
-    - HS code 1602.90.10.00.00 should be in PAFN codes (chapter 16) → no PAFN rejection
+    - HS code 1602.90.10.00.00 should be in the in-scope codes (chapter 16) → no jurisdiction rejection
     - No REJECTED_HS_CODE for chapter 16
     - FOOD_NOT_EXPIRED: items have future expiry dates → should PASS or WARN (no FAIL)
     """
@@ -185,7 +185,7 @@ class TestReferenceCase:
         findings = _run_rules_sync(food_safety_rules, reference_payload, submission)
         assert isinstance(findings, list)
 
-    def test_complete_finding_projection_matches_pafn_baseline(
+    def test_complete_finding_projection_matches_baseline(
         self, food_safety_rules, reference_payload
     ):
         findings = _run_rules_sync(
@@ -221,12 +221,12 @@ class TestReferenceCase:
         rejected = [f for f in findings if f.get("ruleCode") == "REJECTED_HS_CODE"]
         assert rejected == [], f"Unexpected REJECTED_HS_CODE findings: {rejected}"
 
-    def test_chicken_hs_code_is_valid_pafn_code(self, food_safety_rules, reference_payload):
-        """HS code 1602.x should match PAFN chapter 16 prefix → no NON_PAFN_HS_CODE."""
+    def test_chicken_hs_code_is_within_jurisdiction(self, food_safety_rules, reference_payload):
+        """HS code 1602.x should match the in-scope chapter 16 prefix → no NON_FOOD_SAFETY_HS_CODE."""
         submission = _minimal_submission(reference_payload)
         findings = _run_rules_sync(food_safety_rules, reference_payload, submission)
-        non_pafn = [f for f in findings if f.get("ruleCode") == "NON_PAFN_HS_CODE"]
-        assert non_pafn == [], f"Unexpected NON_PAFN_HS_CODE findings: {non_pafn}"
+        out_of_scope = [f for f in findings if f.get("ruleCode") == "NON_FOOD_SAFETY_HS_CODE"]
+        assert out_of_scope == [], f"Unexpected NON_FOOD_SAFETY_HS_CODE findings: {out_of_scope}"
 
     def test_food_items_have_future_expiry_dates(self, food_safety_rules, reference_payload):
         """Reference payload has future expiry dates → FOOD_NOT_EXPIRED should not FAIL."""
@@ -308,5 +308,5 @@ class TestReferenceCase:
         assert context.calls[-1][1]["recommendation"] == policy_result["recommendation"]
         assert all(
             domain_name not in " ".join(DEFAULT_ACTIVITY_NAMES.values()).lower()
-            for domain_name in ("food", "pafn", "halal", "customs")
+            for domain_name in ("food", "halal", "customs")
         )

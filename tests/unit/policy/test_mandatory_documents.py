@@ -3,7 +3,7 @@
 from typing import ClassVar
 
 from src.platform.policy.evaluators.mandatory_documents import (
-    _get_hs_prefixes,
+    _code_prefixes,
     _norm,
     validate_mandatory_docs,
 )
@@ -17,16 +17,20 @@ class TestNorm:
         assert _norm("House Bill") == _norm("House_Bill")
 
 
-class TestGetHsPrefixes:
-    RULES: ClassVar[list] = [{"id": "HALAL_HS_CODES", "hsCodes": ["0201", "0202.10.00"]}]
+class TestCodePrefixes:
+    RULES: ClassVar[list] = [{"id": "HALAL_HS_CODES", "codes": ["0201", "0202.10.00"]}]
+    LEGACY_RULES: ClassVar[list] = [{"id": "HALAL_HS_CODES", "hsCodes": ["0201"]}]
 
     def test_returns_normalized(self):
-        prefixes = _get_hs_prefixes(self.RULES, "HALAL_HS_CODES")
+        prefixes = _code_prefixes(self.RULES, "HALAL_HS_CODES")
         assert "0201" in prefixes
         assert "02021" in prefixes
 
     def test_missing_rule_returns_empty_tuple(self):
-        assert _get_hs_prefixes(self.RULES, "NONEXISTENT") == ()
+        assert _code_prefixes(self.RULES, "NONEXISTENT") == ()
+
+    def test_legacy_hs_codes_key_still_read(self):
+        assert "0201" in _code_prefixes(self.LEGACY_RULES, "HALAL_HS_CODES")
 
 
 class TestValidateMandatoryDocs:
@@ -37,8 +41,8 @@ class TestValidateMandatoryDocs:
             {"documentType": "Certificate_Of_Origin", "documentTypeId": "51"},
         ],
         "conditionalDocuments": [],
-        "personalShipment": {
-            "declarationPrefixes": ["TDR"],
+        "conditionalProfile": {
+            "identifierPrefixes": ["TDR"],
             "requiredDocuments": [
                 {"documentType": "Declaration_Document", "documentTypeId": "42"},
                 {"documentType": "Other_Documents", "documentTypeId": "43"},
@@ -52,10 +56,10 @@ class TestValidateMandatoryDocs:
             rules.extend(extra)
         return rules
 
-    def _payload(self, doc_ids, items=None, bayan="TIM/1234/SHU25"):
+    def _payload(self, doc_ids, items=None, case_reference="TIM/1234/SHU25"):
         return {
             "requestId": "REQ-001",
-            "bayanNumber": bayan,
+            "caseReference": case_reference,
             "documents": [{"documentTypeId": did, "documentType": f"Type_{did}"} for did in doc_ids],
             "items": items or [],
         }
@@ -74,8 +78,8 @@ class TestValidateMandatoryDocs:
         missing = [f for f in findings if f["ruleCode"] == "MANDATORY_DOC_MISSING"]
         assert len(missing) == 1
 
-    def test_personal_tdr(self):
-        payload = self._payload(["42", "43"], bayan="TDR/5678/KWI26")
+    def test_conditional_profile_applies_on_prefix_match(self):
+        payload = self._payload(["42", "43"], case_reference="TDR/5678/KWI26")
         findings, _ = validate_mandatory_docs(self._rules(), payload, self._submission(["Declaration_Document", "Other_Documents"]))
         assert not any(f["ruleCode"] == "MANDATORY_DOC_MISSING" for f in findings)
 
@@ -105,7 +109,7 @@ class TestValidateMandatoryDocs:
 
     def test_name_normalization(self):
         payload = {
-            "requestId": "R1", "bayanNumber": "T/1/S",
+            "requestId": "R1", "caseReference": "T/1/S",
             "documents": [{"documentTypeId": "50", "documentType": "Invoice"}, {"documentTypeId": "51", "documentType": "Certificate_Of_Origin"}],
             "items": [],
         }
@@ -117,35 +121,58 @@ class TestValidateMandatoryDocs:
         doc_names = [d["document"] for d in norm_sub]
         assert "Invoice" in doc_names
 
-    def test_halal_conditional_required_when_hs_matches(self):
+    def test_conditional_doc_required_when_code_matches(self):
         rules = [
             {
                 "id": "MANDATORY_DOC_RULES",
                 "mandatoryDocuments": [],
+                "codeAttribute": "hsCode",
                 "conditionalDocuments": [{"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"}],
                 "conditionalRequirements": [
-                    {"documentType": "Halal_Slaughter_Certificate", "hsCodeRuleId": "HALAL_HS_CODES"}
+                    {"documentType": "Halal_Slaughter_Certificate", "codeRuleId": "HALAL_HS_CODES"}
                 ],
             },
-            {"id": "HALAL_HS_CODES", "hsCodes": ["0202"]},
+            {"id": "HALAL_HS_CODES", "codes": ["0202"]},
         ]
         payload = {
-            "requestId": "R1", "bayanNumber": "T/1/S",
+            "requestId": "R1", "caseReference": "T/1/S",
             "documents": [{"documentTypeId": "50", "documentType": "Invoice"}],
             "items": [{"hsCode": "0202.10.00", "countryOfOrigin": "AE"}],
         }
         findings, _ = validate_mandatory_docs(rules, payload, [{"documentTypeId": "50", "document": "Invoice", "fields": {}}])
         assert any(f["documentType"] == "Halal_Slaughter_Certificate" for f in findings if f["ruleCode"] == "MANDATORY_DOC_MISSING")
 
-    def test_origin_country_trigger_is_template_driven(self):
+    def test_code_trigger_works_with_neutral_attribute_names(self):
+        rules = [
+            {
+                "id": "MANDATORY_DOC_RULES",
+                "mandatoryDocuments": [],
+                "codeAttribute": "diagnosisCode",
+                "conditionalDocuments": [{"documentType": "Specialist_Report", "documentTypeId": "77"}],
+                "conditionalRequirements": [
+                    {"documentType": "Specialist_Report", "codeRuleId": "REFERRAL_CODES"}
+                ],
+            },
+            {"id": "REFERRAL_CODES", "codes": ["M54"]},
+        ]
+        payload = {
+            "requestId": "R1", "caseReference": "C/1",
+            "documents": [{"documentTypeId": "50", "documentType": "Invoice"}],
+            "items": [{"diagnosisCode": "M54.5"}],
+        }
+        findings, _ = validate_mandatory_docs(rules, payload, [{"documentTypeId": "50", "document": "Invoice", "fields": {}}])
+        assert any(f["documentType"] == "Specialist_Report" for f in findings)
+
+    def test_region_trigger_is_template_driven(self):
         rule = {
             "id": "MANDATORY_DOC_RULES",
             "mandatoryDocuments": [],
+            "regionAttribute": "countryOfOrigin",
             "conditionalDocuments": [
                 {"documentType": "Regional_Declaration", "documentTypeId": "90"}
             ],
             "conditionalRequirements": [
-                {"documentType": "Regional_Declaration", "originCountries": ["NZ"]}
+                {"documentType": "Regional_Declaration", "regions": ["NZ"]}
             ],
         }
         payload = self._payload(

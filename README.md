@@ -20,11 +20,11 @@ Use ARIA when a decision depends on **several documents that must agree**, not w
 
 No Azure subscription or package installation is required. Clone or download the repository, then:
 
-1. Open the [Inspection Workbench](reference-implementations/pafn-food-inspection/ui/index.html).
+1. Open the [Inspection Workbench](reference-implementations/food-inspection/ui/index.html).
 2. Select **Load sample case**.
 3. Select **Run inspection**.
 4. Review the recommendation, findings, document comparison, and decision trace.
-5. Open [Token Analytics](reference-implementations/pafn-food-inspection/ui/tokens.html) to see the internal operations view.
+5. Open [Token Analytics](reference-implementations/food-inspection/ui/tokens.html) to see the internal operations view.
 
 The demo uses synthetic browser-local data. It illustrates the intended experience and does not call Azure AI services or the incomplete Core Platform backend.
 
@@ -150,7 +150,7 @@ JSON and Markdown configuration that defines the evidence, fields, rules, thresh
 
 ### Reference Implementation
 
-An isolated example that combines the Core Platform with an industry template and adopter-specific connectors. The first reference case is PAFN food import inspection.
+An isolated example that combines the Core Platform with an industry template and adopter-specific connectors. The first reference case is food import inspection.
 
 ```text
 Core Platform + Industry Template + Connector = Adopted Solution
@@ -182,6 +182,8 @@ tests/                        Unit and future integration tests
 | [Deployment Guide](docs/DeploymentGuide.md) | Check deployment readiness and planned Azure setup |
 | [Local Development Setup](docs/LocalDevelopmentSetup.md) | Check current local development readiness |
 | [Transparency FAQ](TRANSPARENCY_FAQ.md) | Review responsible AI considerations |
+| [ARIA Risk Scoring Design](30-ARIA-Risk-Scoring-Design.md) | Review normalized scoring, persistence, review, and override behavior |
+| [Reference 0-100 Risk Scoring](docs/reference/Reference-Risk-Scoring-Design.md) | Review the compatible 0-100 reference policy |
 | [Contributing](CONTRIBUTING.md) | Contribute code, templates, tests, or documentation |
 
 ---

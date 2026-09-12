@@ -1,41 +1,77 @@
 """
 Rules Engine Executor
 
-Ported from PAFN's rules_engine/rule_executor.py.
-Changes from PAFN:
-  - Removed shared.telemetry and shared.pii_redaction imports.
-  - All imports changed from rules_engine.X to src.platform.policy.evaluators.X.
-  - run_rules() gains an optional `allowed_fields_by_doc` parameter that is
-    forwarded to validate_min_fields() so callers can source field lists from
-    TemplateLoader instead of document_type_fields.json.
-    - Agency and jurisdiction HS values are sourced from template rule documents.
+Dispatches each rule document to an evaluator by its ``category`` field rather
+than through a fixed sequence of hardcoded rule IDs. A template declares only
+the categories it needs; categories with no registered evaluator are treated as
+reference data, and every step is independently skippable.
 
-Logic, step ordering, confidence cutoff, and finding normalization are
-identical to PAFN production.
+Register a new evaluator by adding an entry to ``EVALUATOR_REGISTRY`` and a
+position in ``DEFAULT_EVALUATION_ORDER``.
 """
 
+import inspect
 import logging
 import os
 import traceback
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
-from src.platform.policy.evaluators.agency_code import validate_agency_code
+from src.platform.policy.evaluators.classification_code import validate_classification_codes
 from src.platform.policy.evaluators.cross_document import validate_cross_docs
-from src.platform.policy.evaluators.hs_code import validate_hs_codes
-from src.platform.policy.evaluators.item_check import validate_item_checks
-from src.platform.policy.evaluators.logical_rules import validate_logical_rules
+from src.platform.policy.evaluators.expected_value import validate_expected_value
+from src.platform.policy.evaluators.line_item_reconciliation import validate_line_items
 from src.platform.policy.evaluators.mandatory_documents import validate_mandatory_docs
 from src.platform.policy.evaluators.minimum_fields import validate_min_fields
 from src.platform.policy.evaluators.signature_stamp import validate_signature_stamp
+from src.platform.policy.evaluators.temporal_rules import validate_temporal_rules
 
 logger = logging.getLogger(__name__)
 
+CATEGORY_EXPECTED_VALUE = "ExpectedValue"
+CATEGORY_MANDATORY_DOCUMENTS = "MandatoryDocuments"
+CATEGORY_MINIMUM_FIELDS = "MinimumFields"
+CATEGORY_CODE_VALIDATION = "ClassificationCodeValidation"
+CATEGORY_CROSS_DOCUMENT = "CrossDocumentConsistency"
+CATEGORY_ITEM_RECONCILIATION = "ItemReconciliation"
+CATEGORY_SIGNATURE_STAMP = "SignatureStampVerification"
+CATEGORY_TEMPORAL = "TemporalValidity"
+
+DEFAULT_EVALUATION_ORDER: tuple[str, ...] = (
+    CATEGORY_EXPECTED_VALUE,
+    CATEGORY_MANDATORY_DOCUMENTS,
+    CATEGORY_MINIMUM_FIELDS,
+    CATEGORY_CODE_VALIDATION,
+    CATEGORY_CROSS_DOCUMENT,
+    CATEGORY_ITEM_RECONCILIATION,
+    CATEGORY_SIGNATURE_STAMP,
+    CATEGORY_TEMPORAL,
+)
+
 MANDATORY_RULE_ID = "MANDATORY_DOC_RULES"
 MIN_FIELDS_RULE_ID = "MIN_FIELDS_RULES"
-HS_CODE_RULE_ID = "REJECTED_HS_CODES"
+CODE_VALIDATION_RULE_ID = "DENIED_CODES"
 CROSS_DOC_RULE_ID = "CROSS_DOC_RULES"
 SIGNATURE_STAMP_RULE_ID = "SIGNATURE_STAMP_RULES"
-LOGICAL_RULE_ID = "LOGICAL_RULES"
-AGENCY_CODE_RULE_ID = "AGENCY_CODE_RULES"
+TEMPORAL_RULE_ID = "TEMPORAL_RULES"
+EXPECTED_VALUE_RULE_ID = "EXPECTED_VALUE_RULES"
+ITEM_RECONCILIATION_RULE_ID = "ITEM_RECONCILIATION_RULES"
+
+# Lets rule sets authored before `category` existed still dispatch correctly.
+_LEGACY_ID_TO_CATEGORY = {
+    EXPECTED_VALUE_RULE_ID: CATEGORY_EXPECTED_VALUE,
+    "AGENCY_CODE_RULES": CATEGORY_EXPECTED_VALUE,
+    MANDATORY_RULE_ID: CATEGORY_MANDATORY_DOCUMENTS,
+    MIN_FIELDS_RULE_ID: CATEGORY_MINIMUM_FIELDS,
+    CODE_VALIDATION_RULE_ID: CATEGORY_CODE_VALIDATION,
+    "REJECTED_HS_CODES": CATEGORY_CODE_VALIDATION,
+    CROSS_DOC_RULE_ID: CATEGORY_CROSS_DOCUMENT,
+    ITEM_RECONCILIATION_RULE_ID: CATEGORY_ITEM_RECONCILIATION,
+    SIGNATURE_STAMP_RULE_ID: CATEGORY_SIGNATURE_STAMP,
+    TEMPORAL_RULE_ID: CATEGORY_TEMPORAL,
+    "LOGICAL_RULES": CATEGORY_TEMPORAL,
+}
 
 FINDING_CONFIDENCE_THRESHOLD = float(
     os.environ.get("FINDING_CONFIDENCE_THRESHOLD", "0.5")
@@ -47,149 +83,172 @@ def _find_rule(rules_list: list, rule_id: str) -> dict | None:
     return next((r for r in rules_list if r.get("id") == rule_id), None)
 
 
+def rule_category(rule: dict) -> str | None:
+    """Return a rule's category, falling back to its legacy rule ID."""
+    return rule.get("category") or _LEGACY_ID_TO_CATEGORY.get(rule.get("id"))
+
+
+def group_rules_by_category(rules_list: list) -> dict[str, list[dict]]:
+    """Bucket rule documents by category, preserving declaration order."""
+    grouped: dict[str, list[dict]] = {}
+    for rule in rules_list:
+        category = rule_category(rule)
+        if category:
+            grouped.setdefault(category, []).append(rule)
+    return grouped
+
+
+@dataclass
+class EvaluationContext:
+    """State threaded through the evaluators for a single case."""
+
+    payload: dict
+    submission: list
+    rules_list: list
+    allowed_fields_by_doc: dict | None = None
+    reasoning: dict | None = None
+
+
+def _eval_expected_value(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    rule = next((r for r in rules if r.get("expectedValue")), None)
+    if not rule:
+        return []
+    return validate_expected_value(
+        ctx.submission,
+        expected_value=str(rule["expectedValue"]),
+        document_type=rule["documentType"],
+        field_name=rule["fieldName"],
+        missing_rule_code=rule.get("missingRuleCode", "EXPECTED_VALUE_MISSING"),
+        mismatch_rule_code=rule.get("mismatchRuleCode", "EXPECTED_VALUE_MISMATCH"),
+    )
+
+
+def _eval_mandatory_documents(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    findings, normalized_submission = validate_mandatory_docs(
+        ctx.rules_list, ctx.payload, ctx.submission
+    )
+    ctx.submission = normalized_submission
+    return findings
+
+
+def _eval_minimum_fields(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    return validate_min_fields(
+        rules[0], ctx.submission, allowed_fields_by_doc=ctx.allowed_fields_by_doc
+    )
+
+
+def _eval_code_validation(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    primary = next(
+        (r for r in rules if "deniedCodes" in r or r.get("inScopeRuleId")),
+        None,
+    )
+    if primary is None:
+        return []
+    combined_rule = {**primary}
+    in_scope_rule_id = primary.get("inScopeRuleId")
+    in_scope_rule = (
+        _find_rule(ctx.rules_list, in_scope_rule_id) if in_scope_rule_id else None
+    )
+    if in_scope_rule:
+        combined_rule["inScopeCodes"] = in_scope_rule.get("acceptedCodes", [])
+    return validate_classification_codes(combined_rule, ctx.payload)
+
+
+def _eval_cross_document(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    result = validate_cross_docs(
+        ctx.payload,
+        rules[0],
+        ctx.submission,
+        reasoning=ctx.reasoning,
+    )
+    return [*result.get("findings", []), *result.get("item_type_findings", [])]
+
+
+def _eval_item_reconciliation(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    return validate_line_items(rules[0], ctx.payload, ctx.submission)
+
+
+def _eval_signature_stamp(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    return validate_signature_stamp(rules[0], ctx.submission)
+
+
+def _eval_temporal(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
+    rule = rules[0]
+    if str(rule.get("isActive", "True")).lower() == "false":
+        logger.info("Skipping %s — rule is inactive", CATEGORY_TEMPORAL)
+        return []
+    return validate_temporal_rules(rule, ctx.payload, ctx.submission)
+
+
+EVALUATOR_REGISTRY: dict[str, Callable[[list[dict], EvaluationContext], Any]] = {
+    CATEGORY_EXPECTED_VALUE: _eval_expected_value,
+    CATEGORY_MANDATORY_DOCUMENTS: _eval_mandatory_documents,
+    CATEGORY_MINIMUM_FIELDS: _eval_minimum_fields,
+    CATEGORY_CODE_VALIDATION: _eval_code_validation,
+    CATEGORY_CROSS_DOCUMENT: _eval_cross_document,
+    CATEGORY_ITEM_RECONCILIATION: _eval_item_reconciliation,
+    CATEGORY_SIGNATURE_STAMP: _eval_signature_stamp,
+    CATEGORY_TEMPORAL: _eval_temporal,
+}
+
+
 async def run_rules(
     rules_list: list,
     payload: dict,
     submission: list,
-    managed_identity_client_id: str = "",
-    llm_comparison_fn=None,
-    item_type_check_fn=None,
     allowed_fields_by_doc: dict | None = None,
+    reasoning: dict | None = None,
+    evaluation_order: tuple[str, ...] | None = None,
 ) -> list:
-    """Execute the rule pipeline in a fixed order and return a flat findings list.
+    """Dispatch rules to evaluators by category and return a flat findings list.
 
     Args:
-        rules_list:           List of rule dicts (each with an "id" key).
-                              Loaded from Cosmos DB or a template's rules.json.
-        payload:              Importer declaration dict (requestId, items, documents).
-        submission:           List of DI-extracted document dicts.
-        managed_identity_client_id: Azure Managed Identity client ID (for LLM calls).
-        llm_comparison_fn:    Injectable async callable for cross-doc fuzzy/semantic checks.
-        item_type_check_fn:   Injectable async callable for LLM item type checks.
+        rules_list:           List of rule dicts. Each should carry a "category";
+                              legacy rule IDs are mapped for backwards compatibility.
+        payload:              Case submission dict (requestId, items, documents).
+        submission:           List of extracted document dicts.
         allowed_fields_by_doc: {doc_type: [field_name]} from TemplateLoader — forwarded
                                to validate_min_fields so field intersection uses the
                                template's evidence_types.json instead of a hardcoded file.
+        reasoning:            Result from the Reasoning Agent. Evaluators are
+                              deterministic and never call an LLM themselves.
+        evaluation_order:     Overrides DEFAULT_EVALUATION_ORDER.
     """
-    findings = []
-    normalized_submission = submission
+    ctx = EvaluationContext(
+        payload=payload,
+        submission=submission,
+        rules_list=rules_list,
+        allowed_fields_by_doc=allowed_fields_by_doc,
+        reasoning=reasoning,
+    )
 
-    agency_rule = _find_rule(rules_list, AGENCY_CODE_RULE_ID)
+    findings: list = []
+    rules_by_category = group_rules_by_category(rules_list)
+    order = evaluation_order or DEFAULT_EVALUATION_ORDER
 
-    # Step 0: Agency code check
-    if agency_rule and agency_rule.get("agencyCode"):
+    for category in order:
+        evaluator = EVALUATOR_REGISTRY.get(category)
+        if evaluator is None:
+            logger.warning("No evaluator registered for category %s", category)
+            continue
+
+        category_rules = rules_by_category.get(category)
+        if not category_rules:
+            logger.info("Skipping %s — no rule of this category configured", category)
+            continue
+
         try:
-            result = validate_agency_code(
-                submission,
-                agency_code=str(agency_rule["agencyCode"]),
-                document_type=agency_rule["documentType"],
-                field_name=agency_rule["fieldName"],
-                missing_rule_code=agency_rule.get("missingRuleCode", "AGENCY_CODE_MISSING"),
-                mismatch_rule_code=agency_rule.get(
-                    "mismatchRuleCode", "AGENCY_CODE_MISMATCH"
-                ),
-            )
+            result = evaluator(category_rules, ctx)
+            if inspect.isawaitable(result):
+                result = await result
             findings.extend(result)
-            logger.info("agency_code: %d finding(s)", len(result))
+            logger.info("%s: %d finding(s)", category, len(result))
         except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 0 agency_code FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping agency_code — %s not configured", AGENCY_CODE_RULE_ID)
+            logger.error("%s FAILED | %s\n%s", category, exc, traceback.format_exc())
 
-    # Step 1: Mandatory documents + name normalization
-    rule = _find_rule(rules_list, MANDATORY_RULE_ID)
-    if rule:
-        try:
-            result, normalized_submission = validate_mandatory_docs(rules_list, payload, submission)
-            findings.extend(result)
-            logger.info("mandatory: %d finding(s)", len(result))
-        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 1 mandatory_documents FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping mandatory — %s not in rules_list", MANDATORY_RULE_ID)
-
-    # Step 2: Minimum fields per document
-    rule = _find_rule(rules_list, MIN_FIELDS_RULE_ID)
-    if rule:
-        try:
-            result = validate_min_fields(rule, normalized_submission, allowed_fields_by_doc=allowed_fields_by_doc)
-            findings.extend(result)
-            logger.info("minimum_fields: %d finding(s)", len(result))
-        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 2 minimum_fields FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping minimum_fields — %s not in rules_list", MIN_FIELDS_RULE_ID)
-
-    # Step 3: HS code validation
-    rule = _find_rule(rules_list, HS_CODE_RULE_ID)
-    if rule:
-        try:
-            combined_rule = {**rule}
-            jurisdiction_rule_id = rule.get("validJurisdictionRuleId")
-            jurisdiction_rule = (
-                _find_rule(rules_list, jurisdiction_rule_id)
-                if jurisdiction_rule_id
-                else None
-            )
-            if jurisdiction_rule:
-                combined_rule["jurisdictionCodes"] = jurisdiction_rule.get(
-                    "acceptedCodes", []
-                )
-            result = validate_hs_codes(combined_rule, payload)
-            findings.extend(result)
-            logger.info("hs_code: %d finding(s)", len(result))
-        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 3 hs_code FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping hs_code — %s not in rules_list", HS_CODE_RULE_ID)
-
-    # Step 4: Cross-document consistency
-    rule = _find_rule(rules_list, CROSS_DOC_RULE_ID)
-    if rule:
-        try:
-            result = await validate_cross_docs(
-                payload, rule, normalized_submission,
-                managed_identity_client_id, llm_comparison_fn, item_type_check_fn,
-            )
-            cross_findings = result.get("findings", [])
-            findings.extend(cross_findings)
-            findings.extend(result.get("item_type_findings", []))
-            logger.info("cross_document: %d finding(s)", len(cross_findings))
-        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 4 cross_document FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping cross_document — %s not in rules_list", CROSS_DOC_RULE_ID)
-
-    # Step 5: Item checks (payload vs document line items)
-    try:
-        item_findings = validate_item_checks(payload, normalized_submission)
-        findings.extend(item_findings)
-        logger.info("item_check: %d finding(s)", len(item_findings))
-    except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-        logger.error("Step 5 item_check FAILED | %s\n%s", exc, traceback.format_exc())
-
-    # Step 6: Signature / stamp verification
-    rule = _find_rule(rules_list, SIGNATURE_STAMP_RULE_ID)
-    if rule:
-        try:
-            result = validate_signature_stamp(rule, normalized_submission)
-            findings.extend(result)
-            logger.info("signature_stamp: %d finding(s)", len(result))
-        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 6 signature_stamp FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping signature_stamp — %s not in rules_list", SIGNATURE_STAMP_RULE_ID)
-
-    # Step 7: Logical consistency (date-based validity)
-    rule = _find_rule(rules_list, LOGICAL_RULE_ID)
-    if rule and str(rule.get("isActive", "True")).lower() != "false":
-        try:
-            result = validate_logical_rules(rule, payload, normalized_submission)
-            findings.extend(result)
-            logger.info("logical_rules: %d finding(s)", len(result))
-        except Exception as exc:  # noqa: BLE001 - isolate independent rule failures
-            logger.error("Step 7 logical_rules FAILED | %s\n%s", exc, traceback.format_exc())
-    else:
-        logger.warning("Skipping logical_rules — %s not in rules_list or inactive", LOGICAL_RULE_ID)
+    reference_only = sorted(set(rules_by_category) - set(EVALUATOR_REGISTRY))
+    if reference_only:
+        logger.debug("Reference-data categories (no evaluator): %s", reference_only)
 
     # Normalize: copy ruleId → ruleCode when ruleCode is absent
     normalized = []

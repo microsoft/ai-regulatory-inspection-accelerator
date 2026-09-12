@@ -14,13 +14,13 @@ No real Azure credentials are required.
 
 import json
 
+import pytest
+
 from src.platform.document_intelligence.schemas import (
     DocumentInput,
     ExtractedMetadata,
 )
 from src.platform.document_intelligence.vision_extraction import (
-    _build_hybrid_extraction_prompt,
-    _build_vision_extraction_prompt,
     cross_validate_with_ocr,
     extract_metadata_hybrid,
     extract_metadata_vision,
@@ -32,6 +32,17 @@ from src.platform.document_intelligence.vision_extraction import (
 
 DOC_TYPE = "Halal_Slaughter_Certificate"
 FIELDS = ["certificate_number", "issue_date", "expiry_date", "issuing_authority"]
+
+
+class StubTemplateLoader:
+    """The vision functions only ever ask the loader to render a prompt."""
+
+    def get_prompt(self, prompt_name: str, **values: str) -> str:
+        rendered = " ".join(f"{k}={v}" for k, v in sorted(values.items()))
+        return f"[{prompt_name}] {rendered}".strip()
+
+
+LOADER = StubTemplateLoader()
 
 FAKE_DOC_INPUT = DocumentInput(
     file_path="uploads/halal.pdf",
@@ -84,33 +95,33 @@ class FakeOpenAIClient:
 
 
 # ---------------------------------------------------------------------------
-# Prompt builder tests
+# Prompt sourcing
 # ---------------------------------------------------------------------------
 
-class TestBuildVisionPrompt:
-    def test_contains_fields_text(self):
-        prompt = _build_vision_extraction_prompt(DOC_TYPE, FIELDS)
-        for f in FIELDS:
-            assert f in prompt, f"Expected field '{f}' in vision prompt"
+class TestPromptSourcing:
+    """Prompts come from the template Knowledge Pack, never from platform code."""
 
-    def test_contains_doc_type_display_name(self):
-        prompt = _build_vision_extraction_prompt(DOC_TYPE, FIELDS)
-        assert "Halal Slaughter Certificate" in prompt
+    def test_vision_prompt_is_rendered_by_the_loader(self):
+        client = FakeOpenAIClient()
+        extract_metadata_vision(
+            client, FAKE_DOC_INPUT, b"\x89PNG\r\n", DOC_TYPE, FIELDS,
+            loader=LOADER,
+            deployment="gpt-test",
+        )
+        system_prompt = client.calls[0]["messages"][0]["content"]
+        assert system_prompt.startswith("[vision_extraction]")
+        assert "certificate_number" in system_prompt
 
-    def test_contains_json_schema_instruction(self):
-        prompt = _build_vision_extraction_prompt(DOC_TYPE, FIELDS)
-        assert "key_value_pairs" in prompt
-
-
-class TestBuildHybridPrompt:
-    def test_contains_fields_text(self):
-        prompt = _build_hybrid_extraction_prompt(DOC_TYPE, FIELDS)
-        for f in FIELDS:
-            assert f in prompt
-
-    def test_mentions_ocr_strategy(self):
-        prompt = _build_hybrid_extraction_prompt(DOC_TYPE, FIELDS)
-        assert "OCR" in prompt
+    def test_hybrid_prompt_is_rendered_by_the_loader(self):
+        client = FakeOpenAIClient()
+        extract_metadata_hybrid(
+            client, FAKE_DOC_INPUT, b"\x89PNG\r\n",
+            "OCR text", DOC_TYPE, FIELDS,
+            loader=LOADER,
+            deployment="gpt-test",
+        )
+        system_prompt = client.calls[0]["messages"][0]["content"]
+        assert system_prompt.startswith("[hybrid_extraction]")
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +133,7 @@ class TestExtractMetadataVision:
         client = FakeOpenAIClient()
         meta, _ = extract_metadata_vision(
             client, FAKE_DOC_INPUT, b"\x89PNG\r\n", DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert isinstance(meta, ExtractedMetadata)
@@ -130,6 +142,7 @@ class TestExtractMetadataVision:
         client = FakeOpenAIClient()
         meta, _ = extract_metadata_vision(
             client, FAKE_DOC_INPUT, b"\x89PNG\r\n", DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert len(meta.key_value_pairs) == 1
@@ -139,6 +152,7 @@ class TestExtractMetadataVision:
         client = FakeOpenAIClient()
         extract_metadata_vision(
             client, FAKE_DOC_INPUT, b"\x89PNG\r\n", DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert len(client.calls) == 1
@@ -151,10 +165,18 @@ class TestExtractMetadataVision:
         client = FakeOpenAIClient("not json at all")
         meta, _ = extract_metadata_vision(
             client, FAKE_DOC_INPUT, b"\x89PNG\r\n", DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
             max_retries=1,
         )
         assert isinstance(meta, ExtractedMetadata)
+
+    def test_requires_a_template_loader(self):
+        with pytest.raises(ValueError, match="TemplateLoader is required"):
+            extract_metadata_vision(
+                FakeOpenAIClient(), FAKE_DOC_INPUT, b"\x89PNG\r\n", DOC_TYPE, FIELDS,
+                deployment="gpt-test",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +189,7 @@ class TestExtractMetadataHybrid:
         meta, _ = extract_metadata_hybrid(
             client, FAKE_DOC_INPUT, b"\x89PNG\r\n",
             "OCR text here", DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert isinstance(meta, ExtractedMetadata)
@@ -177,6 +200,7 @@ class TestExtractMetadataHybrid:
         extract_metadata_hybrid(
             client, FAKE_DOC_INPUT, b"\x89PNG\r\n",
             ocr, DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
         )
         user_content = client.calls[0]["messages"][1]["content"]
@@ -189,6 +213,7 @@ class TestExtractMetadataHybrid:
         extract_metadata_hybrid(
             client, FAKE_DOC_INPUT, pages,
             "OCR", DOC_TYPE, FIELDS,
+            loader=LOADER,
             deployment="gpt-test",
         )
         user_content = client.calls[0]["messages"][1]["content"]
@@ -219,6 +244,7 @@ class TestCrossValidateWithOCR:
         result, corrections = cross_validate_with_ocr(
             client, fields, "some OCR text", DOC_TYPE,
             allowed_fields=["certificate_number", "issue_date"],
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert result["certificate_number"]["value"] == "HC-FIXED"
@@ -233,6 +259,7 @@ class TestCrossValidateWithOCR:
         result, corrections = cross_validate_with_ocr(
             client, fields, "OCR text", DOC_TYPE,
             allowed_fields=["certificate_number"],
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert "unknown_field" not in result
@@ -249,6 +276,7 @@ class TestCrossValidateWithOCR:
         result, corrections = cross_validate_with_ocr(
             client, fields, "OCR text", DOC_TYPE,
             allowed_fields=["certificate_number", "issue_date"],
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert result["issue_date"]["value"] == "2024-01-15"
@@ -284,6 +312,7 @@ class TestCrossValidateWithOCR:
         result, corrections = cross_validate_with_ocr(
             client, fields, "OCR text", DOC_TYPE,
             allowed_fields=["certificate_number"],
+            loader=LOADER,
             deployment="gpt-test",
         )
         assert result is fields

@@ -150,15 +150,16 @@ resource "azurerm_function_app_flex_consumption" "pipeline" {
     "AZURE_OPENAI_EMBEDDING_DEPLOYMENT" = var.azure_openai_embedding_deployment
 
     # Cosmos DB
-    "COSMOS_DB_ENDPOINT"                 = var.cosmos_db_endpoint
-    "COSMOS_DB_DATABASE"                 = var.cosmos_db_database
-    "COSMOS_DB_CONTAINER"                = "inspections"
-    "COSMOS_DB_INBOUND_CONTAINER"        = "inbound-requests"
-    "COSMOS_DB_RESULTS_CONTAINER"        = "extraction-artifacts"
-    "COSMOS_DB_RULES_CONTAINER"          = "rules"
-    "COSMOS_DB_CALLBACK_LOG_CONTAINER"   = "callback-log"
-    "COSMOS_DB_FEEDBACK_CONTAINER"       = "inspector-feedback"
-    "COSMOS_CONNECTION__accountEndpoint" = var.cosmos_db_endpoint
+    "COSMOS_DB_ENDPOINT"                   = var.cosmos_db_endpoint
+    "COSMOS_DB_DATABASE"                   = var.cosmos_db_database
+    "COSMOS_DB_CONTAINER"                  = "inspections"
+    "COSMOS_DB_INBOUND_CONTAINER"          = "inbound-requests"
+    "COSMOS_DB_RESULTS_CONTAINER"          = "extraction-artifacts"
+    "COSMOS_DB_RISK_EVALUATIONS_CONTAINER" = "risk-evaluations"
+    "COSMOS_DB_RULES_CONTAINER"            = "rules"
+    "COSMOS_DB_CALLBACK_LOG_CONTAINER"     = "callback-log"
+    "COSMOS_DB_FEEDBACK_CONTAINER"         = "inspector-feedback"
+    "COSMOS_CONNECTION__accountEndpoint"   = var.cosmos_db_endpoint
 
     # Azure App Configuration
     "APP_CONFIG_ENDPOINT" = var.app_configuration_endpoint

@@ -1,9 +1,7 @@
 """Unit tests for src.platform.orchestration.pipeline.run_pipeline
 
-Ported/derived from PAFN's function_app.py::inspector_orchestrator behavior.
-PAFN has no direct unit tests for the orchestrator itself (Durable Functions
-orchestrators are hard to unit test without driving the generator manually),
-so this test suite is new - it drives the orchestrator generator directly
+Durable Functions orchestrators are hard to unit test without driving the
+generator manually, so this suite drives the orchestrator generator directly
 with a FakeContext, asserting the exact sequence and payload of
 call_activity_with_retry calls without requiring azure-functions or
 azure-durable-functions to be installed.
@@ -70,7 +68,7 @@ class TestSuccessPath:
             "summary": "All checks passed.",
             "verdictId": "V-1",
         }
-        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {})
+        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {}, {})
 
         names = [c[0] for c in ctx.calls]
         assert names == [
@@ -78,6 +76,7 @@ class TestSuccessPath:
             DEFAULT_ACTIVITY_NAMES["di_extraction"],
             DEFAULT_ACTIVITY_NAMES["reasoning"],
             DEFAULT_ACTIVITY_NAMES["rules_policy"],
+            DEFAULT_ACTIVITY_NAMES["risk_persistence"],
             DEFAULT_ACTIVITY_NAMES["delivery"],
         ]
 
@@ -93,10 +92,15 @@ class TestSuccessPath:
             "recommendation": "PASS",
             "confidence": 0.9,
             "aiRiskLevel": "LOW",
+            "compositeRiskScore": 0.45,
+            "riskScore": 0.45,
+            "riskEvaluation": {"id": "REQ-1-risk"},
+            "riskAssessment": {"id": "REQ-1-risk"},
+            "recommendationStatus": "ELIGIBLE",
             "summary": "OK",
             "verdictId": "V-1",
         }
-        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {})
+        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {}, {})
 
         delivery_call = ctx.calls[-1]
         assert delivery_call[0] == DEFAULT_ACTIVITY_NAMES["delivery"]
@@ -104,6 +108,11 @@ class TestSuccessPath:
         assert delivery_input["status"] == "COMPLETED"
         assert delivery_input["recommendation"] == "PASS"
         assert delivery_input["confidence"] == 0.9
+        assert delivery_input["compositeRiskScore"] == 0.45
+        assert delivery_input["riskScore"] == 0.45
+        assert delivery_input["riskEvaluation"] == {"id": "REQ-1-risk"}
+        assert delivery_input["riskAssessment"] == {"id": "REQ-1-risk"}
+        assert delivery_input["recommendationStatus"] == "ELIGIBLE"
         assert delivery_input["verdictId"] == "V-1"
         # Pre-validation warnings and policy findings are merged
         assert delivery_input["findings"] == [{"code": "DUP_WARN"}, {"ruleCode": "R1", "result": "PASS"}]
@@ -120,6 +129,7 @@ class TestSuccessPath:
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
             {},
+            {},
         )
         assert all(call[1] is _RETRY_POLICY for call in ctx.calls)
 
@@ -135,6 +145,7 @@ class TestSuccessPath:
             {"success": True, "extractedFields": {}},
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         )
         extraction_input = ctx.calls[1][2]
@@ -156,6 +167,7 @@ class TestSuccessPath:
             {"success": True, "extractedFields": extracted_fields},
             reasoning_result,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         )
 
@@ -239,6 +251,7 @@ class TestActivityNameOverride:
             "di_extraction": "custom_extraction",
             "reasoning": "custom_reasoning",
             "rules_policy": "custom_policy",
+            "risk_persistence": "custom_risk_persistence",
             "delivery": "custom_delivery",
         }
         gen = run_pipeline(ctx, activity_names=custom_names, retry_policy=_RETRY_POLICY)
@@ -249,6 +262,7 @@ class TestActivityNameOverride:
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
             {},
+            {},
         )
         names = [c[0] for c in ctx.calls]
         assert names == [
@@ -256,12 +270,13 @@ class TestActivityNameOverride:
             "custom_extraction",
             "custom_reasoning",
             "custom_policy",
+            "custom_risk_persistence",
             "custom_delivery",
         ]
 
     def test_default_names_are_domain_neutral(self):
         names = " ".join(DEFAULT_ACTIVITY_NAMES.values()).lower()
-        assert all(term not in names for term in ("food", "pafn", "customs", "halal"))
+        assert all(term not in names for term in ("food", "customs", "halal"))
 
     def test_partial_override_falls_back_to_defaults(self):
         ctx = FakeContext(_PAYLOAD)
@@ -284,6 +299,7 @@ class TestTelemetryReplaySafety:
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
             {},
+            {},
         )
         assert "PipelineCompleted" in events
 
@@ -298,6 +314,7 @@ class TestTelemetryReplaySafety:
             {"success": True, "extractedFields": {}},
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         )
         assert events == []
@@ -316,6 +333,7 @@ class TestTelemetryReplaySafety:
                 _REASONING_RESULT,
                 {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
                 {},
+                {},
             )
             return [(name, input) for name, _retry, input in ctx.calls]
 
@@ -327,6 +345,7 @@ class TestTelemetryReplaySafety:
             {"success": True, "extractedFields": {}},
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         ]
         expected_names = list(DEFAULT_ACTIVITY_NAMES.values())

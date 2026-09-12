@@ -7,17 +7,17 @@ score (0.0-1.0) produced by a vision model, decide pass/fail against a
 configurable threshold, and normalize/validate the raw model response into
 a `QualityCheckResult`.
 
-Ported from PAFN's di/di_quality.py, generalized:
-    - Expanded the domain-neutral OCR-readability rubric from PAFN's original
-        checks to 19 specific image-quality issues.
+Design notes:
+    - The domain-neutral OCR-readability rubric covers 19 specific
+        image-quality issues.
     - `assess_quality` supports an injectable provider callback for connector
-        integrations, while `check_image_quality` retains the PAFN-compatible
-        soft-check path used by the active extraction pipeline.
+        integrations, while `check_image_quality` retains the soft-check path
+        used by the active extraction pipeline.
     - Pass/fail is derived deterministically from the configured threshold
         instead of trusting the model's boolean response.
-  - Removed the `QUALITY_SCORE_THRESHOLD` env var lookup at import time
-    (Core Platform must not read environment variables directly - see
-    ADR-010). The threshold is now a parameter with the same default value.
+  - The threshold is a parameter rather than a `QUALITY_SCORE_THRESHOLD` env
+    var lookup at import time (Core Platform must not read environment
+    variables directly - see ADR-010).
 """
 
 import base64
@@ -108,7 +108,7 @@ def evaluate_quality_response(
 
     Pass/fail is determined by comparing `quality_score` against `threshold`
     rather than trusting the model's own `passed` field, which tends to be
-    too lenient (see PAFN incident: a 0.1-scoring, clearly unreadable image
+    too lenient (observed regression: a 0.1-scoring, clearly unreadable image
     was still marked `passed: true` by the model).
 
     Args:
@@ -170,7 +170,7 @@ def check_image_quality(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> QualityCheckResult:
-    """Run the PAFN-compatible soft quality check through an injected client."""
+    """Run the soft quality check through an injected client."""
     encoded_image = base64.b64encode(image_data).decode("utf-8")
     suffix = file_name.lower()
     if suffix.endswith(".pdf"):

@@ -24,7 +24,7 @@ class TestEvaluateQualityResponse:
         assert result.quality_score == 0.9
 
     def test_score_below_threshold_fails_even_if_model_says_passed(self):
-        """PAFN regression: the model's own `passed` field is untrustworthy -
+        """Regression: the model's own `passed` field is untrustworthy -
         only the score-vs-threshold comparison determines the result."""
         result = evaluate_quality_response({"passed": True, "quality_score": 0.1, "issues": ["Very Blurry Scan"]})
         assert result.passed is False

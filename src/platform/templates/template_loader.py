@@ -5,13 +5,13 @@ Core Platform — Template Loader
 Generic loader for the ARIA template contract.  Given a template ID
 (e.g. "food-safety"), loads ``evidence_types.json`` and the optional
 ``normalization.json`` profile from the template directory. It provides
-document-type field and normalization lookups that replace hardcoded PAFN
+document-type field and normalization lookups that replace hardcoded
 configuration.
 
 The caller is responsible for providing a ``template_root`` path (defaults
 to the ``templates/`` directory adjacent to this package's workspace root).
 
-Changes from PAFN's ``shared/prompts.py``:
+Design notes:
   - ``_DOC_TYPE_ID_TO_NAME`` dict migrated to ``doc_type_id_mapping``
     inside ``evidence_types.json`` so adding a new ID requires only a
     JSON edit, no code change.
@@ -133,6 +133,63 @@ def _load_knowledge_pack(template_id: str, templates_root: Path) -> dict:
         raise TypeError(
             f"knowledge_pack.json for template '{template_id}' must contain a 'prompts' object."
         )
+    vocabulary = data.get("field_vocabulary", {})
+    if not isinstance(vocabulary, dict):
+        raise TypeError(
+            f"knowledge_pack.json for template '{template_id}' must contain a "
+            "'field_vocabulary' object when configured."
+        )
+    return data
+
+
+@lru_cache(maxsize=16)
+def _load_risk_config(template_id: str, templates_root: Path) -> dict:
+    """Load optional template-owned risk scoring configuration."""
+    template_path = templates_root / template_id
+    config: dict = {}
+    for artifact_name in (
+        "risk_config.json",
+        "risk_weight_matrix.json",
+        "risk_threshold_bands.json",
+    ):
+        artifact_path = template_path / artifact_name
+        if not artifact_path.is_file():
+            continue
+        try:
+            with open(artifact_path, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"{artifact_name} for template '{template_id}' contains invalid JSON: {exc}"
+            ) from exc
+        if not isinstance(data, dict):
+            raise TypeError(
+                f"{artifact_name} for template '{template_id}' must contain an object."
+            )
+        config = _merge_dicts(config, data)
+    return config
+
+
+@lru_cache(maxsize=16)
+def _load_decision_vocabulary(template_id: str, templates_root: Path) -> dict:
+    """Load the template-owned internal-to-public decision mapping."""
+    vocabulary_path = templates_root / template_id / "decision_vocabulary.json"
+    if not vocabulary_path.is_file():
+        return {}
+    try:
+        with open(vocabulary_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"decision_vocabulary.json for template '{template_id}' contains "
+            f"invalid JSON: {exc}"
+        ) from exc
+    mapping = data.get("internal_to_public") if isinstance(data, dict) else None
+    if not isinstance(mapping, dict):
+        raise TypeError(
+            f"decision_vocabulary.json for template '{template_id}' must contain "
+            "an 'internal_to_public' object."
+        )
     return data
 
 
@@ -151,7 +208,7 @@ class TemplateLoader:
 
     Usage::
 
-        loader = TemplateLoader.for_template("food-safety")
+        loader = TemplateLoader.for_template("my-template")
         doc_type = loader.resolve_doc_type("50", fallback="Invoice")
         fields = loader.get_fields(doc_type)
         di_model = loader.get_di_model(doc_type)
@@ -171,6 +228,8 @@ class TemplateLoader:
         self._data = _load_evidence_types(template_id, root)
         self._normalization = _load_normalization_config(template_id, root)
         self._knowledge_pack = _load_knowledge_pack(template_id, root)
+        self._risk_config = _load_risk_config(template_id, root)
+        self._decision_vocabulary = _load_decision_vocabulary(template_id, root)
         self._id_mapping: dict[str, str] = self._data.get("doc_type_id_mapping") or {}
         # Index document_types by doc_type key for O(1) lookups.
         self._by_type: dict[str, dict] = {}
@@ -293,6 +352,39 @@ class TemplateLoader:
                 f"quality_threshold for '{doc_type}' must be between 0.0 and 1.0."
             )
         return threshold
+
+    def get_risk_config(self) -> dict:
+        """Return a copy of the template-owned risk scoring configuration."""
+        return deepcopy(self._risk_config)
+
+    def get_decision_vocabulary(self) -> dict:
+        """Return the template-owned internal-to-public decision mapping."""
+        return deepcopy(self._decision_vocabulary.get("internal_to_public", {}))
+
+    def get_document_aliases(self) -> dict[str, str]:
+        """Return rule-side to submission-side document name aliases."""
+        aliases = self._knowledge_pack.get("field_vocabulary", {}).get(
+            "document_aliases", {}
+        )
+        return {str(name): str(value) for name, value in aliases.items()}
+
+    def get_field_aliases(self) -> dict[str, list[str]]:
+        """Return semantic field names and their configured source aliases."""
+        aliases = self._knowledge_pack.get("field_vocabulary", {}).get(
+            "field_aliases", {}
+        )
+        return {
+            str(name): [str(value) for value in values]
+            for name, values in aliases.items()
+            if isinstance(values, list)
+        }
+
+    def get_item_description_fields(self) -> list[str]:
+        """Return configured line-item fields used for semantic item checks."""
+        fields = self._knowledge_pack.get("field_vocabulary", {}).get(
+            "item_description_fields", []
+        )
+        return [str(field) for field in fields]
 
     def get_prompt(self, prompt_name: str, **values: str) -> str:
         """Render a named system prompt from the template Knowledge Pack."""

@@ -9,14 +9,14 @@ const activities = [
   { name:"Quality assessment", tokens:241000 }, { name:"Decision summary", tokens:162000 }, { name:"Semantic normalization", tokens:120000 },
 ];
 const cases = [
-  ["CASE-1842","PAFN","Cross-document reasoning","gpt-4.1",18420,2180,11200,20600,0.143,1840],
-  ["CASE-1841","PAFN","Field gap filling","gpt-4.1-mini",8420,930,5100,9350,0.031,960],
+  ["CASE-1842","Food Safety","Cross-document reasoning","gpt-4.1",18420,2180,11200,20600,0.143,1840],
+  ["CASE-1841","Food Safety","Field gap filling","gpt-4.1-mini",8420,930,5100,9350,0.031,960],
   ["CASE-1840","Customs","Cross-document reasoning","gpt-4.1",29400,3610,14400,33010,0.231,2580],
-  ["CASE-1839","PAFN","Quality assessment","gpt-4.1",6240,510,0,6750,0.049,1120],
-  ["CASE-1838","PAFN","Decision summary","gpt-4.1-mini",3190,620,2048,3810,0.014,740],
+  ["CASE-1839","Food Safety","Quality assessment","gpt-4.1",6240,510,0,6750,0.049,1120],
+  ["CASE-1838","Food Safety","Decision summary","gpt-4.1-mini",3190,620,2048,3810,0.014,740],
   ["CASE-1837","Customs","Semantic normalization","gpt-4.1-mini",4770,480,2800,5250,0.018,810],
-  ["CASE-1836","PAFN","Cross-document reasoning","gpt-4.1",15900,1970,9800,17870,0.124,1690],
-  ["CASE-1835","PAFN","Field gap filling","gpt-4.1-mini",7380,840,4200,8220,0.028,890],
+  ["CASE-1836","Food Safety","Cross-document reasoning","gpt-4.1",15900,1970,9800,17870,0.124,1690],
+  ["CASE-1835","Food Safety","Field gap filling","gpt-4.1-mini",7380,840,4200,8220,0.028,890],
 ];
 const rates = { "gpt-4.1": { input: 0.005, output: 0.015 }, "gpt-4.1-mini": { input: 0.0004, output: 0.0016 } };
 const $ = selector => document.querySelector(selector);

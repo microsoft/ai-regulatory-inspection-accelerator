@@ -1,12 +1,12 @@
 [
   {
-    "id": "AGENCY_CODE_RULES",
-    "category": "AgencyCode",
-    "agencyCode": "2",
+    "id": "EXPECTED_VALUE_RULES",
+    "category": "ExpectedValue",
+    "expectedValue": "2",
     "documentType": "Declaration_Document",
     "fieldName": "agency_code",
     "missingRuleCode": "AGENCY_CODE_MISSING",
-    "mismatchRuleCode": "AGENCY_CODE_NOT_PAFN"
+    "mismatchRuleCode": "AGENCY_CODE_MISMATCH"
   },
 
   {
@@ -48,22 +48,24 @@
       {"documentType": "Vehicle,_Truck_&_Equipment_Specifications_Disclosure_Form", "documentTypeId": "70"},
       {"documentType": "Vehicle_Initial_Registration_Form", "documentTypeId": "73"}
     ],
-    "personalShipment": {
-      "declarationPrefixes": ["TDR"],
+    "conditionalProfile": {
+      "identifierPrefixes": ["TDR"],
       "requiredDocuments": [
         {"documentType": "Declaration_Document", "documentTypeId": "42"},
         {"documentType": "Other_Documents", "documentTypeId": "43"}
       ]
     },
+    "codeAttribute": "hsCode",
+    "regionAttribute": "countryOfOrigin",
     "conditionalRequirements": [
-      {"documentType": "Halal_Slaughter_Certificate", "hsCodeRuleId": "HALAL_HS_CODES"},
-      {"documentType": "Fish_Import_License", "hsCodeRuleId": "FISH_HS_CODES"},
-      {"documentType": "Shrimp_Import_License", "hsCodeRuleId": "SHRIMP_HS_CODES"},
-      {"documentType": "Zubaidi_Import_License", "hsCodeRuleId": "ZUBAIDI_HS_CODES"},
-      {"documentType": "Invoice", "hsCodeRuleId": "FRESH_HS_CODES"},
+      {"documentType": "Halal_Slaughter_Certificate", "codeRuleId": "HALAL_HS_CODES"},
+      {"documentType": "Fish_Import_License", "codeRuleId": "FISH_HS_CODES"},
+      {"documentType": "Shrimp_Import_License", "codeRuleId": "SHRIMP_HS_CODES"},
+      {"documentType": "Zubaidi_Import_License", "codeRuleId": "ZUBAIDI_HS_CODES"},
+      {"documentType": "Invoice", "codeRuleId": "FRESH_HS_CODES"},
       {
         "documentType": "Statistical_Declaration",
-        "originCountries": ["SA", "AE", "KW", "QA", "BH", "OM"]
+        "regions": ["SA", "AE", "KW", "QA", "BH", "OM"]
       }
     ]
   },
@@ -132,39 +134,40 @@
   },
 
   {
-    "id": "REJECTED_HS_CODES",
-    "category": "HsCodeValidation",
-    "validJurisdictionRuleId": "PAFN_HS_CODES",
-    "outsideJurisdictionRuleCode": "NON_PAFN_HS_CODE",
-    "rejectedCodes": [
-      {"hsCode": "0301", "sectionDescription": "Live Animals", "chapterDescription": "Live fish", "hsdescription": "Live fish — prohibited food import"},
-      {"hsCode": "0901.21", "sectionDescription": "Foodstuffs", "chapterDescription": "Coffee, tea", "hsdescription": "Roasted coffee — requires special import permit"},
-      {"hsCode": "2402", "sectionDescription": "Tobacco", "chapterDescription": "Cigars, cigarettes", "hsdescription": "Tobacco products — not under PAFN jurisdiction"},
-      {"hsCode": "2401", "sectionDescription": "Tobacco", "chapterDescription": "Unmanufactured tobacco", "hsdescription": "Raw tobacco — not under PAFN jurisdiction"}
+    "id": "DENIED_CODES",
+    "category": "ClassificationCodeValidation",
+    "codeField": "hsCode",
+    "inScopeRuleId": "FOOD_SAFETY_HS_CODES",
+    "outOfScopeRuleCode": "NON_FOOD_SAFETY_HS_CODE",
+    "deniedCodes": [
+      {"code": "0301", "sectionDescription": "Live Animals", "chapterDescription": "Live fish", "description": "Live fish — prohibited food import"},
+      {"code": "0901.21", "sectionDescription": "Foodstuffs", "chapterDescription": "Coffee, tea", "description": "Roasted coffee — requires special import permit"},
+      {"code": "2402", "sectionDescription": "Tobacco", "chapterDescription": "Cigars, cigarettes", "description": "Tobacco products — outside food safety jurisdiction"},
+      {"code": "2401", "sectionDescription": "Tobacco", "chapterDescription": "Unmanufactured tobacco", "description": "Raw tobacco — outside food safety jurisdiction"}
     ]
   },
 
   {
-    "id": "PAFN_HS_CODES",
-    "category": "HsCodeValidation",
+    "id": "FOOD_SAFETY_HS_CODES",
+    "category": "ClassificationCodeValidation",
     "acceptedCodes": [
-      {"hsCode": "02"},
-      {"hsCode": "03"},
-      {"hsCode": "04"},
-      {"hsCode": "07"},
-      {"hsCode": "08"},
-      {"hsCode": "09"},
-      {"hsCode": "10"},
-      {"hsCode": "11"},
-      {"hsCode": "12"},
-      {"hsCode": "15"},
-      {"hsCode": "16"},
-      {"hsCode": "17"},
-      {"hsCode": "18"},
-      {"hsCode": "19"},
-      {"hsCode": "20"},
-      {"hsCode": "21"},
-      {"hsCode": "22"}
+      {"code": "02"},
+      {"code": "03"},
+      {"code": "04"},
+      {"code": "07"},
+      {"code": "08"},
+      {"code": "09"},
+      {"code": "10"},
+      {"code": "11"},
+      {"code": "12"},
+      {"code": "15"},
+      {"code": "16"},
+      {"code": "17"},
+      {"code": "18"},
+      {"code": "19"},
+      {"code": "20"},
+      {"code": "21"},
+      {"code": "22"}
     ]
   },
 
@@ -226,6 +229,44 @@
   {
     "id": "CROSS_DOC_RULES",
     "category": "CrossDocumentConsistency",
+    "countryFields": [
+      "country_of_origin",
+      "countryOfOrigin",
+      "port_of_loading",
+      "port_of_discharge"
+    ],
+    "dateFields": [
+      "invoice_date",
+      "issue_date",
+      "declaration_date",
+      "expiry_date",
+      "production_date",
+      "slaughter_date"
+    ],
+    "documentFallbacks": [
+      {"whenAbsent": ["Packing_List", "Stretching_List"], "use": "Invoice"}
+    ],
+    "lineItemSources": ["Packing_List", "Stretching_List", "Invoice"],
+    "documentAliases": {
+      "HouseBill": "House_Bill",
+      "DeliveryOrders": "Delivery_Orders",
+      "PackingList": "Packing_List",
+      "StretchingList": "Stretching_List",
+      "Invoice": "Invoice",
+      "CertificateOfOrigin": "Certificate_Of_Origin",
+      "IssuingCountryOfOriginCertificate": "Issuing_Country_Of_Origin_Certificate",
+      "HealthCertificateFromCountryOfOrigin": "Health_Certificate_from_Country_of_Origin",
+      "HealthLicense": "Health_License",
+      "HalalSlaughterCertificate": "Halal_Slaughter_Certificate",
+      "StatisticalDeclarationGCC": "Statistical_Declaration",
+      "GCCDeclaration": "GCC_Declaration",
+      "CommercialLicense": "Commercial_License",
+      "ImportLicense": "Import_License",
+      "SignatureAuthorization": "Signature_Authorization",
+      "FishImportLicense": "Fish_Import_License",
+      "ShrimpImportLicense": "Shrimp_Import_License",
+      "ZubaidiImportLicense": "Zubaidi_Import_License"
+    },
     "crossDocumentRules": [
       {
         "ruleId": "CROSS_IMPORTER_NAME",
@@ -339,24 +380,40 @@
   },
 
   {
-    "id": "LOGICAL_RULES",
-    "category": "LogicalConsistency",
+    "id": "TEMPORAL_RULES",
+    "category": "TemporalValidity",
     "isActive": "True",
-    "logicalRules": [
+    "temporalRules": [
       {
         "ruleId": "FOOD_NOT_EXPIRED",
-        "appliesTo": "FoodItem",
+        "scope": "item",
+        "operator": "after",
+        "reference": "today",
+        "valueField": "expiryDate",
+        "lineItemField": "expiry_date",
+        "labelField": "itemType",
         "lineItemSources": [
           {"documentType": "Packing_List", "documentTypeId": "48"},
           {"documentType": "Stretching_List", "documentTypeId": "49"},
           {"documentType": "Invoice", "documentTypeId": "50"}
         ],
-        "inputs": ["expiryDate"],
-        "expression": "expiryDate >= today",
+        "missingResult": "WARN",
+        "failResult": "FAIL",
+        "missingMessage": "Item '{item}' expiry date could not be verified (not found in any document line items).",
+        "failMessage": "Item '{item}' has already expired (expiry date: {value}, source: {source}).",
         "description": "Food must not be already expired"
       },
       {
         "ruleId": "ISSUE_DATE_NOT_IN_FUTURE",
+        "scope": "document",
+        "operator": "notAfter",
+        "reference": "today",
+        "fields": [
+          "issue_date",
+          "certificate_issue_date",
+          "license_issue_date",
+          "license_start_date"
+        ],
         "appliesTo": [
           {"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"},
           {"documentType": "Health_License", "documentTypeId": "40"},
@@ -367,12 +424,21 @@
           {"documentType": "Commercial_License", "documentTypeId": "52"},
           {"documentType": "Import_License", "documentTypeId": "53"}
         ],
-        "inputs": ["certificateIssueDate"],
-        "expression": "certificateIssueDate <= today",
+        "failResult": "FAIL",
+        "failMessage": "{documentType} has an issue date in the future ({value}). The document may be invalid.",
         "description": "Document issue date cannot be in the future"
       },
       {
         "ruleId": "CERTIFICATE_NOT_EXPIRED",
+        "scope": "document",
+        "operator": "after",
+        "reference": "today",
+        "fields": [
+          "expiry_date",
+          "certificate_expiry_date",
+          "license_expiry_date",
+          "certificate_valid_until"
+        ],
         "appliesTo": [
           {"documentType": "Halal_Slaughter_Certificate", "documentTypeId": "21"},
           {"documentType": "Health_License", "documentTypeId": "40"},
@@ -383,10 +449,88 @@
           {"documentType": "Commercial_License", "documentTypeId": "52"},
           {"documentType": "Import_License", "documentTypeId": "53"}
         ],
-        "inputs": ["certificateExpiryDate"],
-        "expression": "certificateExpiryDate > today",
+        "failResult": "FAIL",
+        "failMessage": "{documentType} has expired (expiry date: {value}).",
         "description": "Certificate must still be valid at time of inspection"
       }
     ]
+  },
+
+  {
+    "id": "ITEM_RECONCILIATION_RULES",
+    "category": "ItemReconciliation",
+    "isActive": "True",
+    "description": "Reconcile declared payload items against extracted document line items.",
+    "lineItemSources": ["Packing_List", "Stretching_List", "Invoice"],
+    "labelFields": ["item_description", "product_description", "goods_description"],
+    "tolerances": {"default": 0.02, "conditional": 0.05},
+    "derivedValues": [
+      {
+        "name": "netWeightKg",
+        "operator": "product",
+        "round": 3,
+        "operands": [
+          {"attribute": "itemQty"},
+          {"attribute": "pack", "default": 1},
+          {
+            "attribute": "netUnitWgt",
+            "unitAttribute": "itemUnit",
+            "defaultUnit": "g",
+            "unitMultipliers": {"g": 0.001, "kg": 1, "mt": 1000, "t": 1000}
+          }
+        ]
+      }
+    ],
+    "sanityChecks": [
+      {"id": "ITEM_NW_MISSING", "attribute": "netUnitWgt", "check": "required", "label": "net unit weight"},
+      {"id": "ITEM_NW_INVALID", "derived": "netWeightKg", "check": "positive", "label": "net weight"},
+      {"id": "ITEM_NW_UNREALISTIC", "derived": "netWeightKg", "check": "maximum", "value": 1000000.0, "label": "net weight"}
+    ],
+    "comparisons": [
+      {
+        "id": "ITEM_QTY",
+        "type": "numeric",
+        "declared": {"attribute": "itemQty"},
+        "extracted": {"fields": ["quantity_or_number_of_packages", "quantity"]}
+      },
+      {
+        "id": "ITEM_NW",
+        "type": "numeric",
+        "declared": {"derived": "netWeightKg"},
+        "extracted": {"fields": ["net_weight"]},
+        "conditionalTolerance": true,
+        "unitInference": {"threshold": 500.0, "multiplier": 1000}
+      },
+      {
+        "id": "ITEM_COO",
+        "type": "country",
+        "declared": {"attribute": "countryOfOrigin"},
+        "extracted": {"fields": ["country_of_origin_per_item", "country_of_origin"]}
+      },
+      {
+        "id": "ITEM_EXP",
+        "type": "date",
+        "declared": {"attribute": "expiryDate"},
+        "extracted": {"fields": ["expiry_date"]}
+      },
+      {
+        "id": "ITEM_PROD",
+        "type": "date",
+        "declared": {"attribute": "prodDate"},
+        "extracted": {"fields": ["production_date"]}
+      }
+    ],
+    "crossDocumentComparison": {
+      "id": "ITEM_NW_XDOC",
+      "derived": "netWeightKg",
+      "fields": ["net_weight"],
+      "unitInference": {"threshold": 500.0, "multiplier": 1000}
+    },
+    "aggregate": {
+      "id": "ITEM_NW_TOTAL",
+      "derived": "netWeightKg",
+      "fields": ["total_net_weight", "net_weight_total"],
+      "unitInference": {"threshold": 500.0, "multiplier": 1000}
+    }
   }
 ]

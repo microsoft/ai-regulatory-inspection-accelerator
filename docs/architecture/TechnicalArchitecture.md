@@ -94,11 +94,11 @@ Eleven capability groups, from bundle intake through reporting:
 
 ## 3. Logical Architecture
 
-This is the reference topology as built and running for PAFN - no component below is invented or aspirational; every box maps to a real Azure resource in the production deployment.
+This is the reference topology - every box maps to a real Azure resource.
 
 The objective of the Core Platform is to reuse this same engine, unchanged, across many government and private-sector entities - not to reinvent infrastructure that already works. The only legitimate platform-side additions are genuine efficiency gains (for example, converting Office documents to Markdown before extraction to cut token usage); everything that varies per adopter - document types, rules, vocabulary, connectors - is configuration, never new platform code.
 
-**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below - which already includes human-in-the-loop escalation for low-confidence/high-risk cases via a manual review queue. There is no chat interface in this diagram. The Chat Agent (a conversational interface to that same human reviewer) is built in the PAFN reference deployment (SCEN-02) but is not yet generalized into the Core Platform, not yet validated to the same degree as the Delivery Agent, and is not part of the Agent and Processing Layer shown here.
+**Phase 1 scope note:** This topology ships Recommendation only - Pre-Validation through Delivery below - which already includes human-in-the-loop escalation for low-confidence/high-risk cases via a manual review queue. There is no chat interface in this diagram. The Chat Agent (a conversational interface to that same human reviewer) is built in the reference deployment (SCEN-02) but is not yet generalized into the Core Platform, not yet validated to the same degree as the Delivery Agent, and is not part of the Agent and Processing Layer shown here.
 
 ![ARIA reference architecture - Site-to-Site VPN intake, Durable Functions Agent and Processing Layer, Azure AI Services, Data and Integration Layer, callback to the adopting entity's own portal](../images/architecture/reference-architecture.png)
 
@@ -184,7 +184,7 @@ flowchart LR
 | Azure Platform, Monitoring and Operations | Cross-cutting platform services | Key Vault · Application Insights · Azure Monitor · Entra Authentication |
 | Analytics and Dashboards | Reporting and downstream analytics over processed cases | Power BI · Azure Synapse Analytics |
 
-The generalized Core Platform (Section 4 onward) implements this same topology in domain-neutral terms - the layer names above are the concrete, as-built PAFN mapping; the component names in Section 4 are the reusable, industry-agnostic equivalents.
+The generalized Core Platform (Section 4 onward) implements this same topology in domain-neutral terms - the layer names above are the concrete, as-built deployment mapping; the component names in Section 4 are the reusable, industry-agnostic equivalents.
 
 ---
 
@@ -206,7 +206,7 @@ Full Purpose/Inputs/Outputs/Dependencies/Extensibility/Token-Impact specificatio
 | C-10 | Policy Evaluation Engine | Evaluates all active compliance rules from Cosmos DB, deterministically | Zero - no LLM calls, by design |
 | C-11 | Risk Assessment Engine | Computes weighted risk score, grade, and HOLD escalation decision | Minimal - only historical pattern lookup uses embeddings |
 | C-12 | Delivery Agent | Synthesizes final verdict, assembles evidence chain, delivers via HMAC-signed callback - always includes human-in-the-loop escalation for low-confidence/high-risk cases | Minimal - decision synthesis is algorithmic |
-| C-13 | Human Review Framework (Chat Agent) | Conversational Q&A for reviewers, built in the PAFN reference deployment via direct Cosmos DB tool lookups - not yet generalized into the Core Platform or validated to the same degree as the Delivery Agent | Retrieval-augmented design proposed (ADR-017) but not yet implemented - current tool calls query Cosmos DB directly |
+| C-13 | Human Review Framework (Chat Agent) | Conversational Q&A for reviewers, built in the reference deployment via direct Cosmos DB tool lookups - not yet generalized into the Core Platform or validated to the same degree as the Delivery Agent | Retrieval-augmented design proposed (ADR-017) but not yet implemented - current tool calls query Cosmos DB directly |
 | C-14 | Explainability Framework | Generates plain-language, per-finding decision rationale | Low - bounded per-finding context |
 | C-15 | Audit Framework | Immutable, append-only event stream for every decision, LLM call, and human action | Monitoring - tracks tokens, doesn't consume them |
 | C-16 | Connector Framework | Adapts external submission/delivery formats via the `BaseConnector` interface contract | Zero - purely algorithmic transformation |
@@ -225,7 +225,7 @@ The pipeline is five sequential Durable Functions activities plus three componen
 | Reasoning Agent | Cross-document consistency and conflict detection | Activity 3 | Reasoning Agent (C-09) |
 | Rules & Policy Agent | Rule evaluation against evidence, risk scoring, grading, and HOLD determination | Activity 4 | Policy Evaluation Engine (C-10) + Risk Assessment Engine (C-11) |
 | Delivery Agent | Verdict synthesis, evidence chain, delivery - human-in-the-loop escalation for low-confidence/high-risk cases already included | Activity 5 | Delivery Agent (C-12) |
-| **Chat Agent** | Evidence Q&A for reviewers - built in the PAFN reference deployment, not yet generalized into the Core Platform *(see Roadmap)* | Async | Human Review Framework (C-13) |
+| **Chat Agent** | Evidence Q&A for reviewers - built in the reference deployment, not yet generalized into the Core Platform *(see Roadmap)* | Async | Human Review Framework (C-13) |
 | **Audit Assistant Agent** | Decision reconstruction, lineage querying *(Planned)* | On-demand | Audit Framework (C-15) |
 | Knowledge Pack Stage | Template knowledge compression + caching | Background | Knowledge Pack Generator (C-07) |
 
@@ -248,7 +248,7 @@ sequenceDiagram
     POL->>POL: Evaluate 8 rule categories (deterministic) + weighted risk score + HOLD determination
     POL->>REC: Findings + risk score + grade + confidence
     REC->>REC: Verdict synthesis + evidence chain + human-in-the-loop escalation (Phase 1, manual queue)
-    Note over REV: Async - triggered on HOLD or reviewer request, built in PAFN reference deployment, not yet generalized
+    Note over REV: Async - triggered on HOLD or reviewer request, built in the reference deployment, not yet generalized
     REC-->>REV: Case routed to human review queue
     REV->>REV: Direct Cosmos DB tool lookups grounded in evidence (retrieval-augmented design proposed in ADR-017, not yet implemented)
 ```
@@ -293,7 +293,7 @@ TIER 3 - REFERENCE IMPLEMENTATIONS (customer-isolated)
 
 | Industry | Template | Decision vocabulary |
 |---|---|---|
-| Food Safety Inspection (PAFN reference) | `food-safety` | PASS · HOLD · FAIL |
+| Food Safety Inspection | `food-safety` | PASS · HOLD · FAIL |
 | Customs Clearance | `customs-trade` | CLEAR · HOLD · DETAIN |
 | Healthcare Compliance | `healthcare-compliance` | AUTHORIZE · PEER REVIEW · DENY |
 | Licensing and Certification | `licensing-cert` | APPROVE · PROVISIONAL · DENY |
@@ -339,7 +339,7 @@ Full entity-relationship diagram and Azure AI Search index schema live in the [I
 | SharePoint integration | Inbound | Microsoft Graph API, webhook on document upload |
 | Document repository integration | Inbound | Blob/SFTP webhook or poll, transform to ARIA JSON |
 | Cosmos DB Change Feed | Internal | Event-driven trigger for case/summary indexing into Azure AI Search |
-| Regulatory system integration | Both | Always Tier 3 (customer-isolated); PAFN's Raqeb connector is the reference example |
+| Regulatory system integration | Both | Always Tier 3 (customer-isolated); a case-management system connector is the reference example |
 
 Full pattern diagrams live in the [Internal Engineering Deep-Reference](internal/aria-platform-architecture-deepdive.md#output-9---integration-architecture-full-detail).
 
@@ -435,11 +435,11 @@ Five architectural proofs validate the platform design. Full evidence for each l
 
 | # | Proof | Verdict |
 |---|---|---|
-| 1 | ARIA remains valuable if the PAFN reference implementation is removed | Core Platform + 5 additional industry templates remain fully deployable |
+| 1 | ARIA remains valuable if any single reference implementation is removed | Core Platform + 5 additional industry templates remain fully deployable |
 | 2 | New industries can be onboarded without platform code changes | 14 template artifacts are the only work required |
 | 3 | Token efficiency is built into the architecture, not bolted on | ~81% aggregate token reduction targeted across a full case lifecycle, based on component-level projections - not yet measured against a production case set |
-| 4 | PAFN is a reference implementation, not the product | PAFN-specific code is fully isolated in `reference-implementations/` |
-| 5 | ARIA is reusable Microsoft-scale IP | 12 target verticals, TAM > $25B, 56% of PAFN components directly reusable with zero modification |
+| 4 | A reference implementation is not the product | Adopter-specific code is fully isolated in `reference-implementations/` |
+| 5 | ARIA is reusable Microsoft-scale IP | 12 target verticals, TAM > $25B |
 
 ---
 

@@ -1,0 +1,30 @@
+{
+  "risk_bands": [
+    {
+      "minimum": 0.75,
+      "risk_level": "High",
+      "recommendation": "ACCEPT_WITH_WARNING",
+      "recommendation_label": "Accept with warnings",
+      "platform_recommendation": "HOLD"
+    },
+    {
+      "minimum": 0.4,
+      "risk_level": "Medium",
+      "recommendation": "ACCEPT_WITH_WARNING",
+      "recommendation_label": "Accept with warnings",
+      "platform_recommendation": "HOLD"
+    },
+    {
+      "minimum": 0.0,
+      "risk_level": "Low",
+      "recommendation": "ACCEPT",
+      "recommendation_label": "Accept",
+      "platform_recommendation": "PASS"
+    }
+  ],
+  "explicit_reject": {
+    "recommendation": "REJECT",
+    "recommendation_label": "Reject",
+    "platform_recommendation": "FAIL"
+  }
+}

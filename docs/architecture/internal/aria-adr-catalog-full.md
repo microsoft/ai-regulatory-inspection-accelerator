@@ -27,34 +27,34 @@
 
 | ADR ID | Title | Status | Category | Source |
 |---|---|---|---|---|
-| ADR-001 | Azure Durable Functions for Pipeline Orchestration | **Accepted - Proven** | Platform / Orchestration | Document 04 |
-| ADR-002 | Configuration-Driven Document Type Schema | **Accepted - Proven** | Platform / Extensibility | Document 04 |
-| ADR-003 | Cosmos DB for Rules Engine and Case Store | **Accepted - Proven** | Platform / Data | Document 04 |
-| ADR-004 | Azure Managed Identity Zero-Secrets Architecture | **Accepted - Proven** | Security / Identity | Document 04 |
-| ADR-005 | LLM Cross-Document Reasoning Pattern | **Accepted - Proven** | AI / Reasoning | Document 04 |
-| ADR-006 | Private Endpoint Network Topology | **Accepted - Proven** | Security / Network | Document 04 |
-| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted - Proven** (tool-calling pattern is real and built as PAFN's SCEN-02 Chat Agent; less tested/validated than the Delivery Agent) | AI / Agent | Document 04 |
-| ADR-008 | Async Callback Delivery Pattern | **Accepted - Proven** | Integration / Delivery | Document 04 |
+| ADR-001 | Azure Durable Functions for Pipeline Orchestration | **Accepted** | Platform / Orchestration | Document 04 |
+| ADR-002 | Configuration-Driven Document Type Schema | **Accepted** | Platform / Extensibility | Document 04 |
+| ADR-003 | Cosmos DB for Rules Engine and Case Store | **Accepted** | Platform / Data | Document 04 |
+| ADR-004 | Azure Managed Identity Zero-Secrets Architecture | **Accepted** | Security / Identity | Document 04 |
+| ADR-005 | LLM Cross-Document Reasoning Pattern | **Accepted** | AI / Reasoning | Document 04 |
+| ADR-006 | Private Endpoint Network Topology | **Accepted** | Security / Network | Document 04 |
+| ADR-007 | Tool-Calling Agent Architecture for Human Review | **Accepted** (tool-calling pattern is built as the reference deployment's SCEN-02 Chat Agent; less tested/validated than the Delivery Agent) | AI / Agent | Document 04 |
+| ADR-008 | Async Callback Delivery Pattern | **Accepted** | Integration / Delivery | Document 04 |
 | ADR-009 | Three-Tier Product Model | **Accepted - Design** | Platform / Architecture | Document 15 |
 | ADR-010 | Domain Neutrality Enforcement via CI | **Accepted - Design** | Platform / Governance | Document 15 |
 | ADR-011 | Token Efficiency as First-Class Architectural Concern | **Accepted - Design** | AI / Cost | Document 15 |
-| ADR-012 | Document Normalization Before LLM Processing | **Accepted - Proven** | AI / Pre-Processing | Document 15 |
-| ADR-013 | Dual-Phase Extraction Strategy | **Accepted - Proven** | AI / Extraction | Document 15 |
+| ADR-012 | Document Normalization Before LLM Processing | **Accepted** | AI / Pre-Processing | Document 15 |
+| ADR-013 | Dual-Phase Extraction Strategy | **Accepted** | AI / Extraction | Document 15 |
 | ADR-014 | Semantic Chunking for Large Document Processing | **Accepted - Design** | AI / Context Management | Document 15 |
 | ADR-015 | Knowledge Pack Strategy for Domain Context Compression | **Accepted - Design** | AI / Context Management | Document 15 |
 | ADR-016 | Context Assembly Engine Pattern | **Accepted - Design** | AI / Context Management | Document 15 |
-| ADR-017 | Retrieval-Augmented Human Review | **Proposed** (PAFN's real chat engine uses direct Cosmos DB tool lookups, not Azure AI Search retrieval - this design is not implemented) | AI / Human Review | Document 15 |
+| ADR-017 | Retrieval-Augmented Human Review | **Proposed** (the reference chat engine uses direct Cosmos DB tool lookups, not Azure AI Search retrieval - this design is not implemented) | AI / Human Review | Document 15 |
 | ADR-018 | Azure OpenAI Prompt Prefix Caching | **Accepted - Design** | AI / Cost | Document 15 |
-| ADR-019 | Azure API Management as Submission Gateway | **Accepted - Proven** | Integration / Gateway | Document 15 |
-| ADR-020 | Azure AI Search for Semantic Case History Retrieval | **Accepted - Proven** | Platform / Search | Document 15 |
+| ADR-019 | Azure API Management as Submission Gateway | **Accepted** | Integration / Gateway | Document 15 |
+| ADR-020 | Azure AI Search for Semantic Case History Retrieval | **Accepted** | Platform / Search | Document 15 |
 | ADR-021 | PII Redaction Architecture (single-tier default; dual-tier optional) | **Accepted - Design** | Security / Privacy | Document 15 |
 | ADR-022 | Agent and Stage Orchestration Architecture | **Accepted - Design** | AI / Agent | Document 15 |
 | ADR-023 | Knowledge Pack Stage as Event-Driven Background Process | **Accepted - Design** | AI / Agent | Document 15 |
 | ADR-024 | Connector Isolation Model | **Accepted - Design** | Platform / Extensibility | Document 15 |
 | ADR-025 | Template CI Enforcement | **Accepted - Design** | Platform / Governance | Document 15 |
 | ADR-026 | Sovereign Deployment via Environment Variable Substitution | **Proposed** | Platform / Deployment | Document 15 |
-| ADR-027 | Duplicate Detection Before AI Processing | **Accepted - Proven** | AI / Pre-Processing | Document 15 |
-| ADR-028 | Evaluation Framework as Mandatory Deployment Gate | **Accepted - Proven** | Platform / Quality | Document 15 |
+| ADR-027 | Duplicate Detection Before AI Processing | **Accepted** | AI / Pre-Processing | Document 15 |
+| ADR-028 | Evaluation Framework as Mandatory Deployment Gate | **Accepted** | Platform / Quality | Document 15 |
 
 **Total ADRs:** 28 (8 original + 20 new)
 
@@ -89,13 +89,13 @@
 
 ### 1.3 ADR Status Summary
 
-Status reflects maturity, not just approval - three tiers distinguish decisions matched by real evidence from decisions that are architecturally sound but unmeasured.
+Status reflects maturity, not just approval - three tiers distinguish decisions that are implemented from decisions that are architecturally sound but unbuilt.
 
 | Status | Count | Notes |
 |---|---|---|
-| **Accepted - Proven** | 14 | Matches something real PAFN already does today (ADR-001 through 008, 012, 013, 019, 020, 027, 028) |
+| **Accepted** | 14 | Implemented in the reference deployment (ADR-001 through 008, 012, 013, 019, 020, 027, 028) |
 | **Accepted - Design** | 12 | Architecturally decided, sound reasoning, not yet built or measured (ADR-009, 010, 011, 014-016, 018, 021-025) |
-| **Proposed** | 2 | No path to validation without further work (ADR-017: PAFN's real Chat Agent does not use this retrieval design; ADR-026: no path to validation without a real deployment) |
+| **Proposed** | 2 | No path to validation without further work (ADR-017: the reference Chat Agent does not use this retrieval design; ADR-026: no path to validation without a real deployment) |
 | Deprecated | 0 | No decisions deprecated |
 | Superseded | 0 | No decisions superseded |
 
@@ -125,14 +125,14 @@ These ADRs are documented in full in 04-Architecture-Decision-Records.md. Summar
 ## ADR-009: Three-Tier Product Model
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (not yet applied to PAFN; conceptual model for the generalized platform)
+**Status:** Accepted - Design (conceptual model for the generalized platform)
 **Category:** Platform / Architecture
 **Deciders:** Principal Product Manager · Principal Enterprise Architect
 **Source:** Document 15, Output 1 (Reusability Strategy) and Output 7 (Template Framework)
 
 ### Context
 
-ARIA must be deployable across many unrelated industries (food safety, customs, KYC, insurance, healthcare, environmental, licensing) without requiring platform engineering for each deployment. The initial PAFN implementation entangled customer-specific logic (Raqeb connector, Kuwait food safety rules, Arabic UI) with reusable platform logic, making it impossible to tell where the platform ended and the customer began. A clear product model was needed to enforce separation.
+ARIA must be deployable across many unrelated industries (food safety, customs, KYC, insurance, healthcare, environmental, licensing) without requiring platform engineering for each deployment. Earlier single-customer implementations entangled adopter-specific logic (case-management connector, domain rules, localized UI) with reusable platform logic, making it impossible to tell where the platform ended and the customer began. A clear product model was needed to enforce separation.
 
 The core tension: domain experts must be able to configure the platform for their industry without engineering involvement, while platform engineers must be able to evolve the core without affecting customer-specific code. These goals conflict unless the product is structured to separate their concerns explicitly.
 
@@ -154,11 +154,11 @@ No tier may import from a lower tier's directory in reverse (e.g., `src/platform
 
 **IP governance clarity:** Microsoft's IP is in Tier 1. Tier 2 and Tier 3 artifacts are customer-configurable. This separation is essential for IP licensing, Marketplace listing, and partner delivery models.
 
-**Proven by PAFN:** After applying the three-tier model, PAFN is fully classified: 26 components as Tier 1 (Core Platform), 7 as Tier 2 (Industry Template), and 5 as Tier 3 / Customer-Specific. The classification confirms that 76% of PAFN is reusable platform IP.
+**Classification outcome:** Applying the three-tier model to the reference deployment classifies 26 components as Tier 1 (Core Platform), 7 as Tier 2 (Industry Template), and 5 as Tier 3 / Customer-Specific.
 
 ### Alternatives Considered
 
-**Two-tier model (Platform + Customer):** No template tier - domain configuration embedded in customer deployments. Rejected because this recreates the PAFN problem: every new customer starts from scratch. The template tier enables partner-led delivery without Microsoft CSE involvement.
+**Two-tier model (Platform + Customer):** No template tier - domain configuration embedded in customer deployments. Rejected because it recreates the original problem: every new customer starts from scratch. The template tier enables partner-led delivery without Microsoft CSE involvement.
 
 **Single tier (fully generic platform):** All configuration at runtime via API. Rejected because it requires engineering work to add any new domain, contradicting the "domain experts configure, not engineers" principle.
 
@@ -243,7 +243,7 @@ The banned-word list is intentionally configurable because new industries introd
 
 Azure OpenAI input and output tokens are the dominant variable cost in every ARIA deployment. An unoptimized implementation that sends raw documents to LLMs produces a cost profile that scales poorly: more documents, more pages, more complexity → quadratically higher LLM costs. For a government customer processing 10,000 cases/day with 5 documents per case, this becomes a commercially critical concern.
 
-Early PAFN prototypes sent full document OCR output directly to the LLM for field extraction. Token consumption was approximately 5–8× what a structured approach would require. At scale, this cost profile would make ARIA economically non-viable in price-sensitive markets.
+Early prototypes sent full document OCR output directly to the LLM for field extraction. Token consumption was approximately 5–8× what a structured approach would require. At scale, this cost profile would make ARIA economically non-viable in price-sensitive markets.
 
 Token efficiency must be an architectural property, not an operational practice. If it is left to individual developers to "try to use fewer tokens," the property will not hold across the codebase over time.
 
@@ -296,7 +296,7 @@ Making token efficiency architectural means it cannot be removed by a developer 
 ## ADR-012: Document Normalization Before LLM Processing
 
 **Date:** 2026-08-10
-**Status:** Accepted - Proven (PAFN's `di_extraction.py` already normalizes to Markdown before LLM processing)
+**Status:** Accepted (`di_extraction.py` normalizes to Markdown before LLM processing)
 **Category:** AI / Pre-Processing
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.2 (DOCX to Markdown) and 6.3 (PDF Normalization)
@@ -353,7 +353,7 @@ Normalized Markdown is stored in Blob Storage, enabling reuse if the same docume
 ## ADR-013: Dual-Phase Extraction Strategy
 
 **Date:** 2026-08-10
-**Status:** Accepted - Proven (matches PAFN's real `di_extraction.py` 8-step process)
+**Status:** Accepted (matches the `di_extraction.py` 8-step process)
 **Category:** AI / Extraction
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.4 (Structured Pre-Extraction)
@@ -414,7 +414,7 @@ The `diModel` field in `evidence_types.json` makes the Phase 1 model selection d
 ## ADR-014: Semantic Chunking for Large Document Processing
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (not yet built; unproven at PAFN's actual document sizes)
+**Status:** Accepted - Design (not yet built; unvalidated at realistic document sizes)
 **Category:** AI / Context Management
 **Deciders:** AI Systems Architect
 **Source:** Document 15, Output 6, Strategy 6.5 (Semantic Chunking)
@@ -469,14 +469,14 @@ Header-based chunking is preferred because it is deterministic, fast (no embeddi
 ## ADR-015: Knowledge Pack Strategy for Domain Context Compression
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (not yet built; unproven at PAFN's ~47-rule scale)
+**Status:** Accepted - Design (not yet built; unvalidated at a ~47-rule scale)
 **Category:** AI / Context Management
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.6 (Knowledge Packs)
 
 ### Context
 
-The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) and the Reasoning Agent both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
+The Chat Agent (ADR-007, built in the SCEN-02 reference deployment) and the Reasoning Agent both benefit from domain context - a compressed representation of the relevant rules, known aliases, decision vocabulary, and risk thresholds for the current template. Without this, either: (a) no domain context is provided (reducing answer quality), or (b) the full rule set is injected into LLM context (20,000+ tokens).
 
 A food safety deployment has ~47 active rules. Loading all 47 rules as JSON context for every LLM call in the human review session is 20,000+ tokens per call - commercially catastrophic at scale.
 
@@ -584,20 +584,20 @@ The per-call token budget acts as a circuit breaker: if the assembled context ex
 ## ADR-017: Retrieval-Augmented Human Review
 
 **Date:** 2026-08-10
-**Status:** Proposed - PAFN's real Chat Agent (SCEN-02) uses direct Cosmos DB tool lookups (`get_case_verdict`, `get_extracted_fields`, `get_finding_evidence`, `get_rule_definition`), not Azure AI Search retrieval-augmented generation. This ADR describes a design under consideration, not the as-built system - open question, to be revisited.
+**Status:** Proposed - the reference Chat Agent (SCEN-02) uses direct Cosmos DB tool lookups (`get_case_verdict`, `get_extracted_fields`, `get_finding_evidence`, `get_rule_definition`), not Azure AI Search retrieval-augmented generation. This ADR describes a design under consideration, not the as-built system - open question, to be revisited.
 **Category:** AI / Human Review
 **Deciders:** AI Systems Architect · Principal Enterprise Architect
 **Source:** Document 15, Output 6, Strategy 6.7 (Retrieval-Augmented Human Review)
 
 ### Context
 
-The Chat Agent (ADR-007, built in PAFN's SCEN-02 reference deployment) provides a conversational agent for reviewers. Naive implementation would inject the full case record into the LLM context for every reviewer query - giving the LLM complete visibility but consuming 10,000+ tokens per query. For a reviewer session with 20 queries on a complex case (typical for HOLD/FAIL decisions), this is 200,000+ tokens per session.
+The Chat Agent (ADR-007, built in the SCEN-02 reference deployment) provides a conversational agent for reviewers. Naive implementation would inject the full case record into the LLM context for every reviewer query - giving the LLM complete visibility but consuming 10,000+ tokens per query. For a reviewer session with 20 queries on a complex case (typical for HOLD/FAIL decisions), this is 200,000+ tokens per session.
 
 A reviewer asking "Why was the weight flagged?" needs the 2–3 most relevant findings, not the entire case record. The LLM does not need all 10,000 tokens of context to answer accurately - it needs the right 1,500 tokens.
 
 ### Decision
 
-**Note:** This retrieval-augmented design is proposed, not yet implemented - PAFN's real Chat Agent answers reviewer queries via direct Cosmos DB tool lookups instead. The Chat Agent would implement **retrieval-augmented generation (RAG)** for every reviewer query if this design is adopted:
+**Note:** This retrieval-augmented design is proposed, not yet implemented - the reference Chat Agent answers reviewer queries via direct Cosmos DB tool lookups instead. The Chat Agent would implement **retrieval-augmented generation (RAG)** for every reviewer query if this design is adopted:
 
 1. The reviewer's query is embedded using text-embedding-3-small
 2. Azure AI Search performs hybrid vector + keyword retrieval against the case's indexed evidence (using `caseId` as filter)
@@ -640,7 +640,7 @@ The mandatory citation requirement (source document, page, field value) ensures 
 ## ADR-018: Azure OpenAI Prompt Prefix Caching
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (not confirmed as implemented in PAFN today)
+**Status:** Accepted - Design (not confirmed as implemented today)
 **Category:** AI / Cost
 **Deciders:** AI Systems Architect · Engineering Lead
 **Source:** Document 15, Output 6, Strategy 6.8 (Prompt Template Caching)
@@ -696,7 +696,7 @@ Prompt prefix caching is a zero-code-change cost reduction once prompts are stru
 ## ADR-019: Azure API Management as Submission Gateway
 
 **Date:** 2026-08-10
-**Status:** Accepted - Proven (PAFN already routes Raqeb submissions through APIM)
+**Status:** Accepted (the reference deployment routes submissions through APIM)
 **Category:** Integration / Gateway
 **Deciders:** Principal Enterprise Architect
 **Source:** Document 15, Output 11 (Azure Reference Architecture)
@@ -750,7 +750,7 @@ Schema validation at the gateway also provides an early, structured error respon
 ## ADR-020: Azure AI Search for Semantic Case History Retrieval
 
 **Date:** 2026-08-10
-**Status:** Accepted - Proven (PAFN already has `case_document_indexer.py` and `case_summary_indexer.py`)
+**Status:** Accepted (the reference deployment has `case_document_indexer.py` and `case_summary_indexer.py`)
 **Category:** Platform / Search
 **Deciders:** Principal Enterprise Architect · AI Systems Architect
 **Source:** Document 15, Output 11 (Azure Reference Architecture) and Output 4, Component C-13
@@ -805,7 +805,7 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 ## ADR-021: PII Redaction Architecture (Single-Tier Default; Dual-Tier Optional)
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (real PAFN uses a simpler, single-tier redact-at-write-boundary pattern - see Context)
+**Status:** Accepted - Design (the reference implementation uses a simpler, single-tier redact-at-write-boundary pattern - see Context)
 **Category:** Security / Privacy
 **Deciders:** Principal Enterprise Architect · CISO
 **Source:** Document 15, Output 1 (Architecture Principle AP-04) and Output 4, Component C-12
@@ -814,13 +814,13 @@ Change Feed-triggered indexing is consistent with ADR-003 (Cosmos DB for case st
 
 Evidence documents submitted to ARIA may contain PII: names, identification numbers, financial figures, health information, addresses. The Delivery Agent (C-12) assembles a complete evidence chain that includes extracted field values - many of which are PII.
 
-Real PAFN's `shared/pii_redaction.py` already solves this with a simpler pattern: PII fields are redacted before the Cosmos write boundary, and no un-redacted tier is ever persisted. The pipeline uses full data in memory during processing; only the redacted version is stored. This is proven in production and has a smaller risk surface than storing raw PII anywhere.
+The reference implementation's `shared/pii_redaction.py` solves this with a simpler pattern: PII fields are redacted before the Cosmos write boundary, and no un-redacted tier is ever persisted. The pipeline uses full data in memory during processing; only the redacted version is stored. This has a smaller risk surface than storing raw PII anywhere.
 
-A dual-tier write (a second, un-redacted "secured" container for auditors) is a materially different design - it persists raw PII, which is a larger risk surface than PAFN's current approach. That trade-off should only be made if a specific customer or regulatory requirement demands auditors see raw PII values rather than field-level citations. No such requirement has been documented for any current or planned ARIA deployment.
+A dual-tier write (a second, un-redacted "secured" container for auditors) is a materially different design - it persists raw PII, which is a larger risk surface than the single-tier approach. That trade-off should only be made if a specific customer or regulatory requirement demands auditors see raw PII values rather than field-level citations. No such requirement has been documented for any current or planned ARIA deployment.
 
 ### Decision
 
-**Default (matches PAFN):** The platform redacts PII at the write boundary. A single evidence store is written per case, with PII field values replaced by `[REDACTED: {fieldName}]` labels. No un-redacted tier is persisted. PII field declarations live in the template's `pii_field_list.json` - platform applies redaction automatically based on template configuration, consistent with PAFN's existing implementation.
+**Default (single-tier):** The platform redacts PII at the write boundary. A single evidence store is written per case, with PII field values replaced by `[REDACTED: {fieldName}]` labels. No un-redacted tier is persisted. PII field declarations live in the template's `pii_field_list.json` - platform applies redaction automatically based on template configuration.
 
 **Optional dual-tier extension:** If a specific customer's compliance requirement mandates auditor access to raw PII values (documented and cited here before enabling), the platform may additionally write a second, access-restricted container containing the un-redacted evidence chain. This is a per-template, per-customer opt-in - never a platform-wide default.
 
@@ -828,7 +828,7 @@ The PII field map (which fields in which documents contain PII) is generated dur
 
 ### Rationale
 
-Matching PAFN's proven single-tier pattern as the default minimizes risk surface - there is no scenario where raw PII sits in storage waiting to be queried or exfiltrated. The template-declared PII field list means domain experts (not platform engineers) control what is considered PII in their domain. Healthcare PII fields differ from financial PII fields differ from immigration PII fields - the platform should not hardcode this.
+The single-tier pattern as the default minimizes risk surface - there is no scenario where raw PII sits in storage waiting to be queried or exfiltrated. The template-declared PII field list means domain experts (not platform engineers) control what is considered PII in their domain. Healthcare PII fields differ from financial PII fields differ from immigration PII fields - the platform should not hardcode this.
 
 The dual-tier extension remains available for the rare case where a real regulatory or contractual requirement forces auditor access to raw values, but it must be justified per-deployment rather than assumed as architecture.
 
@@ -836,7 +836,7 @@ The dual-tier extension remains available for the rare case where a real regulat
 
 **Dual-tier write as the default (original decision):** Write both a secured (with PII) and display (redacted) evidence store for every deployment. Rejected as the default because it persists raw PII with no demonstrated requirement forcing it, and it doubles storage cost and attack surface for every deployment regardless of need.
 
-**Single store with field-level encryption:** Encrypt PII fields at rest; decrypt only for authorized queries. Technically feasible but adds complexity: key management per field, query performance impact, decryption at display time. Rejected in favor of the simpler redact-at-write-boundary pattern PAFN already uses.
+**Single store with field-level encryption:** Encrypt PII fields at rest; decrypt only for authorized queries. Technically feasible but adds complexity: key management per field, query performance impact, decryption at display time. Rejected in favor of the simpler redact-at-write-boundary pattern.
 
 **Single store with access control at query time:** All evidence in one container; access control filters PII fields in query results. Rejected because query-level PII filtering is error-prone - a single unguarded query path exposes PII. Redaction at write time is safer than filtering at read time.
 
@@ -845,7 +845,7 @@ The dual-tier extension remains available for the rare case where a real regulat
 ### Consequences
 
 **Positive:**
-- Matches PAFN's proven, production-validated pattern - no new risk introduced by default
+- Matches the implemented single-tier pattern - no new risk introduced by default
 - No raw PII persisted anywhere by default - smaller attack surface than the dual-tier design
 - Template-controlled PII field list enables domain-specific PII handling without platform changes
 - Dual-tier extension remains available, but only when a documented requirement justifies it
@@ -877,7 +877,7 @@ ARIA implements an 8-component pipeline of Agents and Stages: five Agent/Stage c
 
 **Component roster:**
 - **Sequential (5 components / 5 activities):** Pre-Validation Agent (Activity 1) · DI Extraction Agent (Activity 2 - includes field canonicalization and PII classification) · Reasoning Agent (Activity 3) · Rules & Policy Agent (Activity 4 - includes risk scoring and HOLD determination) · Delivery Agent (Activity 5)
-- **Async / background (3):** Chat Agent (async, built in PAFN) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
+- **Async / background (3):** Chat Agent (async, built in the reference deployment) · Audit Log (cross-cutting) · Knowledge Pack Stage (event-driven background)
 
 Each component:
 - Has a single, well-defined responsibility
@@ -974,7 +974,7 @@ Isolation from the case processing pipeline ensures that a slow or failed Knowle
 ## ADR-024: Connector Isolation Model
 
 **Date:** 2026-08-10
-**Status:** Accepted - Design (target model; real PAFN's Raqeb-specific logic is still embedded directly in `pre_validation.py` and `agency_code.py` today - see Context)
+**Status:** Accepted - Design (target model; adopter-specific logic is still embedded directly in `pre_validation.py` and `agency_code.py` today - see Context)
 **Category:** Platform / Extensibility
 **Deciders:** Principal Enterprise Architect · Engineering Lead
 **Source:** Document 15, Output 1 (Reusability Strategy) and Output 4, Component C-16
@@ -983,7 +983,7 @@ Isolation from the case processing pipeline ensures that a slow or failed Knowle
 
 External system integration is required in every ARIA deployment: inbound submission sources (SharePoint, workflow engines, CRMs, custom portals) and outbound decision delivery targets (customs management systems, healthcare claim systems, CRMs, case management platforms). Each customer has a different external system. If connector logic lives in the platform pipeline, adding a new connector requires platform engineering.
 
-**Current state:** In real PAFN today, Raqeb-specific logic is still embedded directly in `pre_validation.py` and `agency_code.py` rather than isolated behind a connector boundary - this ADR describes the target isolation model, not the as-built state. Migrating Raqeb into a standalone connector under `reference-implementations/` is outstanding work, not a completed correction.
+**Current state:** Adopter-specific logic is still embedded directly in `pre_validation.py` and `agency_code.py` rather than isolated behind a connector boundary - this ADR describes the target isolation model, not the as-built state. Migrating it into a standalone connector under `reference-implementations/` is outstanding work, not a completed correction.
 
 ### Decision
 
@@ -997,7 +997,7 @@ The Connector Framework enforces three isolation rules:
 
 **Built-in connectors (platform-provided, in `connectors/`):** Generic REST, File-based (Blob/SFTP), SharePoint (Graph API), Dynamics 365 (Dataverse).
 
-**Customer connectors (in `reference-implementations/`):** Raqeb (PAFN), any customer-specific integration.
+**Customer connectors (in `reference-implementations/`):** case-management system adapters, any customer-specific integration.
 
 ### Rationale
 
@@ -1137,7 +1137,7 @@ The two-endpoint substitution pattern works because ARIA's AI service clients ar
 ## ADR-027: Duplicate Detection Before AI Processing
 
 **Date:** 2026-08-10
-**Status:** Accepted - Proven (PAFN's `pre_validation.py` already deduplicates by checksum)
+**Status:** Accepted (`pre_validation.py` deduplicates by checksum)
 **Category:** AI / Pre-Processing
 **Deciders:** AI Systems Architect · Engineering Lead
 **Source:** Document 15, Output 6, Strategy 6.7 (Duplicate Detection)
@@ -1146,7 +1146,7 @@ The two-endpoint substitution pattern works because ARIA's AI service clients ar
 
 Submitters frequently include duplicate documents in evidence bundles - the same invoice submitted as both a digital PDF and a scanned TIFF, or two versions of the same certificate with minor formatting differences. Processing duplicate documents wastes 100% of the AI compute cost (Azure DI + LLM extraction) for the duplicate, produces identical extraction results, and may artificially increase cross-document conflict detection if the same values appear with minor formatting differences.
 
-In PAFN production data, approximately 3–5% of submitted documents are duplicates. For a 1,000-case/day deployment at 5 documents per case = 5,000 documents/day → 150–250 duplicate document processing events saved per day.
+Approximately 3–5% of submitted documents are expected to be duplicates. For a 1,000-case/day deployment at 5 documents per case = 5,000 documents/day → 150–250 duplicate document processing events saved per day.
 
 ### Decision
 
@@ -1189,7 +1189,7 @@ Near-duplicate detection adds compute cost (MinHash construction) but catches th
 ## ADR-028: Evaluation Framework as Mandatory Deployment Gate
 
 **Date:** 2026-08-10
-**Status:** Accepted - Proven (PAFN already has a working evaluation framework - `run_evaluation.py`, ground truth data, accuracy thresholds)
+**Status:** Accepted (a working evaluation framework exists - `run_evaluation.py`, ground truth data, accuracy thresholds)
 **Category:** Platform / Quality
 **Deciders:** Principal Enterprise Architect · Architecture Governance Lead
 **Source:** Document 15, Architecture Principle AP-10 and Output 1, Extensibility Model
@@ -1220,7 +1220,7 @@ The Evaluation Framework is a mandatory deployment gate: no ARIA template deploy
 
 Architecture Principle AP-10 ("measurable accuracy before production") reflects a fundamental product responsibility: ARIA's decisions affect real people in regulated contexts (food safety, immigration, healthcare). Deploying a system with unknown or insufficient accuracy is an IP liability and a customer harm risk.
 
-The 85% threshold is calibrated from PAFN production experience - at 85% field extraction accuracy, the cross-document validation and policy evaluation stages catch the remaining ambiguities and route cases to human review appropriately. Below 85%, the rate of incorrect AI decisions rises to unacceptable levels.
+The 85% threshold is a working baseline - at 85% field extraction accuracy, the cross-document validation and policy evaluation stages catch the remaining ambiguities and route cases to human review appropriately. Below 85%, the rate of incorrect AI decisions rises to unacceptable levels.
 
 ### Alternatives Considered
 
@@ -1248,7 +1248,7 @@ The 85% threshold is calibrated from PAFN production experience - at 85% field e
 
 **Total ADRs in catalog:** 28
 **Date range:** ADR-001 through ADR-008 (2026-08-07) · ADR-009 through ADR-028 (2026-08-10)
-**Status breakdown:** 14 Accepted - Proven · 12 Accepted - Design · 2 Proposed
+**Status breakdown:** 14 Accepted · 12 Accepted - Design · 2 Proposed
 
 **Decisions by impact area:**
 - **Token efficiency:** ADR-011 · ADR-012 · ADR-013 · ADR-014 · ADR-015 · ADR-016 · ADR-017 · ADR-018 · ADR-027 (9 decisions)

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Reference rule risk scores",
+  "type": "object",
+  "required": ["id", "version", "rules"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "id": {"const": "RULE_RISK_SCORES"},
+    "version": {"type": "string"},
+    "effectiveFrom": {"type": "string"},
+    "rules": {"type": "array", "items": {"type": "object", "required": ["riskScore", "recommendation"], "properties": {"ruleId": {"type": "string"}, "rulePattern": {"type": "string"}, "riskScore": {"type": "integer", "minimum": 0, "maximum": 100}, "recommendation": {"enum": ["ACCEPT", "ACCEPT_WITH_WARNING", "REJECT"]}}}}
+  },
+  "additionalProperties": false
+}

@@ -1,4 +1,4 @@
-"""Azure adapters for the disposable EPIC-03 hackathon environment."""
+"""Azure adapters for the intake stage."""
 
 from __future__ import annotations
 

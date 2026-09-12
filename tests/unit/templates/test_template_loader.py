@@ -264,6 +264,36 @@ class TestFoodSafetyTemplate:
         loader = self._get_loader()
         assert len(loader.get_fields("Halal_Slaughter_Certificate")) > 5
 
+    def test_risk_configuration_is_template_owned(self):
+        risk_config = self._get_loader().get_risk_config()
+
+        assert risk_config["policy_version"] == "enhanced-risk-v1"
+        assert risk_config["quality"] == {"threshold": 0.75, "impact": 0.6}
+        assert risk_config["extraction"] == {"threshold": 0.85, "impact": 0.45}
+        assert risk_config["rule_weights"]["REJECTED_HS_CODE"] == 1.0
+        assert risk_config["rule_actions"]["REJECTED_HS_CODE"] == "REJECT"
+        assert risk_config["risk_bands"][0]["platform_recommendation"] == "HOLD"
+        assert risk_config["risk_bands"][1]["recommendation"] == "ACCEPT_WITH_WARNING"
+        assert risk_config["explicit_reject"]["platform_recommendation"] == "FAIL"
+
+    def test_reconciliation_vocabulary_is_template_owned(self):
+        loader = self._get_loader()
+
+        assert loader.get_document_aliases()["HouseBill"] == "House_Bill"
+        assert "company_name" in loader.get_field_aliases()["importerName"]
+        assert loader.get_item_description_fields() == [
+            "item_description",
+            "product_description",
+            "goods_description",
+        ]
+
+    def test_decision_vocabulary_is_template_owned(self):
+        vocabulary = self._get_loader().get_decision_vocabulary()
+
+        assert vocabulary["PASS"]["recommendation"] == "ACCEPT"
+        assert vocabulary["HOLD"]["recommendation"] == "ACCEPT_WITH_WARNING"
+        assert vocabulary["FAIL"]["recommendation"] == "REJECT"
+
     def test_all_ids_resolve_to_known_doc_types(self):
         loader = self._get_loader()
         known = set(loader.known_doc_types())

@@ -1,8 +1,8 @@
 """
 Mandatory Fields Rule Logic
 
-Ported from PAFN's rules_engine/mandatory_documents.py. Personal-shipment and
-conditional-document criteria are supplied by template rule configuration.
+Conditional-profile and conditional-document criteria are supplied by template
+rule configuration.
 """
 
 import re
@@ -15,17 +15,18 @@ def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
-def _normalize_hs(hs_code: str) -> str:
-    normalized = hs_code.strip().replace(".", "").rstrip("0")
+def _normalize_code(code: str) -> str:
+    normalized = code.strip().replace(".", "").rstrip("0")
     return normalized if normalized else "0"
 
 
-def _get_hs_prefixes(rules: list, rule_id: str) -> tuple:
-    """Fetch and normalize HS code prefixes from a rule document by ID."""
+def _code_prefixes(rules: list, rule_id: str) -> tuple:
+    """Fetch and normalize classification-code prefixes from a rule document by ID."""
     rule = next((r for r in rules if r.get("id") == rule_id), None)
     if rule is None:
         return ()
-    return tuple(_normalize_hs(c) for c in rule.get("hsCodes", []) if c)
+    codes = rule.get("codes") or rule.get("hsCodes") or []
+    return tuple(_normalize_code(c) for c in codes if c)
 
 
 def validate_mandatory_docs(rules, payload, submission):
@@ -65,24 +66,24 @@ def validate_mandatory_docs(rules, payload, submission):
     def _entry_type(entry) -> str:
         return entry["documentType"] if isinstance(entry, dict) else entry
 
-    bayan_number = payload.get("bayanNumber", "") or ""
-    personal_config = rule.get("personalShipment", {})
-    personal_prefixes = tuple(
-        prefix.upper() for prefix in personal_config.get("declarationPrefixes", [])
+    case_reference = payload.get("caseReference", "") or ""
+    conditional_profile = rule.get("conditionalProfile", {})
+    profile_prefixes = tuple(
+        prefix.upper() for prefix in conditional_profile.get("identifierPrefixes", [])
     )
-    is_personal = bool(personal_prefixes) and bayan_number.upper().startswith(
-        personal_prefixes
+    use_profile = bool(profile_prefixes) and case_reference.upper().startswith(
+        profile_prefixes
     )
 
-    if is_personal:
-        for requirement in personal_config.get("requiredDocuments", []):
+    if use_profile:
+        for requirement in conditional_profile.get("requiredDocuments", []):
             req_id = _entry_id(requirement)
             req_type = _entry_type(requirement)
             if req_id not in payload_type_ids:
                 findings.append({
                     "ruleCode": "MANDATORY_DOC_MISSING",
                     "result": "FAIL",
-                    "message": f"{req_type.replace('_', ' ')} was not uploaded. Request this document from the importer before proceeding.",
+                    "message": f"{req_type.replace('_', ' ')} was not uploaded. Request this document from the submitter before proceeding.",
                     "documentType": req_type,
                 })
     else:
@@ -135,20 +136,23 @@ def validate_mandatory_docs(rules, payload, submission):
                     if isinstance(opt, dict):
                         cond_type_to_id[_entry_type(opt)] = _entry_id(opt)
 
+        code_attribute = rule.get("codeAttribute", "classificationCode")
+        region_attribute = rule.get("regionAttribute", "region")
+
         conditionally_required: set = set()
         for item in payload.get("items", []):
-            hs_code = str(item.get("hsCode", ""))
-            country = llm_mapper.normalize_country(str(item.get("countryOfOrigin", "")))
+            item_code_value = str(item.get(code_attribute, ""))
+            region = llm_mapper.normalize_country(str(item.get(region_attribute, "")))
             for requirement in rule.get("conditionalRequirements", []):
                 doc_type = requirement.get("documentType", "")
-                hs_rule_id = requirement.get("hsCodeRuleId")
-                hs_prefixes = _get_hs_prefixes(rules, hs_rule_id) if hs_rule_id else ()
-                origin_countries = requirement.get("originCountries", [])
-                hs_matches = bool(hs_prefixes) and _normalize_hs(hs_code).startswith(
-                    hs_prefixes
+                code_rule_id = requirement.get("codeRuleId") or requirement.get("hsCodeRuleId")
+                prefixes = _code_prefixes(rules, code_rule_id) if code_rule_id else ()
+                regions = requirement.get("regions") or requirement.get("originCountries", [])
+                code_matches = bool(prefixes) and _normalize_code(item_code_value).startswith(
+                    prefixes
                 )
-                country_matches = bool(origin_countries) and country in origin_countries
-                if doc_type and (hs_matches or country_matches):
+                region_matches = bool(regions) and region in regions
+                if doc_type and (code_matches or region_matches):
                     conditionally_required.add(doc_type)
 
         for doc_type in conditionally_required:
@@ -161,7 +165,7 @@ def validate_mandatory_docs(rules, payload, submission):
                 "ruleCode": "MANDATORY_DOC_MISSING",
                 "result": "FAIL",
                 "message": (
-                    f"{doc_type.replace('_', ' ')} was not uploaded. This document is required for this shipment's country of origin."
+                    f"{doc_type.replace('_', ' ')} was not uploaded. This document is conditionally required for this case."
                 ),
                 "documentType": doc_type,
             })

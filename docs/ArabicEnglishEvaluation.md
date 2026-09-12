@@ -24,7 +24,7 @@ The challenge set at
 `tests/evaluation/arabic_english_challenge_set.json` covers:
 
 * Modern Standard Arabic
-* Gulf Arabic, including Kuwait-relevant wording
+* Gulf Arabic dialects
 * Selected Egyptian, Levantine, and Maghrebi contrast cases
 * Arabizi and phonetic transliteration
 * Arabic-English code-switching

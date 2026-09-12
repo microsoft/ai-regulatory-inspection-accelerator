@@ -6,7 +6,7 @@ ms.date: 2026-08-24
 ms.topic: reference
 ---
 
-This folder contains supporting documentation for **ARIA - AI Regulatory Inspection Accelerator**, a reusable, Azure-native Solution Accelerator. PAFN (the Kuwait food safety inspection system) is the first production reference implementation of ARIA - see the root [README.md](../README.md) for the full solution overview, business scenario, and getting started guide.
+This folder contains supporting documentation for **ARIA - AI Regulatory Inspection Accelerator**, a reusable, Azure-native Solution Accelerator. See the root [README.md](../README.md) for the full solution overview, business scenario, and getting started guide.
 
 ---
 

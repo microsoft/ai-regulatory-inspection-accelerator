@@ -4,13 +4,8 @@ Core Platform — Document Intelligence — Vision Extraction
 
 Vision-based field extraction for handwritten Arabic documents.
 
-Ported from PAFN's ``di/vision_extraction.py``.  The sole change is that
-``get_fields_for_doc_type(doc_type)`` calls in the prompt-builder
-functions are replaced by an explicit ``fields: list[str]`` parameter
-propagated from the caller (which sources the list from
-``TemplateLoader``).  All algorithm logic, prompt text, retry semantics,
-JSON parsing, ensemble merge strategy, and cross-validation LLM call are
-identical to the PAFN production implementation.
+Prompts are sourced from the active template's Knowledge Pack via
+``TemplateLoader``; the platform ships no domain-specific prompt text.
 
 Provides three extraction modes:
   1. Pure vision  — for fully handwritten docs where OCR is useless.
@@ -42,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Shared helpers (ported unchanged)
+# Shared helpers
 # ---------------------------------------------------------------------------
 
 def _detect_media_type(file_name: str) -> str:
@@ -57,7 +52,7 @@ def _detect_media_type(file_name: str) -> str:
 
 
 def _normalize_response(data: dict) -> dict:
-    """Normalize raw LLM JSON into typed model fields (ported unchanged)."""
+    """Normalize raw LLM JSON into typed model fields."""
     normalized_kv: list[KVPair] = []
     for kv in (data.get("key_value_pairs") or []):
         if not isinstance(kv, dict):
@@ -91,16 +86,10 @@ def _normalize_response(data: dict) -> dict:
         if not isinstance(item, dict):
             continue
         raw_item_conf = float(item.get("confidence", 0.0) or 0.0)
+        # LineItem allows extra fields, so the template's own line-item schema passes through.
+        fields = {k: v for k, v in item.items() if k != "confidence"}
         normalized_line_items.append(
-            LineItem(
-                goods_description=str(item.get("goods_description", "")),
-                quantity=str(item.get("quantity", "")),
-                weight=str(item.get("weight", "")),
-                weight_unit=str(item.get("weight_unit", "")),
-                hs_code=str(item.get("hs_code", "")),
-                expiry_date=str(item.get("expiry_date", "")),
-                confidence=max(0.0, min(1.0, raw_item_conf)),
-            )
+            LineItem(confidence=max(0.0, min(1.0, raw_item_conf)), **fields)
         )
     data["line_items"] = normalized_line_items
     data["signature_detected"] = bool(data.get("signature_detected", False))
@@ -109,204 +98,21 @@ def _normalize_response(data: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Prompt builders (ported; get_fields_for_doc_type → fields parameter)
+# Multi-page image block builder
 # ---------------------------------------------------------------------------
 
-def _build_vision_extraction_prompt(doc_type: str, fields: list[str]) -> str:
-    """Build system prompt for pure-vision field extraction.
+def _require_loader(loader: TemplateLoader | None) -> TemplateLoader:
+    """Reject an absent loader rather than defaulting to a particular domain."""
+    if loader is None:
+        raise ValueError(
+            "A TemplateLoader is required — prompts are sourced from the active "
+            "template's Knowledge Pack, so the platform cannot pick a default."
+        )
+    return loader
 
-    Changed from PAFN: ``fields`` is now an explicit parameter instead of
-    being fetched from ``document_type_fields.json`` via
-    ``get_fields_for_doc_type(doc_type)``.
-    """
-    fields_text = ", ".join(fields)
-    display_name = doc_type.replace("_", " ")
-
-    return f"""You are a bilingual (Arabic / English) document analysis expert with \
-specialized capability in reading handwritten Arabic documents.
-
-You extract structured metadata from customs, trade, and food-safety documents
-used by Kuwait Customs / PAFN (Public Authority for Food and Nutrition).
-
-The document type is already known: **{display_name}**
-
-═══════════════════════════════════════════════════════════════
-TASK: VISUAL FIELD EXTRACTION (HANDWRITTEN DOCUMENT)
-═══════════════════════════════════════════════════════════════
-
-This document contains handwritten Arabic text. Read the image directly and
-extract the following target fields:
-    {fields_text}
-
-Rules:
-- Read text directly from the image — do NOT rely on any OCR transcription.
-- For Arabic handwriting, read carefully — characters may be joined or unclear.
-- Extract key-value evidence and return it in key_value_pairs.
-- For each extracted pair, set canonical_field to ONE exact field name from the
-  target list above when the pair maps to a target field.
-- If a key-value pair does not map to a target field, set canonical_field to "".
-- Do NOT invent canonical field names beyond the target list.
-- Keep source keys in their original language/text in key.
-- Dates should be ISO-8601 (YYYY-MM-DD) when possible.
-- Confidence should reflect your certainty reading the handwriting (0.0-1.0).
-  Lower confidence for unclear strokes.
-- Do NOT invent or fabricate values. If you cannot read a field, omit it or
-  set confidence to 0.0.
-- If you can partially read a value, include what you can read and set
-  confidence proportionally.
-
-═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT
-═══════════════════════════════════════════════════════════════
-
-Respond with a SINGLE JSON object (no markdown, no extra text):
-
-{{{{
-  "tables_extracted": [],
-  "key_value_pairs": [
-    {{{{
-      "key": "رقم الشهادة",
-      "value": "ABC-123",
-      "confidence": 0.85,
-      "canonical_field": "certificate_number"
-    }}}}
-  ],
-  "line_items": [],
-  "signature_detected": false,
-  "language": "ar"
-}}}}
-
-IMPORTANT:
-- Return ONLY the JSON object, no surrounding text or markdown fences.
-- Confidence should be between 0.0 and 1.0.
-- Use empty lists [] for list fields with no data.
-- signature_detected: set to true ONLY if you can visually see an actual
-  handwritten signature, ink stamp, rubber stamp, embossed seal, or official
-  certification mark in the document image. Text labels like "Authorized
-  Signatory:" or mentions of "stamp" do NOT count — there must be a visible
-  ink/stamp FIGURE or handwritten mark present on the document.
-"""
-
-
-def _build_hybrid_extraction_prompt(doc_type: str, fields: list[str]) -> str:
-    """Build system prompt for hybrid OCR+vision extraction.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter.
-    """
-    fields_text = ", ".join(fields)
-    display_name = doc_type.replace("_", " ")
-
-    return f"""You are a bilingual (Arabic / English) document analysis expert specialized \
-in reading documents that contain BOTH printed and handwritten text.
-
-You extract structured metadata from customs, trade, and food-safety documents
-used by Kuwait Customs / PAFN (Public Authority for Food and Nutrition).
-
-The document type is already known: **{display_name}**
-
-═══════════════════════════════════════════════════════════════
-TASK: HYBRID FIELD EXTRACTION (PRINTED + HANDWRITTEN)
-═══════════════════════════════════════════════════════════════
-
-You are given TWO sources of information:
-1. **OCR text** — extracted by an OCR engine. Printed/typed text is
-   usually accurate here. Handwritten portions may be missing, garbled, or wrong.
-2. **The original document image** — use this to read handwritten fields and
-   verify/correct the OCR where it seems wrong.
-
-STRATEGY (CRITICAL — follow this order):
-- **Step 1: Parse the OCR structure first.** Arabic government documents use
-  numbered field labels (e.g. ١ - المصدر, ٢ - المنتج, ٣ - المستورد).
-  Use these numbers and labels to identify WHICH value belongs to WHICH field.
-  The OCR text usually gets the STRUCTURE right even when individual
-  characters are garbled.
-- **Step 2: For each numbered field**, read the value from the OCR text.
-  If the OCR value looks clean and complete, use it (high confidence).
-- **Step 3: Only consult the image** to fill in values the OCR missed,
-  or to correct specific characters where the OCR is clearly garbled.
-- **Step 4: If OCR and image disagree on a specific value**, prefer the OCR
-  when the OCR text is structurally intact (e.g. appears inside a table cell
-  or next to a clear label). Prefer the image only when the OCR text is
-  clearly garbled (random characters, missing text).
-
-IMPORTANT — ARABIC DOCUMENT STRUCTURE:
-Arabic government/trade documents typically use numbered field labels
-(e.g. ١ - LABEL, ٢ - LABEL, etc.). The field labels are in Arabic and
-the values may be handwritten in Arabic.
-
-To correctly assign values to canonical fields:
-- Read the Arabic label text next to each number in the OCR.
-- Use the MEANING of the Arabic label to decide which target field it
-  corresponds to. For example, a label meaning "exporter" maps to the
-  exporter field, a label meaning "importer" maps to the importer field.
-- Do NOT rely on field position/order alone — always use the label text.
-- Pay special attention to fields that sound similar (e.g. exporter vs
-  importer, producer vs goods description). Read the Arabic label carefully.
-- If the OCR shows a value next to a specific numbered label, trust that
-  structural association over visual proximity in the image.
-
-Target fields for this document type:
-    {fields_text}
-
-Rules:
-- Extract key-value evidence and return it in key_value_pairs.
-- For each pair, set canonical_field to ONE exact field name from the target
-  list above when it maps to a target field.
-- If a key-value pair does not map to a target field, set canonical_field to "".
-- Do NOT invent canonical field names beyond the target list.
-- Keep source keys in their original language/text in key.
-- Keep Arabic values in Arabic. Do NOT translate Arabic text to English.
-- Dates should be ISO-8601 (YYYY-MM-DD) when possible. Arabic dates are
-  usually YYYY/MM/DD — convert slashes to dashes but preserve month/day order.
-- For Arabic numerals (٠-٩), convert to Western digits (0-9) in values.
-  The Arabic decimal mark (٫) is a decimal point, NOT a comma.
-- Confidence should reflect your certainty:
-    - 0.9+ for clearly printed text confirmed by OCR
-    - 0.7-0.9 for legible handwriting
-    - 0.4-0.7 for partially unclear handwriting
-    - Below 0.4 for guesses (prefer omitting instead)
-- Do NOT fabricate values. If you cannot read a field from either source,
-  omit it or set confidence to 0.0.
-
-═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT
-═══════════════════════════════════════════════════════════════
-
-Respond with a SINGLE JSON object (no markdown, no extra text):
-
-{{{{
-  "tables_extracted": [],
-  "key_value_pairs": [
-    {{{{
-      "key": "Certificate No.",
-      "value": "ABC-123",
-      "confidence": 0.95,
-      "canonical_field": "certificate_number"
-    }}}}
-  ],
-  "line_items": [],
-  "signature_detected": false,
-  "language": "ar+en"
-}}}}
-
-IMPORTANT:
-- Return ONLY the JSON object.
-- Confidence between 0.0 and 1.0.
-- Use empty lists [] for list fields with no data.
-- signature_detected: set to true ONLY if you can visually see an actual
-  handwritten signature, ink stamp, rubber stamp, embossed seal, or official
-  certification mark in the document image. Text labels like "Authorized
-  Signatory:" or mentions of "stamp" do NOT count — there must be a visible
-  ink/stamp FIGURE or handwritten mark present on the document.
-"""
-
-
-# ---------------------------------------------------------------------------
-# Multi-page image block builder (ported unchanged)
-# ---------------------------------------------------------------------------
 
 def _build_image_blocks(pages: list[bytes], file_name: str) -> list[dict]:
-    """Build vision-API image_url content blocks (ported unchanged)."""
+    """Build vision-API image_url content blocks."""
     blocks: list[dict] = []
     for page_bytes in pages:
         b64 = base64.b64encode(page_bytes).decode("utf-8")
@@ -324,7 +130,7 @@ def _build_image_blocks(pages: list[bytes], file_name: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Pure vision extraction (ported; fields parameter added)
+# Pure vision extraction
 # ---------------------------------------------------------------------------
 
 def extract_metadata_vision(
@@ -343,11 +149,9 @@ def extract_metadata_vision(
 ) -> tuple[ExtractedMetadata, str]:
     """Extract structured metadata from a document image using GPT-5.4 vision.
 
-    Changed from PAFN: ``fields`` is now an explicit parameter (sourced from
-    ``TemplateLoader``) instead of being fetched from
-    ``document_type_fields.json``.  All algorithm logic is identical.
+    ``fields`` is sourced from ``TemplateLoader`` by the caller.
     """
-    loader = loader or TemplateLoader.for_template("food-safety")
+    loader = _require_loader(loader)
     system_prompt = loader.get_prompt(
         "vision_extraction",
         document_type=doc_type.replace("_", " "),
@@ -427,7 +231,7 @@ def extract_metadata_vision(
 
 
 # ---------------------------------------------------------------------------
-# Hybrid extraction (ported; fields parameter added)
+# Hybrid extraction
 # ---------------------------------------------------------------------------
 
 def extract_metadata_hybrid(
@@ -445,12 +249,8 @@ def extract_metadata_hybrid(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Hybrid extraction: partial OCR text + image sent together to the LLM.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter.
-    All algorithm logic is identical.
-    """
-    loader = loader or TemplateLoader.for_template("food-safety")
+    """Hybrid extraction: partial OCR text + image sent together to the LLM."""
+    loader = _require_loader(loader)
     system_prompt = loader.get_prompt(
         "hybrid_extraction",
         document_type=doc_type.replace("_", " "),
@@ -536,7 +336,7 @@ def extract_metadata_hybrid(
 
 
 # ---------------------------------------------------------------------------
-# Ensemble merge helper (ported unchanged)
+# Ensemble merge helper
 # ---------------------------------------------------------------------------
 
 def _merge_metadata(
@@ -585,7 +385,7 @@ def _merge_metadata(
 
 
 # ---------------------------------------------------------------------------
-# Ensemble extraction (ported; fields parameter added)
+# Ensemble extraction
 # ---------------------------------------------------------------------------
 
 def extract_metadata_ensemble(
@@ -604,11 +404,7 @@ def extract_metadata_ensemble(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Dual-pass ensemble extraction for difficult handwritten Arabic documents.
-
-    Changed from PAFN: ``fields`` is now an explicit parameter.
-    All algorithm logic is identical.
-    """
+    """Dual-pass ensemble extraction for difficult handwritten Arabic documents."""
     vision_meta, _ = extract_metadata_vision(
         openai_client, doc_input, image_data, doc_type, fields,
         loader=loader,
@@ -659,7 +455,7 @@ def extract_metadata_ensemble(
 
 
 # ---------------------------------------------------------------------------
-# OCR cross-validation (ported; allowed_fields parameter added)
+# OCR cross-validation
 # ---------------------------------------------------------------------------
 
 def cross_validate_with_ocr(
@@ -676,9 +472,7 @@ def cross_validate_with_ocr(
 ) -> tuple[dict, list[str]]:
     """Cross-validate vision/hybrid extraction against OCR markdown.
 
-    Changed from PAFN: ``allowed_fields`` is now an explicit parameter
-    (sourced from ``TemplateLoader``) instead of being fetched via
-    ``get_fields_for_doc_type(doc_type)``.  All algorithm logic is identical.
+    ``allowed_fields`` is sourced from ``TemplateLoader`` by the caller.
     """
     if not ocr_markdown or not fields:
         return fields, []
@@ -693,7 +487,7 @@ def cross_validate_with_ocr(
 
     truncated_ocr = ocr_markdown[:5000]
 
-    loader = loader or TemplateLoader.for_template("food-safety")
+    loader = _require_loader(loader)
     system_prompt = loader.get_prompt("ocr_cross_validation")
 
     user_msg = (

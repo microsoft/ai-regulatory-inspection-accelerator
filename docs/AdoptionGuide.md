@@ -84,7 +84,7 @@ Review:
 
 ### Lesson 4: Experience the target workflow
 
-Open the [Inspection Workbench](../reference-implementations/pafn-food-inspection/ui/index.html), load the sample case, and run the inspection. Review the evidence viewer, recommendation, findings, and decision trace.
+Open the [Inspection Workbench](../reference-implementations/food-inspection/ui/index.html), load the sample case, and run the inspection. Review the evidence viewer, recommendation, findings, and decision trace.
 
 The browser demo is synthetic and does not execute the Azure backend.
 

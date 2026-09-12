@@ -1,6 +1,6 @@
 # Local Development Setup
 
-**Status: Planned.** There is no runnable code in `src/platform/` yet, so there is no local development workflow to document today. This guide will be filled in once the [Core Platform port from PAFN](../README.md#roadmap) lands.
+**Status: Planned.** There is no runnable code in `src/platform/` yet, so there is no local development workflow to document today. This guide will be filled in once the [Core Platform implementation](../README.md#roadmap) lands.
 
 ## What this guide will cover
 

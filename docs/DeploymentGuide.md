@@ -1,6 +1,6 @@
 # Deployment Guide
 
-**Status: Planned.** The Core Platform (`src/platform/`) has not been implemented yet, so there is nothing deployable today. This guide will be filled in once the [Core Platform port from PAFN](../README.md#roadmap) lands.
+**Status: Planned.** The Core Platform (`src/platform/`) has not been implemented yet, so there is nothing deployable today. This guide will be filled in once the [Core Platform implementation](../README.md#roadmap) lands.
 
 ## What this guide will cover
 

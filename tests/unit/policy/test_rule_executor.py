@@ -33,7 +33,7 @@ class TestRunRules:
 
     AGENCY_RULE: ClassVar[dict] = {
         "id": "AGENCY_CODE_RULES",
-        "agencyCode": "7",
+        "expectedValue": "7",
         "documentType": "Permit",
         "fieldName": "authority_id",
     }
@@ -43,15 +43,17 @@ class TestRunRules:
             run_rules(rules_list=rules_list, payload=payload, submission=submission)
         )
 
-    def test_empty_rules_list_only_runs_item_check_and_agency(self):
-        with patch("src.platform.policy.rule_executor.validate_agency_code", return_value=[]), \
-             patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]):
+    def test_empty_rules_list_runs_no_evaluators(self):
+        with patch("src.platform.policy.rule_executor.validate_expected_value") as agency, \
+             patch("src.platform.policy.rule_executor.validate_line_items") as item_check:
             findings = self._run(
                 rules_list=[],
                 payload={"requestId": "R1", "items": []},
                 submission=[],
             )
-        assert isinstance(findings, list)
+        assert findings == []
+        agency.assert_not_called()
+        item_check.assert_not_called()
 
     def test_confidence_cutoff_drops_low_confidence_findings(self):
         low_conf_finding = {
@@ -66,8 +68,8 @@ class TestRunRules:
             "message": "test2",
             "confidence": 0.9,
         }
-        with patch("src.platform.policy.rule_executor.validate_agency_code", return_value=[low_conf_finding, high_conf_finding]), \
-             patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]):
+        with patch("src.platform.policy.rule_executor.validate_expected_value", return_value=[low_conf_finding, high_conf_finding]), \
+             patch("src.platform.policy.rule_executor.validate_line_items", return_value=[]):
             findings = self._run(
                 [self.AGENCY_RULE], {"requestId": "R1", "items": []}, []
             )
@@ -81,8 +83,8 @@ class TestRunRules:
             "result": "WARN",
             "message": "test",
         }
-        with patch("src.platform.policy.rule_executor.validate_agency_code", return_value=[finding_with_only_rule_id]), \
-             patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]):
+        with patch("src.platform.policy.rule_executor.validate_expected_value", return_value=[finding_with_only_rule_id]), \
+             patch("src.platform.policy.rule_executor.validate_line_items", return_value=[]):
             findings = self._run(
                 [self.AGENCY_RULE], {"requestId": "R1", "items": []}, []
             )
@@ -92,23 +94,23 @@ class TestRunRules:
         """AGENCY_CODE_RULES doc supplies the agency code instead of hardcoded '2'."""
         captured = {}
 
-        def capturing_validator(submission, agency_code, **config):
-            captured.update(agency_code=agency_code, **config)
+        def capturing_validator(submission, expected_value, **config):
+            captured.update(expected_value=expected_value, **config)
             return []
 
-        with patch("src.platform.policy.rule_executor.validate_agency_code", side_effect=capturing_validator), \
-             patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]):
+        with patch("src.platform.policy.rule_executor.validate_expected_value", side_effect=capturing_validator), \
+             patch("src.platform.policy.rule_executor.validate_line_items", return_value=[]):
             self._run(
                 rules_list=[{
                     "id": "AGENCY_CODE_RULES",
-                    "agencyCode": "7",
+                    "expectedValue": "7",
                     "documentType": "Permit",
                     "fieldName": "authority_id",
                 }],
                 payload={"requestId": "R1", "items": []},
                 submission=[],
             )
-        assert captured["agency_code"] == "7"
+        assert captured["expected_value"] == "7"
         assert captured["document_type"] == "Permit"
         assert captured["field_name"] == "authority_id"
 
@@ -123,8 +125,8 @@ class TestRunRules:
         rules_list = [{"id": "MIN_FIELDS_RULES", "minimumFieldsByDocuments": []}]
         allowed = {"Invoice": ["invoice_number"]}
 
-        with patch("src.platform.policy.rule_executor.validate_agency_code", return_value=[]), \
-             patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]), \
+        with patch("src.platform.policy.rule_executor.validate_expected_value", return_value=[]), \
+             patch("src.platform.policy.rule_executor.validate_line_items", return_value=[]), \
              patch("src.platform.policy.rule_executor.validate_min_fields", side_effect=capturing_min_fields):
             self._run(rules_list, {"requestId": "R1", "items": []}, [])
 
@@ -140,8 +142,8 @@ class TestRunRules:
                 allowed_fields_by_doc=allowed,
             )
 
-        with patch("src.platform.policy.rule_executor.validate_agency_code", return_value=[]), \
-             patch("src.platform.policy.rule_executor.validate_item_checks", return_value=[]), \
+        with patch("src.platform.policy.rule_executor.validate_expected_value", return_value=[]), \
+             patch("src.platform.policy.rule_executor.validate_line_items", return_value=[]), \
              patch("src.platform.policy.rule_executor.validate_min_fields", side_effect=capturing_min_fields):
             asyncio.run(_run_with_param())
 

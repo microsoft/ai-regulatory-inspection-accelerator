@@ -1,14 +1,15 @@
 """
 Cross-Document Rule Logic
 
-Ported from PAFN's rules_engine/cross_document.py.
-Changes from PAFN: removed shared.telemetry import; changed
-`from rules_engine import llm_mapper` to relative import.
+Field comparison rules, the field-name sets that select a comparison strategy,
+and any document substitutions all come from the CROSS_DOC_RULES rule document.
 """
 
 import logging
 import re
+from collections.abc import Mapping
 from datetime import datetime
+from typing import Any
 
 from src.platform.policy.evaluators import llm_mapper
 
@@ -20,15 +21,8 @@ _MONTH_ABBR = {
     "sep": "09", "oct": "10", "nov": "11", "dec": "12",
 }
 
-_COUNTRY_FIELDS = frozenset({
-    "country_of_origin", "countryOfOrigin",
-    "port_of_loading", "port_of_discharge",
-})
-
-_DATE_FIELDS = frozenset({
-    "invoice_date", "issue_date", "declaration_date",
-    "expiry_date", "production_date", "slaughter_date",
-})
+VALUE_TYPE_COUNTRY = "country"
+VALUE_TYPE_DATE = "date"
 
 
 def _parse_numeric(value: str):
@@ -66,30 +60,47 @@ def _digits_only(value: str) -> str | None:
     return digits if digits else None
 
 
-def _apply_document_fallbacks(rules: list, doc_field_index: dict) -> list:
-    """Substitute Invoice when Packing_List / Stretching_List are absent."""
-    _PACKING_DOCS = {"Packing_List", "Stretching_List"}
-    has_packing = any(d in doc_field_index for d in _PACKING_DOCS)
-    has_invoice = "Invoice" in doc_field_index
-    if has_packing or not has_invoice:
-        return rules
-    result = []
-    for rule in rules:
-        resolved = [llm_mapper.resolve_document_name(d) for d in rule.get("documents", [])]
-        if any(d in _PACKING_DOCS for d in resolved):
-            new_docs = [
-                "Invoice" if llm_mapper.resolve_document_name(d) in _PACKING_DOCS else d
-                for d in rule.get("documents", [])
-            ]
-            rule = {**rule, "documents": new_docs}
-        result.append(rule)
-    return result
+def apply_document_fallbacks(
+    rules: list,
+    doc_field_index: dict,
+    fallbacks: list,
+    aliases: dict | None = None,
+) -> list:
+    """Substitute a stand-in document when none of the preferred ones were submitted."""
+    for fallback in fallbacks:
+        absent_group = set(fallback.get("whenAbsent", []))
+        replacement = fallback.get("use")
+        if not absent_group or not replacement:
+            continue
+        if any(d in doc_field_index for d in absent_group):
+            continue
+        if replacement not in doc_field_index:
+            continue
+        rewritten = []
+        for rule in rules:
+            documents = rule.get("documents", [])
+            resolved = [llm_mapper.resolve_document_name(d, aliases) for d in documents]
+            if any(d in absent_group for d in resolved):
+                rule = {**rule, "documents": [
+                    replacement
+                    if llm_mapper.resolve_document_name(d, aliases) in absent_group
+                    else d
+                    for d in documents
+                ]}
+            rewritten.append(rule)
+        rules = rewritten
+    return rules
 
 
-def _collect_field_values(rule: dict, doc_index: dict, field_resolution: dict) -> dict:
+def _collect_field_values(
+    rule: dict,
+    doc_index: dict,
+    field_resolution: dict,
+    aliases: dict | None = None,
+) -> dict:
     doc_values = {}
     for rule_doc_name in rule.get("documents", []):
-        sub_doc_name = llm_mapper.resolve_document_name(rule_doc_name)
+        sub_doc_name = llm_mapper.resolve_document_name(rule_doc_name, aliases)
         fields = doc_index.get(sub_doc_name, {})
         value = llm_mapper.get_field_value(fields, rule["field"], field_resolution, sub_doc_name)
         if value:
@@ -97,7 +108,25 @@ def _collect_field_values(rule: dict, doc_index: dict, field_resolution: dict) -
     return doc_values
 
 
-def _check_exact(rule: dict, doc_values: dict) -> dict:
+def _value_type(rule: dict, country_fields: frozenset, date_fields: frozenset) -> str | None:
+    """A rule may declare valueType directly, otherwise it is inferred from the field name."""
+    declared = rule.get("valueType")
+    if declared:
+        return declared
+    field = rule.get("field")
+    if field in country_fields:
+        return VALUE_TYPE_COUNTRY
+    if field in date_fields:
+        return VALUE_TYPE_DATE
+    return None
+
+
+def _check_exact(
+    rule: dict,
+    doc_values: dict,
+    country_fields: frozenset = frozenset(),
+    date_fields: frozenset = frozenset(),
+) -> dict:
     rule_id = rule["ruleId"]
     if len(doc_values) < 2:
         return {
@@ -107,7 +136,9 @@ def _check_exact(rule: dict, doc_values: dict) -> dict:
             "severity": rule.get("severity", "Warning"),
         }
 
-    if rule.get("field") in _COUNTRY_FIELDS:
+    value_type = _value_type(rule, country_fields, date_fields)
+
+    if value_type == VALUE_TYPE_COUNTRY:
         normalised = {k: llm_mapper.normalize_country(v) for k, v in doc_values.items()}
         unique = set(normalised.values())
         result = "PASS" if len(unique) == 1 else "FAIL"
@@ -118,7 +149,7 @@ def _check_exact(rule: dict, doc_values: dict) -> dict:
             "severity": rule.get("severity", "Warning"),
         }
 
-    if rule.get("field") in _DATE_FIELDS:
+    if value_type == VALUE_TYPE_DATE:
         normalised = {k: _normalize_date(v) for k, v in doc_values.items()}
         if all(v is not None for v in normalised.values()):
             unique = set(normalised.values())
@@ -148,28 +179,48 @@ def _check_exact(rule: dict, doc_values: dict) -> dict:
     }
 
 
-async def validate_cross_docs(
-    payload: dict,
-    rules_input,
-    submission: list,
-    managed_identity_client_id: str = "",
-    llm_comparison_fn=None,
-    item_type_check_fn=None,
-) -> dict:
-    """Full cross-document validation orchestrator.
-
-    Steps:
-      A: Build flat doc field index; apply Packing/Stretching → Invoice fallback.
-      B: LLM field resolution + fuzzy/semantic comparison (injectable).
-      C: exactMatch rules — deterministic in-process comparison.
-      D: Merge: one finding per rule (LLM result takes priority over in-process).
-      E: LLM item type semantic check (injectable).
-    """
+def select_cross_document_rules(rules_input) -> tuple[dict | None, list]:
+    """Return the CROSS_DOC_RULES document and its validated comparison rules."""
     if isinstance(rules_input, list):
         rule_doc = next((r for r in rules_input if r.get("id") == "CROSS_DOC_RULES"), None)
     else:
         rule_doc = rules_input if rules_input.get("id") == "CROSS_DOC_RULES" else None
 
+    if rule_doc is None:
+        return None, []
+
+    def _is_valid(r: dict) -> bool:
+        if not isinstance(r.get("field"), str):
+            return False
+        docs = r.get("documents", [])
+        return isinstance(docs, list) and all(isinstance(d, str) for d in docs)
+
+    return rule_doc, [r for r in rule_doc.get("crossDocumentRules", []) if _is_valid(r)]
+
+
+async def _await_result(result: dict) -> dict:
+    return result
+
+
+def validate_cross_docs(
+    payload: dict[str, Any],
+    rules_input: Any,
+    submission: list[dict[str, Any]],
+    reasoning: dict | None = None,
+    *,
+    document_aliases: Mapping[str, str] | None = None,
+) -> dict | Any:
+    """Deterministic cross-document validation.
+
+    Performs no LLM calls. ``reasoning`` is the Reasoning Agent's result; any
+    comparison it resolved takes priority over the in-process comparison.
+    """
+    reasoning = reasoning or {}
+    field_resolution = reasoning.get("field_resolution", {})
+    llm_findings_by_rule = reasoning.get("comparison_findings", {})
+    errors = list(reasoning.get("errors", []))
+
+    rule_doc, cross_doc_rules = select_cross_document_rules(rules_input)
     if rule_doc is None:
         return {
             "requestId": payload.get("requestId"),
@@ -178,69 +229,30 @@ async def validate_cross_docs(
                         "message": "CROSS_DOC_RULES not found in rules_input."}],
         }
 
-    cross_doc_rules = rule_doc.get("crossDocumentRules", [])
-
-    def _is_valid(r: dict) -> bool:
-        if not isinstance(r.get("field"), str):
-            return False
-        docs = r.get("documents", [])
-        return isinstance(docs, list) and all(isinstance(d, str) for d in docs)
-
-    cross_doc_rules = [r for r in cross_doc_rules if _is_valid(r)]
     request_id = payload.get("requestId", "unknown")
-    errors = []
+
+    aliases = {
+        **rule_doc.get("documentAliases", {}),
+        **dict(document_aliases or {}),
+    }
+    country_fields = frozenset(rule_doc.get("countryFields", []))
+    date_fields = frozenset(rule_doc.get("dateFields", []))
 
     logger.info("Cross-document validation | requestId=%s | docs=%d | rules=%d",
                 request_id, len(submission), len(cross_doc_rules))
 
-    # Step A
     doc_field_index = llm_mapper.build_doc_field_index(submission, min_confidence=0.8)
-    cross_doc_rules = _apply_document_fallbacks(cross_doc_rules, doc_field_index)
+    cross_doc_rules = apply_document_fallbacks(
+        cross_doc_rules, doc_field_index, rule_doc.get("documentFallbacks", []), aliases
+    )
 
-    # Step B
-    field_resolution = {}
-    llm_findings_by_rule = {}
-    if llm_comparison_fn is None:
-        logger.warning("No llm_comparison_fn provided — skipping LLM checks")
-    else:
-        try:
-            llm_result = await llm_comparison_fn(
-                payload=payload,
-                cross_doc_rules=cross_doc_rules,
-                submission=submission,
-                managed_identity_client_id=managed_identity_client_id,
-            )
-            if not llm_result.get("success"):
-                errors.extend(llm_result.get("errors", []))
-            else:
-                field_resolution = llm_result.get("field_resolution", {})
-                rule_severity_map = {r["ruleId"]: r.get("severity", "Warning") for r in cross_doc_rules}
-                for f in llm_result.get("comparison_findings", []):
-                    llm_findings_by_rule[f["ruleId"]] = {
-                        "ruleId": f["ruleId"],
-                        "result": f.get("result", "NOT_APPLICABLE"),
-                        "message": f.get("explanation", ""),
-                        "evidence": f.get("evidence", ""),
-                        "affectedDocs": f.get("affectedDocs", []),
-                        "confidence": f.get("confidence"),
-                        "severity": rule_severity_map.get(f["ruleId"], "Warning"),
-                    }
-        except Exception as exc:
-            if getattr(exc, "status_code", None) in (401, 403):
-                raise RuntimeError(
-                    f"OpenAI auth failure (HTTP {exc.status_code}) during cross-document checks. "
-                    f"Original error: {exc}"
-                ) from exc
-            logger.error("LLM cross-doc checks failed: %s", exc)
-            errors.append({"code": "LLM_ERROR", "severity": "error", "message": str(exc)})
-
-    # Step C
+    # Deterministic exactMatch comparison
     in_process_findings = {}
     for rule in cross_doc_rules:
         if rule.get("comparisonType") != "exactMatch":
             continue
-        doc_values = _collect_field_values(rule, doc_field_index, field_resolution)
-        finding = _check_exact(rule, doc_values)
+        doc_values = _collect_field_values(rule, doc_field_index, field_resolution, aliases)
+        finding = _check_exact(rule, doc_values, country_fields, date_fields)
         in_process_findings[rule["ruleId"]] = finding
 
     # Step D
@@ -259,36 +271,13 @@ async def validate_cross_docs(
         )
         ordered_findings.append(finding)
 
-    # Step E
-    item_type_findings = []
-    if item_type_check_fn is not None:
-        items = payload.get("items", [])
-        _SOURCE_PRIORITY = ["Packing_List", "Stretching_List", "Invoice"]
-        source_doc_type = None
-        source_line_items = []
-        for doc_type in _SOURCE_PRIORITY:
-            for doc in submission:
-                if doc.get("document") == doc_type and doc.get("lineItems"):
-                    source_doc_type = doc_type
-                    source_line_items = doc["lineItems"]
-                    break
-            if source_doc_type:
-                break
-        if source_doc_type and items:
-            try:
-                item_type_findings = await item_type_check_fn(
-                    items=items,
-                    source_doc_type=source_doc_type,
-                    line_items=source_line_items,
-                    managed_identity_client_id=managed_identity_client_id,
-                )
-            except Exception as exc:  # noqa: BLE001 - optional LLM check must not abort rules
-                logger.error("LLM item type checks failed: %s", exc)
-
-    return {
+    result = {
         "requestId": request_id,
         "findings": ordered_findings,
-        "item_type_findings": item_type_findings,
+        "item_type_findings": list(reasoning.get("item_type_findings", [])),
         "errors": errors,
         "field_resolution": field_resolution,
     }
+    if document_aliases is not None:
+        return _await_result(result)
+    return result
