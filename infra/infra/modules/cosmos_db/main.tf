@@ -78,6 +78,17 @@ resource "azurerm_cosmosdb_sql_container" "extraction_artifacts" {
   partition_key_version = 2
 }
 
+# ── risk-evaluations ─────────────────────────────────────────────────────────
+# Immutable document, item, rule, case-risk, review, and override records.
+resource "azurerm_cosmosdb_sql_container" "risk_evaluations" {
+  name                  = "risk-evaluations"
+  resource_group_name   = var.resource_group_name
+  account_name          = azurerm_cosmosdb_account.main.name
+  database_name         = azurerm_cosmosdb_sql_database.main.name
+  partition_key_paths   = ["/requestId"]
+  partition_key_version = 2
+}
+
 # ── rules ─────────────────────────────────────────────────────────────────────
 # Validation rules registry.
 resource "azurerm_cosmosdb_sql_container" "rules" {

@@ -26,7 +26,7 @@ sends a callback, it only invokes the Delivery Agent activity.
 from collections.abc import Callable, Generator
 from typing import Any
 
-# Default Durable Functions activity names for the five pipeline agents.
+# Default Durable Functions activity names for the pipeline agents.
 # A reference implementation's function_app.py registers its activities
 # under these names by default; override via `activity_names` if a
 # deployment needs different Durable Functions activity names.
@@ -35,6 +35,7 @@ DEFAULT_ACTIVITY_NAMES: dict[str, str] = {
     "di_extraction": "di_extraction_activity",
     "reasoning": "reasoning_activity",
     "rules_policy": "rules_policy_activity",
+    "risk_persistence": "risk_persistence_activity",
     "delivery": "delivery_activity",
 }
 
@@ -182,6 +183,16 @@ def run_pipeline(
             "templateId": payload.get("templateId"),
             "evaluatedAt": context.current_utc_datetime.isoformat(),
         }
+    )
+
+    # Persist the canonical risk evaluation before any completed decision is delivered.
+    yield context.call_activity_with_retry(
+        names["risk_persistence"], retry_policy,
+        {
+            "payload": payload,
+            "riskEvaluation": rules_policy_result.get("riskEvaluation"),
+            "findings": rules_policy_result.get("findings", []),
+        },
     )
 
     # ── Delivery Agent ─────────────────────────────────────────────────────

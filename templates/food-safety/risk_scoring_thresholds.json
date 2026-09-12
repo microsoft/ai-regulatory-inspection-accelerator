@@ -1,0 +1,15 @@
+{
+  "$schema": "../_schema/risk-scoring-thresholds.schema.json",
+  "id": "RISK_SCORING_THRESHOLDS",
+  "version": "1.0",
+  "effectiveFrom": "2026-09-12",
+  "qualityScoreThreshold": 0.75,
+  "fieldConfidenceThreshold": 0.85,
+  "documentConfidenceThreshold": null,
+  "findingConfidenceThreshold": 0.50,
+  "riskBands": [
+    {"name": "Low", "minimum": 0, "maximum": 39},
+    {"name": "Medium", "minimum": 40, "maximum": 74},
+    {"name": "High", "minimum": 75, "maximum": 100}
+  ]
+}

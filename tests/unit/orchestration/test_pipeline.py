@@ -68,7 +68,7 @@ class TestSuccessPath:
             "summary": "All checks passed.",
             "verdictId": "V-1",
         }
-        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {})
+        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {}, {})
 
         names = [c[0] for c in ctx.calls]
         assert names == [
@@ -76,6 +76,7 @@ class TestSuccessPath:
             DEFAULT_ACTIVITY_NAMES["di_extraction"],
             DEFAULT_ACTIVITY_NAMES["reasoning"],
             DEFAULT_ACTIVITY_NAMES["rules_policy"],
+            DEFAULT_ACTIVITY_NAMES["risk_persistence"],
             DEFAULT_ACTIVITY_NAMES["delivery"],
         ]
 
@@ -99,7 +100,7 @@ class TestSuccessPath:
             "summary": "OK",
             "verdictId": "V-1",
         }
-        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {})
+        _drive(gen, pre_result, extraction_result, _REASONING_RESULT, policy_result, {}, {})
 
         delivery_call = ctx.calls[-1]
         assert delivery_call[0] == DEFAULT_ACTIVITY_NAMES["delivery"]
@@ -128,6 +129,7 @@ class TestSuccessPath:
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
             {},
+            {},
         )
         assert all(call[1] is _RETRY_POLICY for call in ctx.calls)
 
@@ -143,6 +145,7 @@ class TestSuccessPath:
             {"success": True, "extractedFields": {}},
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         )
         extraction_input = ctx.calls[1][2]
@@ -164,6 +167,7 @@ class TestSuccessPath:
             {"success": True, "extractedFields": extracted_fields},
             reasoning_result,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         )
 
@@ -247,6 +251,7 @@ class TestActivityNameOverride:
             "di_extraction": "custom_extraction",
             "reasoning": "custom_reasoning",
             "rules_policy": "custom_policy",
+            "risk_persistence": "custom_risk_persistence",
             "delivery": "custom_delivery",
         }
         gen = run_pipeline(ctx, activity_names=custom_names, retry_policy=_RETRY_POLICY)
@@ -257,6 +262,7 @@ class TestActivityNameOverride:
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
             {},
+            {},
         )
         names = [c[0] for c in ctx.calls]
         assert names == [
@@ -264,6 +270,7 @@ class TestActivityNameOverride:
             "custom_extraction",
             "custom_reasoning",
             "custom_policy",
+            "custom_risk_persistence",
             "custom_delivery",
         ]
 
@@ -292,6 +299,7 @@ class TestTelemetryReplaySafety:
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
             {},
+            {},
         )
         assert "PipelineCompleted" in events
 
@@ -306,6 +314,7 @@ class TestTelemetryReplaySafety:
             {"success": True, "extractedFields": {}},
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         )
         assert events == []
@@ -324,6 +333,7 @@ class TestTelemetryReplaySafety:
                 _REASONING_RESULT,
                 {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
                 {},
+                {},
             )
             return [(name, input) for name, _retry, input in ctx.calls]
 
@@ -335,6 +345,7 @@ class TestTelemetryReplaySafety:
             {"success": True, "extractedFields": {}},
             _REASONING_RESULT,
             {"findings": [], "recommendation": "PASS", "confidence": 1.0, "summary": "OK"},
+            {},
             {},
         ]
         expected_names = list(DEFAULT_ACTIVITY_NAMES.values())

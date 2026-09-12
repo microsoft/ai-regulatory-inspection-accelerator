@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PAFN-compatible risk scoring thresholds",
+  "type": "object",
+  "required": ["id", "version", "qualityScoreThreshold", "fieldConfidenceThreshold", "riskBands"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "id": {"const": "RISK_SCORING_THRESHOLDS"},
+    "version": {"type": "string"},
+    "effectiveFrom": {"type": "string"},
+    "qualityScoreThreshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "fieldConfidenceThreshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "documentConfidenceThreshold": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+    "findingConfidenceThreshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "riskBands": {"type": "array", "items": {"type": "object", "required": ["name", "minimum", "maximum"], "properties": {"name": {"type": "string"}, "minimum": {"type": "integer"}, "maximum": {"type": "integer"}}}}
+  },
+  "additionalProperties": false
+}

@@ -155,6 +155,7 @@ resource "azurerm_function_app_flex_consumption" "pipeline" {
     "COSMOS_DB_CONTAINER"                = "inspections"
     "COSMOS_DB_INBOUND_CONTAINER"        = "inbound-requests"
     "COSMOS_DB_RESULTS_CONTAINER"        = "extraction-artifacts"
+    "COSMOS_DB_RISK_EVALUATIONS_CONTAINER" = "risk-evaluations"
     "COSMOS_DB_RULES_CONTAINER"          = "rules"
     "COSMOS_DB_CALLBACK_LOG_CONTAINER"   = "callback-log"
     "COSMOS_DB_FEEDBACK_CONTAINER"       = "inspector-feedback"

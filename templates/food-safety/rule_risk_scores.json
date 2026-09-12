@@ -1,0 +1,19 @@
+{
+  "$schema": "../_schema/rule-risk-scores.schema.json",
+  "id": "RULE_RISK_SCORES",
+  "version": "1.0",
+  "effectiveFrom": "2026-09-12",
+  "rules": [
+    {"ruleId": "SIGNATURE_STAMP_MISSING", "riskScore": 40, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"rulePattern": "CROSS_*", "riskScore": 40, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "MIN_FIELDS_RULES", "riskScore": 40, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "MANDATORY_DOC_MISSING", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"rulePattern": "AGENCY_CODE_*", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"rulePattern": "ITEM_*", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "TOTAL_NW_MISMATCH", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "FOOD_NOT_EXPIRED", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "CERTIFICATE_NOT_EXPIRED", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "ISSUE_DATE_NOT_IN_FUTURE", "riskScore": 75, "recommendation": "ACCEPT_WITH_WARNING"},
+    {"ruleId": "REJECTED_HS_CODE", "riskScore": 100, "recommendation": "REJECT"}
+  ]
+}
