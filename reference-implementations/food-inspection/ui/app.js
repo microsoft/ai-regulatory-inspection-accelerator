@@ -17,6 +17,7 @@ const els = {
   confidenceValue: document.querySelector("#confidenceValue"), confidenceBar: document.querySelector("#confidenceBar"),
   findingCount: document.querySelector("#findingCount"), findingsList: document.querySelector("#findingsList"),
   traceList: document.querySelector("#traceList"),
+  comparisonCount: document.querySelector("#comparisonCount"), comparisonList: document.querySelector("#comparisonList"),
   scenarioSelect: document.querySelector("#scenarioSelect"),
 };
 
@@ -29,7 +30,7 @@ const scenarios = {
       { name: "Health_Certificate.pdf", type: "Health Certificate", size: 735000, title: "HEALTH CERTIFICATE", rows: [["Reference", "HC-BR-88219"], ["Commodity", "Frozen poultry products"], ["Net weight", "12,400 kg"], ["Validity", "2026-11-30"]] },
       { name: "Halal_Certificate.pdf", type: "Halal Certificate", size: 364000, title: "HALAL CERTIFICATE", rows: [["Reference", "HAL-77218"], ["Commodity", "Frozen poultry products"], ["Net weight", "12,150 kg"], ["Validity", "2026-10-18"]] },
     ],
-    result: { risk: "MEDIUM", confidence: 87, verdict: "Hold for review", summary: "A material weight mismatch requires inspector confirmation before release.", findings: [["Weight discrepancy", "Halal certificate states 12,150 kg; invoice and health certificate state 12,400 kg."], ["Certificate authority verified", "Issuer appears in the approved authority reference list.", true], ["Dates remain valid", "All certificate expiry dates extend beyond the inspection date.", true]] },
+    result: { risk: "MEDIUM", confidence: 87, verdict: "Hold for review", summary: "A material weight mismatch requires inspector confirmation before release.", comparisons: [["Net weight", "Commercial Invoice · Health Certificate · Halal Certificate", "Mismatch · 12,150 kg vs 12,400 kg"], ["Commodity", "Commercial Invoice ↔ Health Certificate ↔ Halal Certificate", "Match · Frozen poultry products", true]], findings: [["Weight discrepancy", "Halal certificate states 12,150 kg; invoice and health certificate state 12,400 kg."], ["Certificate authority verified", "Issuer appears in the approved authority reference list.", true], ["Dates remain valid", "All certificate expiry dates extend beyond the inspection date.", true]] },
   },
   "food-ar": {
     label: "سلامة الغذاء · العربية",
@@ -39,7 +40,7 @@ const scenarios = {
       { name: "شهادة_صحية.pdf", type: "شهادة صحية", size: 684000, title: "شهادة صحية", rows: [["رقم الشهادة", "HC-AR-4412"], ["وصف المنتج", "منتجات دواجن مجمدة"], ["الوزن الصافي", "8,200 كجم"], ["الصلاحية", "2027-01-20"]], rtl: true },
       { name: "شهادة_الحلال.pdf", type: "شهادة حلال", size: 401000, title: "شهادة حلال", rows: [["رقم الشهادة", "HAL-AR-1188"], ["وصف المنتج", "منتجات دواجن مجمدة"], ["الوزن الصافي", "8,200 كجم"], ["الصلاحية", "2026-12-14"]], rtl: true },
     ],
-    result: { risk: "LOW", confidence: 94, verdict: "Recommend release", summary: "Arabic evidence is complete, consistent, and ready for reviewer confirmation.", findings: [["Arabic fields normalized", "RTL labels and numerals were normalized before comparison.", true], ["Bundle complete", "Required certificates are present and readable.", true], ["No cross-document conflicts", "Reference, commodity, weight, and dates agree.", true]] },
+    result: { risk: "LOW", confidence: 94, verdict: "Recommend release", summary: "Arabic evidence is complete, consistent, and ready for reviewer confirmation.", comparisons: [["الوزن الصافي", "الفاتورة ↔ الشهادة الصحية ↔ شهادة الحلال", "مطابق · 8,200 كجم", true], ["وصف المنتج", "الفاتورة ↔ الشهادة الصحية ↔ شهادة الحلال", "مطابق · منتجات دواجن مجمدة", true]], findings: [["Arabic fields normalized", "RTL labels and numerals were normalized before comparison.", true], ["Bundle complete", "Required certificates are present and readable.", true], ["No cross-document conflicts", "Reference, commodity, weight, and dates agree.", true]] },
   },
   customs: {
     label: "Customs clearance",
@@ -49,7 +50,7 @@ const scenarios = {
       { name: "Customs_Declaration.pdf", type: "Customs Declaration", size: 758000, title: "CUSTOMS DECLARATION", rows: [["Declaration", "CD-99102"], ["Consignee", "Northstar Imports"], ["Packages", "240 cartons"], ["HS code", "1905.90"]] },
       { name: "Certificate_of_Origin.pdf", type: "Certificate of Origin", size: 449000, title: "CERTIFICATE OF ORIGIN", rows: [["Certificate", "CO-VN-5521"], ["Exporter", "Mekong Foods"], ["Origin", "Vietnam"], ["Issue date", "2026-08-22"]] },
     ],
-    result: { risk: "MEDIUM", confidence: 89, verdict: "Hold for review", summary: "The declared HS code needs a policy reviewer before clearance.", findings: [["HS classification review", "The declaration uses a code requiring controlled-list verification."], ["Package count matches", "Bill of lading and declaration both list 240 cartons.", true], ["Origin consistent", "The origin certificate and declaration agree.", true]] },
+    result: { risk: "MEDIUM", confidence: 89, verdict: "Hold for review", summary: "The declared HS code needs a policy reviewer before clearance.", comparisons: [["Package count", "Bill of Lading ↔ Customs Declaration", "Match · 240 cartons", true], ["Country of origin", "Declaration ↔ Certificate of Origin", "Match · Vietnam", true]], findings: [["HS classification review", "The declaration uses a code requiring controlled-list verification."], ["Package count matches", "Bill of lading and declaration both list 240 cartons.", true], ["Origin consistent", "The origin certificate and declaration agree.", true]] },
   },
   kyc: {
     label: "KYC onboarding",
@@ -59,7 +60,7 @@ const scenarios = {
       { name: "Ownership_Record.pdf", type: "Ownership Record", size: 512000, title: "OWNERSHIP RECORD", rows: [["Full name", "Amina Rahman"], ["Entity", "Northstar Holdings"], ["Ownership", "75%"], ["Issued", "2026-08-04"]] },
       { name: "Proof_of_Address.pdf", type: "Proof of Address", size: 285000, title: "PROOF OF ADDRESS", rows: [["Full name", "Amina Rahman"], ["Address", "18 Harbour Street"], ["Country", "Canada"], ["Issued", "2026-08-28"]] },
     ],
-    result: { risk: "LOW", confidence: 96, verdict: "Recommend approval", summary: "Identity, ownership, and address evidence are consistent for reviewer approval.", findings: [["Identity verified", "Name and document number are present and internally consistent.", true], ["Ownership relationship mapped", "Beneficial ownership is linked to the entity record.", true], ["Address evidence current", "Proof of address is within the configured recency window.", true]] },
+    result: { risk: "LOW", confidence: 96, verdict: "Recommend approval", summary: "Identity, ownership, and address evidence are consistent for reviewer approval.", comparisons: [["Full name", "Identity ↔ Ownership ↔ Address", "Match · Amina Rahman", true], ["Nationality / country", "Identity ↔ Address", "Match · Canada", true]], findings: [["Identity verified", "Name and document number are present and internally consistent.", true], ["Ownership relationship mapped", "Beneficial ownership is linked to the entity record.", true], ["Address evidence current", "Proof of address is within the configured recency window.", true]] },
   },
   insurance: {
     label: "Insurance claim",
@@ -69,7 +70,7 @@ const scenarios = {
       { name: "Adjuster_Report.pdf", type: "Adjuster Report", size: 620000, title: "ADJUSTER REPORT", rows: [["Claim number", "CL-4820"], ["Claimant", "Jordan Lee"], ["Assessment", "Covered damage"], ["Amount", "$12,800"]] },
       { name: "Repair_Invoice.pdf", type: "Repair Invoice", size: 298000, title: "REPAIR INVOICE", rows: [["Invoice", "REP-1184"], ["Customer", "Jordan Lee"], ["Work", "Water remediation"], ["Amount", "$12,800"]] },
     ],
-    result: { risk: "MEDIUM", confidence: 88, verdict: "Refer to adjuster", summary: "The claimed amount differs from the assessed and invoiced amount.", findings: [["Amount discrepancy", "The claim requests $14,800 while the report and invoice support $12,800."], ["Claim identity matches", "Claim number and claimant agree across documents.", true], ["Repair scope supported", "Invoice work is consistent with the adjuster report.", true]] },
+    result: { risk: "MEDIUM", confidence: 88, verdict: "Refer to adjuster", summary: "The claimed amount differs from the assessed and invoiced amount.", comparisons: [["Claim amount", "Claim Form ↔ Adjuster Report ↔ Repair Invoice", "Mismatch · $14,800 vs $12,800"], ["Claimant", "Claim Form ↔ Adjuster Report ↔ Repair Invoice", "Match · Jordan Lee", true]], findings: [["Amount discrepancy", "The claim requests $14,800 while the report and invoice support $12,800."], ["Claim identity matches", "Claim number and claimant agree across documents.", true], ["Repair scope supported", "Invoice work is consistent with the adjuster report.", true]] },
   },
 };
 
@@ -174,6 +175,25 @@ async function analyze() {
     els.progressBar.style.width = `${progress}%`; els.progressPercent.textContent = `${progress}%`;
     await delay(620);
   }
+  const scenario = scenarios[state.scenario];
+  const baseTokens = state.documents.length * 860;
+  const tokenEvents = [
+    ["Quality assessment", 420, 72, 260],
+    ["Field extraction", baseTokens, 540, Math.round(baseTokens * 0.42)],
+    ["Cross-document reasoning", 980, 210, 620],
+    ["Policy evaluation", 180, 80, 120],
+    ["Decision summary", 260, 96, 180],
+  ].map(([activity, promptTokens, completionTokens, cachedTokens], index) => ({
+    caseId: scenario?.caseId || els.caseId.textContent.replace("Case ", ""),
+    tenant: scenario?.label || "Uploaded evidence",
+    activity,
+    model: index === 1 ? "gpt-4.1-mini" : "gpt-4.1",
+    promptTokens,
+    completionTokens,
+    cachedTokens,
+    latencyMs: 180 + index * 130,
+  }));
+  localStorage.setItem("ariaTokenEvents", JSON.stringify(tokenEvents));
   showDecision();
   state.processing = false; renderDocuments(); els.caseStatus.textContent = "Review ready";
   await delay(300); els.processingStrip.hidden = true;
@@ -191,6 +211,9 @@ function showDecision() {
   const findings = result.findings.map(([title, detail, pass]) => ({ title, detail, pass }));
   els.findingCount.textContent = findings.length;
   els.findingsList.innerHTML = findings.map(item => `<article class="finding${item.pass ? " pass" : ""}"><strong>${item.pass ? "✓ " : "! "}${item.title}</strong><p>${item.detail}</p></article>`).join("");
+  const comparisons = result.comparisons || [];
+  els.comparisonCount.textContent = comparisons.length;
+  els.comparisonList.innerHTML = comparisons.map(([field, sources, outcome, pass]) => `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓ " : "! "}${escapeHtml(field)}</strong><p>${escapeHtml(sources)}</p><p><strong>${escapeHtml(outcome)}</strong></p></article>`).join("");
   els.traceList.innerHTML = ["Bundle accepted", `${state.documents.length} documents extracted`, "Evidence facts reconciled", "Template policy evaluated", result.risk === "LOW" ? "Approval recommendation prepared" : "Human review threshold applied"].map(item => `<li>${item}</li>`).join("");
 }
 

@@ -41,6 +41,13 @@
       <article class="kpi accent"><span>Cache hit rate</span><strong id="cacheRate">—</strong><small id="cachedTokens">—</small></article>
     </section>
 
+    <section class="panel cache-explainer">
+      <div class="panel-title"><div><span class="eyebrow">How caching works</span><h2>Why cached tokens save money</h2></div></div>
+      <p>ARIA keeps the stable instruction prefix, template vocabulary, and policy context reusable. The model can reuse that prefix across calls instead of processing identical input tokens again.</p>
+      <div class="cache-flow"><span>Stable template context</span><b>→</b><span>Provider prefix cache</span><b>→</b><span>Only new evidence costs input tokens</span></div>
+      <small>Cached tokens are still measured for traceability, but the dashboard estimates their cost separately from uncached input tokens.</small>
+    </section>
+
     <section class="analytics-grid">
       <article class="panel usage-panel">
         <div class="panel-title"><div><span class="eyebrow">Consumption trend</span><h2>Daily token usage</h2></div><div class="legend"><span class="prompt-dot"></span>Input <span class="output-dot"></span>Output <span class="cache-dot"></span>Cached</div></div>

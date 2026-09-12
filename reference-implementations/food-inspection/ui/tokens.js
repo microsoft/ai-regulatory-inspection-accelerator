@@ -18,15 +18,33 @@ const cases = [
   ["CASE-1836","Food Safety","Cross-document reasoning","gpt-4.1",15900,1970,9800,17870,0.124,1690],
   ["CASE-1835","Food Safety","Field gap filling","gpt-4.1-mini",7380,840,4200,8220,0.028,890],
 ];
+const demoEvents = JSON.parse(localStorage.getItem("ariaTokenEvents") || "[]");
+if (demoEvents.length) {
+  const demoCases = demoEvents.map((event, index) => [
+    event.caseId || `DEMO-${index + 1}`,
+    event.tenant || "Demo template",
+    event.activity || "Pipeline activity",
+    event.model || "gpt-4.1-mini",
+    event.promptTokens || 0,
+    event.completionTokens || 0,
+    event.cachedTokens || 0,
+    (event.promptTokens || 0) + (event.completionTokens || 0),
+    0,
+    event.latencyMs || 0,
+  ]);
+  cases.unshift(...demoCases);
+}
 const rates = { "gpt-4.1": { input: 0.005, output: 0.015 }, "gpt-4.1-mini": { input: 0.0004, output: 0.0016 } };
 const $ = selector => document.querySelector(selector);
 const formatTokens = value => value >= 1e6 ? `${(value/1e6).toFixed(2)}M` : `${Math.round(value/1000)}K`;
 
 function render() {
   const prompt = usageData.reduce((sum,d)=>sum+d.prompt,0), output = usageData.reduce((sum,d)=>sum+d.output,0), cached = usageData.reduce((sum,d)=>sum+d.cached,0);
-  const total = prompt + output, cacheRate = Math.round(cached/prompt*100), cost = cases.reduce((sum,row)=>sum+row[8],0);
+  const dynamicCost = cases.reduce((sum,row)=>sum + ((row[4] - row[6]) / 1e6 * rates[row[3]].input) + (row[5] / 1e6 * rates[row[3]].output), 0);
+  const staticCost = cases.reduce((sum,row)=>sum+row[8],0);
+  const total = prompt + output, cacheRate = Math.round(cached/prompt*100), cost = dynamicCost || staticCost;
   $("#totalTokens").textContent = formatTokens(total); $("#totalCost").textContent = `$${cost.toFixed(2)}`;
-  $("#avgTokens").textContent = formatTokens(total/148); $("#caseCount").textContent = "148 processed cases";
+  $("#avgTokens").textContent = formatTokens(total/(demoEvents.length || 148)); $("#caseCount").textContent = `${demoEvents.length || 148} processed cases`;
   $("#cacheRate").textContent = `${cacheRate}%`; $("#cachedTokens").textContent = `${formatTokens(cached)} input tokens reused`;
   $("#tokenTrend").textContent = "↓ 8.4% per case vs prior period";
   renderChart(); renderActivities(); renderEfficiency(prompt,output,cached); renderAnomalies(); renderCases(cases);
