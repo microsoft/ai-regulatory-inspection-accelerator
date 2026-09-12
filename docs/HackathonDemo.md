@@ -18,7 +18,8 @@ points at the deployed ARIA APIM gateway for future backend mode:
 
 * APIM base: `https://apim-aria-infra.azure-api.net`
 * Inspection API: `POST https://apim-aria-infra.azure-api.net/inspections`
-* Function App: `https://func-aria-pipeline.azurewebsites.net`
+* Durable Function App: `https://func-aria-pipeline.azurewebsites.net`
+* Live extraction route: `POST /api/live/inspections` with a Function key
 
 The personal-subscription model profile uses:
 
@@ -26,8 +27,9 @@ The personal-subscription model profile uses:
 * `aria-vision` -> `gpt-4o` for the handwriting/ambiguous-evidence fallback
 * `aria-embed-small` -> `text-embedding-3-small` for retrieval features
 
-No secrets are embedded in the browser demo. APIM subscription/authentication
-is required for live backend submissions.
+No secrets are embedded in the browser demo. Live backend mode is enabled only
+in a local/private configuration that supplies the Function key. The public
+hosted page remains synthetic by default.
 
 ## Local demo
 
