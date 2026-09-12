@@ -1,0 +1,10 @@
+azure-ai-documentintelligence>=1.0.0
+azure-cosmos>=4.7.0
+azure-functions>=1.21.0
+azure-functions-durable>=1.2.10
+azure-identity>=1.19.0
+azure-storage-blob>=12.24.0
+openai>=1.57.0
+pycountry>=24.6.1
+pydantic>=2.0.0
+tiktoken>=0.8.0

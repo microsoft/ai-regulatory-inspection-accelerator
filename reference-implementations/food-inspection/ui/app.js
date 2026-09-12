@@ -160,6 +160,9 @@ function renderViewer() {
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 async function analyze() {
   if (!state.documents.length || state.processing) return;
+  if (window.ARIA_CONFIG?.mode === "live" && window.ARIA_CONFIG.apiKey && window.ARIA_CONFIG.liveEndpoint) {
+    return analyzeLive();
+  }
   state.processing = true; renderDocuments();
   els.processingStrip.hidden = false; els.caseStatus.textContent = "Processing";
   if (els.caseId.textContent === "Case —") els.caseId.textContent = `Case DEMO-${String(Date.now()).slice(-4)}`;
@@ -197,6 +200,51 @@ async function analyze() {
   showDecision();
   state.processing = false; renderDocuments(); els.caseStatus.textContent = "Review ready";
   await delay(300); els.processingStrip.hidden = true;
+}
+
+async function analyzeLive() {
+  state.processing = true; renderDocuments(); els.processingStrip.hidden = false; els.caseStatus.textContent = "Live Azure processing";
+  const documents = state.documents.map(doc => ({
+    documentId: doc.id,
+    name: doc.name,
+    type: doc.type,
+    text: doc.rows ? doc.rows.map(([label, value]) => `${label}: ${value}`).join("\n") : "",
+  }));
+  try {
+    const response = await fetch(window.ARIA_CONFIG.liveEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-functions-key": window.ARIA_CONFIG.apiKey },
+      body: JSON.stringify({ requestId: `LIVE-${Date.now()}`, documents }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || "Live inspection failed");
+    els.processingLabel.textContent = "Azure pipeline complete"; els.processingDetail.textContent = `${result.modelNames.text} · ${result.stages.length} stages`;
+    els.progressBar.style.width = "100%"; els.progressPercent.textContent = "100%";
+    state.liveResult = result;
+    showLiveDecision(result);
+    els.caseStatus.textContent = "Live review ready";
+  } catch (error) {
+    els.caseStatus.textContent = "Live unavailable · demo fallback";
+    state.processing = false; els.processingStrip.hidden = true;
+    showDecision();
+  } finally { state.processing = false; renderDocuments(); await delay(300); els.processingStrip.hidden = true; }
+}
+
+function showLiveDecision(result) {
+  const risk = result.riskEvaluation || {};
+  const comparisons = result.comparisons || [];
+  els.decisionEmpty.hidden = true; els.decisionContent.hidden = false;
+  els.recommendationHeading.textContent = "Azure inspection complete";
+  els.riskBadge.textContent = risk.aiRiskLevel || "REVIEW"; els.riskBadge.className = `risk-badge ${risk.aiRiskLevel === "Low" ? "low" : "medium"}`;
+  els.verdictText.textContent = risk.recommendationLabel || risk.recommendation || "Review required";
+  els.verdictIcon.textContent = risk.aiRiskLevel === "Low" ? "✓" : "!";
+  els.verdictSummary.textContent = `Live models: ${result.modelNames.text}; ${result.delivery.status}.`;
+  els.confidenceValue.textContent = "Live"; els.confidenceBar.style.width = "100%";
+  els.findingCount.textContent = result.findings.length;
+  els.findingsList.innerHTML = result.findings.map(item => `<article class="finding"><strong>! ${escapeHtml(item.ruleCode)}</strong><p>${escapeHtml(item.result)} · ${escapeHtml(JSON.stringify(item.evidence || {}))}</p></article>`).join("");
+  els.comparisonCount.textContent = comparisons.length;
+  els.comparisonList.innerHTML = comparisons.map(item => `<article class="finding${item.result === "PASS" ? " pass" : ""}"><strong>${item.result === "PASS" ? "✓" : "!"} ${escapeHtml(item.field)}</strong><p>${escapeHtml(JSON.stringify(item.values))}</p></article>`).join("");
+  els.traceList.innerHTML = result.stages.map(stage => `<li>${escapeHtml(stage.name)} · ${escapeHtml(stage.status)} · ${escapeHtml(stage.detail)}</li>`).join("");
 }
 
 function showDecision() {
