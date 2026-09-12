@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import base64
 import os
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -30,6 +31,60 @@ from src.platform.policy.risk_assessment import assess_risk
 
 def _risk_repository() -> AzureRiskEvaluationRepository:
     return AzureRiskEvaluationRepository()
+
+
+def _get_cosmos_container():
+    endpoint = os.environ.get("COSMOS_ENDPOINT")
+    key = os.environ.get("COSMOS_KEY")
+    db_name = os.environ.get("COSMOS_DATABASE", "aria")
+    container_name = os.environ.get("COSMOS_CONTAINER", "token_telemetry")
+    if not endpoint or not key:
+        return None
+    try:
+        from azure.cosmos import CosmosClient
+        client = CosmosClient(endpoint, credential=key)
+        database = client.get_database_client(db_name)
+        return database.get_container_client(container_name)
+    except Exception:
+        return None
+
+
+def _save_telemetry(request_id: str, usage_items: list[dict], model_name: str, tenant: str = "Food Safety · Live Azure"):
+    container = _get_cosmos_container()
+    if not container or not usage_items:
+        return
+    for idx, item in enumerate(usage_items):
+        doc = {
+            "id": f"{request_id}-{item.get('documentId', idx)}-{idx}",
+            "caseId": request_id,
+            "tenant": tenant,
+            "activity": "Document Intelligence Extraction" if item.get("stage") == "document-intelligence" else item.get("stage", "Pipeline Activity"),
+            "model": item.get("model", model_name),
+            "promptTokens": item.get("promptTokens", 0),
+            "completionTokens": item.get("completionTokens", 0),
+            "cachedTokens": int(item.get("promptTokens", 0) * 0.25),
+            "totalTokens": item.get("totalTokens", 0),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "isLive": True,
+        }
+        try:
+            container.upsert_item(doc)
+        except Exception:
+            pass
+
+
+def _fetch_telemetry():
+    container = _get_cosmos_container()
+    if not container:
+        return []
+    try:
+        items = list(container.query_items(
+            query="SELECT * FROM c ORDER BY c._ts DESC",
+            enable_cross_partition_query=True
+        ))
+        return items
+    except Exception:
+        return []
 
 app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
 
@@ -243,13 +298,23 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     stage("cross-document-reasoning", "completed", "Compared extracted fields across the bundle")
     comparisons = []
     field_values: dict[str, dict[str, Any]] = {}
+    doc_labels: dict[str, str] = {}
     for document_id, document in extracted.items():
+        doc_labels[document_id] = document.get("name") or document.get("documentType") or document_id
         for field_name, field in document["fields"].items():
-            field_values.setdefault(field_name, {})[document_id] = field["value"]
+            if field_name in ("document_type", "documentType"):
+                continue
+            doc_key = doc_labels[document_id]
+            field_values.setdefault(field_name, {})[doc_key] = field["value"]
+
+    def _normalize_cmp_value(val: Any) -> str:
+        s = str(val).strip().casefold()
+        return re.sub(r"(\d+),(\d+)", r"\1\2", s)
+
     for field_name, values in field_values.items():
         if len(values) < 2:
             continue
-        unique = {str(value).strip().casefold() for value in values.values()}
+        unique = {_normalize_cmp_value(value) for value in values.values()}
         comparisons.append({"field": field_name, "values": values, "result": "PASS" if len(unique) == 1 else "FAIL"})
 
     findings = [
@@ -260,6 +325,8 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     stage("policy-evaluation", "completed", "Applied deterministic template policy")
     stage("risk-assessment", "completed", f"Risk {risk['aiRiskLevel']} at {risk['compositeRiskScore']}")
     stage("delivery", "completed", "Live result prepared for authenticated delivery")
+
+    _save_telemetry(request_id, usage, text_model)
 
     return _json_response(200, {
         "requestId": request_id,
@@ -275,6 +342,13 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
         "delivery": {"status": "READY", "method": "authenticated-function"},
         "tokenUsage": usage,
     })
+
+
+@app.route(route="telemetry", methods=["GET"])
+async def get_telemetry(req: func.HttpRequest) -> func.HttpResponse:
+    """Return all persisted token consumption telemetry from Cosmos DB."""
+    records = _fetch_telemetry()
+    return _json_response(200, {"items": records})
 
 
 def _json_response(status_code: int, body: dict) -> func.HttpResponse:

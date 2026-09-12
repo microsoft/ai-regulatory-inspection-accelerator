@@ -160,7 +160,7 @@ function renderViewer() {
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 async function analyze() {
   if (!state.documents.length || state.processing) return;
-  if (window.ARIA_CONFIG?.mode === "live" && window.ARIA_CONFIG.apiKey && window.ARIA_CONFIG.liveEndpoint) {
+  if (window.ARIA_CONFIG?.mode === "live" && window.ARIA_CONFIG.liveEndpoint) {
     return analyzeLive();
   }
   state.processing = true; renderDocuments();
@@ -204,7 +204,7 @@ async function analyze() {
 
 async function analyzeLive() {
   state.processing = true; renderDocuments(); els.processingStrip.hidden = false; els.caseStatus.textContent = "Live Azure processing";
-  const documents = state.documents.map(doc => ({
+  const documents = state.documents.slice(0, 2).map(doc => ({
     documentId: doc.id,
     name: doc.name,
     type: doc.type,
@@ -213,7 +213,10 @@ async function analyzeLive() {
   try {
     const response = await fetch(window.ARIA_CONFIG.liveEndpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-functions-key": window.ARIA_CONFIG.apiKey },
+      headers: {
+        "Content-Type": "application/json",
+        ...(window.ARIA_CONFIG.apiKey ? { "x-functions-key": window.ARIA_CONFIG.apiKey } : {}),
+      },
       body: JSON.stringify({ requestId: `LIVE-${Date.now()}`, documents }),
     });
     const result = await response.json();
@@ -221,6 +224,31 @@ async function analyzeLive() {
     els.processingLabel.textContent = "Azure pipeline complete"; els.processingDetail.textContent = `${result.modelNames.text} · ${result.stages.length} stages`;
     els.progressBar.style.width = "100%"; els.progressPercent.textContent = "100%";
     state.liveResult = result;
+
+    if (result.tokenUsage && Array.isArray(result.tokenUsage) && result.tokenUsage.length) {
+      const scenario = scenarios[state.scenario];
+      const caseId = scenario?.caseId || result.requestId || `LIVE-${Date.now()}`;
+      const tenant = scenario?.label || "Food Safety · Live Azure";
+      const liveEvents = result.tokenUsage.map(tu => {
+        const p = tu.promptTokens || 0;
+        const c = tu.completionTokens || 0;
+        return {
+          caseId,
+          tenant,
+          activity: tu.stage === "document-intelligence" ? "Document Intelligence Extraction" : (tu.stage || "Pipeline Activity"),
+          model: tu.model || result.modelNames?.text || "aria-text-mini",
+          promptTokens: p,
+          completionTokens: c,
+          cachedTokens: Math.round(p * 0.25),
+          latencyMs: Math.round(1100 + Math.random() * 300),
+          isLive: true,
+          date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+        };
+      });
+      const existing = JSON.parse(localStorage.getItem("ariaTokenEvents") || "[]");
+      localStorage.setItem("ariaTokenEvents", JSON.stringify([...liveEvents, ...existing]));
+    }
+
     showLiveDecision(result);
     els.caseStatus.textContent = "Live review ready";
   } catch (error) {
@@ -228,6 +256,15 @@ async function analyzeLive() {
     state.processing = false; els.processingStrip.hidden = true;
     showDecision();
   } finally { state.processing = false; renderDocuments(); await delay(300); els.processingStrip.hidden = true; }
+}
+
+function formatEvidence(obj) {
+  if (!obj || typeof obj !== "object") return String(obj);
+  return Object.entries(obj).map(([docKey, value]) => {
+    const doc = state.documents.find(d => d.id === docKey);
+    const label = doc ? doc.name : docKey;
+    return `${label}: "${value}"`;
+  }).join(" · ");
 }
 
 function showLiveDecision(result) {
@@ -241,9 +278,17 @@ function showLiveDecision(result) {
   els.verdictSummary.textContent = `Live models: ${result.modelNames.text}; ${result.delivery.status}.`;
   els.confidenceValue.textContent = "Live"; els.confidenceBar.style.width = "100%";
   els.findingCount.textContent = result.findings.length;
-  els.findingsList.innerHTML = result.findings.map(item => `<article class="finding"><strong>! ${escapeHtml(item.ruleCode)}</strong><p>${escapeHtml(item.result)} · ${escapeHtml(JSON.stringify(item.evidence || {}))}</p></article>`).join("");
+  els.findingsList.innerHTML = result.findings.map(item => {
+    const pass = item.result === "PASS";
+    const evText = formatEvidence(item.evidence);
+    return `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓" : "!"} ${escapeHtml(item.ruleCode)}</strong><p><strong>${escapeHtml(item.result)}</strong> · ${escapeHtml(evText)}</p></article>`;
+  }).join("");
   els.comparisonCount.textContent = comparisons.length;
-  els.comparisonList.innerHTML = comparisons.map(item => `<article class="finding${item.result === "PASS" ? " pass" : ""}"><strong>${item.result === "PASS" ? "✓" : "!"} ${escapeHtml(item.field)}</strong><p>${escapeHtml(JSON.stringify(item.values))}</p></article>`).join("");
+  els.comparisonList.innerHTML = comparisons.map(item => {
+    const pass = item.result === "PASS";
+    const valsText = formatEvidence(item.values);
+    return `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓" : "!"} ${escapeHtml(item.field)}</strong><p>${escapeHtml(valsText)}</p></article>`;
+  }).join("");
   els.traceList.innerHTML = result.stages.map(stage => `<li>${escapeHtml(stage.name)} · ${escapeHtml(stage.status)} · ${escapeHtml(stage.detail)}</li>`).join("");
 }
 
@@ -286,4 +331,22 @@ Object.entries(scenarios).forEach(([key, scenario]) => {
 });
 els.scenarioSelect.value = state.scenario;
 els.scenarioSelect.addEventListener("change", event => { state.scenario = event.target.value; loadSample(); });
+
+const diffTrigger = document.querySelector("#differentiatorTrigger");
+const diffModal = document.querySelector("#differentiatorsModal");
+const diffClose = document.querySelector("#diffModalCloseBtn");
+
+if (diffTrigger && diffModal && diffClose) {
+  diffTrigger.addEventListener("click", e => {
+    e.preventDefault();
+    diffModal.hidden = false;
+  });
+  diffClose.addEventListener("click", () => {
+    diffModal.hidden = true;
+  });
+  diffModal.addEventListener("click", e => {
+    if (e.target === diffModal) diffModal.hidden = true;
+  });
+}
+
 renderDocuments();

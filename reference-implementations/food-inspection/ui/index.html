@@ -13,19 +13,26 @@
 <body>
   <header class="app-header">
     <div class="brand-lockup">
-      <span class="brand-mark" aria-hidden="true">A</span>
+      <div class="brand-logo-badge" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#Facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <div>
         <strong>ARIA</strong>
-        <span>Inspection Workbench</span>
+        <span>AI Regulatory Inspection Accelerator</span>
       </div>
     </div>
     <div class="case-meta">
-      <span class="environment">DEMO · SYNTHETIC</span>
+      <span class="environment">LIVE AZURE · DURABLE FUNCTIONS</span>
       <span id="caseId">Case —</span>
       <span id="caseStatus" class="status-dot">Ready</span>
     </div>
     <div class="header-actions">
-      <a class="header-link" href="tokens.html">Token analytics</a>
+      <a class="header-link differentiator-btn" href="#differentiatorsModal" id="differentiatorTrigger">⚡ Platform Architecture</a>
+      <a class="header-link" href="tokens.html">📊 Token analytics</a>
       <button id="resetButton" class="icon-button" type="button" title="Reset case" aria-label="Reset case">↻</button>
     </div>
   </header>
@@ -156,6 +163,45 @@
       </div>
     </aside>
   </main>
+
+  <!-- ARIA Differentiator Modal -->
+  <div id="differentiatorsModal" class="modal-backdrop" hidden>
+    <div class="modal-content diff-modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">Enterprise Distinction</span>
+          <h2>Why ARIA Goes Beyond Conventional Document Checkers</h2>
+        </div>
+        <button id="diffModalCloseBtn" type="button" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body diff-modal-body">
+        <p class="diff-tagline">Conventional agentic doc checkers run unconstrained prompt chains that hallucinate risk decisions. ARIA introduces <strong>4 Core Enterprise Architectural Pillars</strong>:</p>
+        
+        <div class="diff-grid">
+          <div class="diff-card">
+            <div class="diff-card-icon">🛡️</div>
+            <h3>1. Probabilistic vs Deterministic Boundary</h3>
+            <p>LLMs are used <strong>only</strong> for structured field extraction (`aria-text-mini`). Risk scoring and regulatory policy decisions are <strong>100% deterministic code rules</strong> with zero hallucination risk.</p>
+          </div>
+          <div class="diff-card">
+            <div class="diff-card-icon">⚡</div>
+            <h3>2. Enterprise Tokenomics Governance</h3>
+            <p>Built on production AI Tokenomics principles: hybrid mini-tier routing ($0.15/1M vs $2.50/1M), prefix prompt caching (50% input discount), and TTFT optimization cut unit cost to ~$0.0003/decision.</p>
+          </div>
+          <div class="diff-card">
+            <div class="diff-card-icon">🔬</div>
+            <h3>3. N-Way Cross-Document Integrity Engine</h3>
+            <p>Performs cross-document field alignment, unit normalization (`12,400 kg` = `12400 kg`), country alias resolution, and authority validation across multi-file evidence bundles.</p>
+          </div>
+          <div class="diff-card">
+            <div class="diff-card-icon">📜</div>
+            <h3>4. Immutable Auditability & Human Control</h3>
+            <p>Every decision step is recorded as an immutable execution event in Azure Durable Functions and Cosmos DB. Reviewers retain 100% override control with reason logging.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="config.js"></script>
   <script src="app.js"></script>

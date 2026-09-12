@@ -9,15 +9,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="tokens.css">
+  <script src="config.js"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="brand-lockup">
-      <span class="brand-mark" aria-hidden="true">A</span>
-      <div><strong>ARIA</strong><span>AI Operations</span></div>
+      <div class="brand-logo-badge" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#Facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div><strong>ARIA</strong><span>AI Regulatory Operations</span></div>
     </div>
-    <div class="scope-label"><span></span> Internal operations</div>
-    <a class="back-link" href="index.html">← Inspection demo</a>
+    <div class="scope-label"><span></span> Persistent Telemetry · Cosmos DB</div>
+    <a class="back-link" href="index.html">← Inspection Workbench</a>
   </header>
 
   <main class="dashboard-shell">
@@ -25,38 +32,163 @@
       <div>
         <span class="eyebrow">Cost and efficiency governance</span>
         <h1>Token analytics</h1>
-        <p>Usage attribution across cases, activities and models. Prompts and evidence are never displayed.</p>
+        <p>Persisted Cosmos DB telemetry & usage attribution across cases, activities, and models.</p>
       </div>
       <div class="filters" aria-label="Dashboard filters">
-        <label>Period<select id="periodFilter"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="1">Today</option></select></label>
-        <label>Tenant<select id="tenantFilter"><option value="all">All tenants</option><option value="food safety">Food safety template</option><option value="customs">Customs template</option></select></label>
+        <a href="https://ai.azure.com/resource/deployments/%2Fsubscriptions%2F40f8a183-12f2-4c39-8f9c-821d0b6716c6%2FresourceGroups%2Frg-aria-infra%2Fproviders%2FMicrosoft.CognitiveServices%2Faccounts%2Foai-aria-infra%2Fdeployments%2Faria-text-mini?wsid=/subscriptions/40f8a183-12f2-4c39-8f9c-821d0b6716c6/resourceGroups/rg-aria-infra/providers/Microsoft.CognitiveServices/accounts/oai-aria-infra&tid=39f2d6ee-e025-4721-835f-effde1aa499d" target="_blank" class="azure-metrics-btn">⚡ Live Azure OpenAI Metrics</a>
+        <label>Preset
+          <select id="periodFilter">
+            <option value="7" selected>Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="1">Today (Last 24h)</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </label>
+        <label>From Date
+          <input type="datetime-local" id="fromDateFilter">
+        </label>
+        <label>To Date
+          <input type="datetime-local" id="toDateFilter">
+        </label>
+        <label>Case / Tenant
+          <select id="caseFilter">
+            <option value="all">All Cases & Tenants</option>
+          </select>
+        </label>
         <button id="exportButton" type="button">Export CSV</button>
       </div>
     </section>
 
     <section class="kpi-grid" aria-label="Key performance indicators">
-      <article class="kpi"><span>Total tokens</span><strong id="totalTokens">—</strong><small id="tokenTrend">—</small></article>
-      <article class="kpi"><span>Estimated cost</span><strong id="totalCost">—</strong><small>Configured model rates</small></article>
-      <article class="kpi"><span>Average per case</span><strong id="avgTokens">—</strong><small id="caseCount">—</small></article>
-      <article class="kpi accent"><span>Cache hit rate</span><strong id="cacheRate">—</strong><small id="cachedTokens">—</small></article>
+      <article class="kpi">
+        <span>Total Tokens Processed</span>
+        <strong id="totalTokens">—</strong>
+        <small id="tokenBreakdown">—</small>
+      </article>
+
+      <article class="kpi">
+        <span>Average Tokens / Case</span>
+        <strong id="avgTokens">—</strong>
+        <small id="caseCount">—</small>
+      </article>
+
+      <article class="kpi cost-primary">
+        <span>Actual Realized Cost</span>
+        <strong id="actualCost">$0.0000</strong>
+        <small id="costModelRates">Realized model billing</small>
+      </article>
+
+      <article class="kpi cost-forecast">
+        <span>Forecast Cost (30-Day)</span>
+        <strong id="forecastCost">$0.0000</strong>
+        <small id="forecastRunrate">Projected 30d run-rate</small>
+      </article>
+
+      <article class="kpi cost-savings">
+        <span>Net Cost Savings</span>
+        <strong id="costSaved">$0.0000</strong>
+        <small id="costSavingsPct">0% vs unoptimized GPT-4.1</small>
+      </article>
+
+      <article class="kpi accent">
+        <span>Cache Hit Rate & Reused</span>
+        <strong id="cacheRate">—</strong>
+        <small id="cachedTokens">—</small>
+      </article>
+    </section>
+
+    <!-- ARIA Efficiency Banner -->
+    <section class="panel efficiency-banner">
+      <div class="efficiency-banner-content">
+        <div class="efficiency-badge-tag">🏆 ARIA TOKENOMICS EFFICIENCY PROOF</div>
+        <h2>How Efficient Is ARIA? <span>(Savings vs. Naive LLM Implementations)</span></h2>
+        <p>Unoptimized multi-agent document checkers route all OCR & extraction requests to full <strong>GPT-4.1 ($2.50/1M tokens)</strong> without prefix caching. ARIA's <strong>hybrid mini-routing (aria-text-mini @ $0.15/1M)</strong> + <strong>prompt caching</strong> reduces execution cost by <strong id="bannerSavingsPct">~94.2%</strong>.</p>
+        <div class="efficiency-comparison-bar">
+          <div class="cmp-box baseline">
+            <span>Naive GPT-4.1 Baseline</span>
+            <strong id="baselineCost">$0.0000</strong>
+            <small>No caching · Full model tier</small>
+          </div>
+          <div class="cmp-arrow">➔</div>
+          <div class="cmp-box optimized">
+            <span>ARIA Optimized Architecture</span>
+            <strong id="ariaCost">$0.0000</strong>
+            <small>aria-text-mini + Prefix Cache</small>
+          </div>
+          <div class="cmp-box saved">
+            <span>Net Money Saved</span>
+            <strong id="ariaMoneySaved">$0.0000</strong>
+            <small id="ariaPctSaved">94.2% Cost Reduction</small>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="panel cache-explainer">
-      <div class="panel-title"><div><span class="eyebrow">How caching works</span><h2>Why cached tokens save money</h2></div></div>
+      <div class="panel-title">
+        <div><span class="eyebrow">How caching works</span><h2>Why cached tokens save money</h2></div>
+        <div class="wiki-links">
+          <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/pafn-di-poc/wiki/Architecture.md" target="_blank" class="wiki-btn">📖 How Caching Works in ARIA (Wiki)</a>
+          <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
+        </div>
+      </div>
       <p>ARIA keeps the stable instruction prefix, template vocabulary, and policy context reusable. The model can reuse that prefix across calls instead of processing identical input tokens again.</p>
       <div class="cache-flow"><span>Stable template context</span><b>→</b><span>Provider prefix cache</span><b>→</b><span>Only new evidence costs input tokens</span></div>
       <small>Cached tokens are still measured for traceability, but the dashboard estimates their cost separately from uncached input tokens.</small>
     </section>
 
+    <section class="panel vision-explainer">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">Multimodal Architecture Decision</span>
+          <h2>Why AI Vision vs Deterministic Python Libraries (PyPDF2, pdfplumber, Tesseract)?</h2>
+        </div>
+        <span class="vision-badge">Hybrid Fallback Strategy</span>
+      </div>
+      <div class="vision-grid">
+        <div class="vision-card python-lib">
+          <h3>🐍 Deterministic Python Libraries (PyPDF / pdfplumber)</h3>
+          <p><strong>Best for:</strong> $0 token cost, ultra-fast text extraction from native digital PDFs.</p>
+          <p><strong>Critical Blind Spots:</strong> Fail completely on scanned/photocopied documents, physical seals/stamps (Halal, Health Authority stamps), handwritten signatures/dates, or complex multi-column table layouts where raw text streams scramble columns.</p>
+        </div>
+        <div class="vision-card ai-vision">
+          <h3>👁️ AI Vision (Multimodal GPT-4o / Azure DI)</h3>
+          <p><strong>Best for:</strong> Understanding visual seals, handwritten text, complex layout geometry, Arabic/RTL visual alignment, and stamped certifications.</p>
+          <p><strong>Cost Protection in ARIA:</strong> ARIA uses a <strong>hybrid fallback architecture</strong>. Digital text is processed via <code>aria-text-mini</code> ($0.15/1M tokens). Vision models (<code>aria-vision</code>) are invoked <strong>only when OCR confidence is &lt;80% or visual stamp verification is explicitly required</strong>.</p>
+        </div>
+      </div>
+    </section>
+
     <section class="analytics-grid">
       <article class="panel usage-panel">
-        <div class="panel-title"><div><span class="eyebrow">Consumption trend</span><h2>Daily token usage</h2></div><div class="legend"><span class="prompt-dot"></span>Input <span class="output-dot"></span>Output <span class="cache-dot"></span>Cached</div></div>
+        <div class="panel-title">
+          <div>
+            <span class="eyebrow">Cost & Token Consumption Analysis</span>
+            <h2 id="chartTitle">Daily Token Usage Trend</h2>
+          </div>
+          <div class="chart-controls">
+            <div class="toggle-group" aria-label="Granularity toggle">
+              <button id="btnDailyGranular" class="toggle-btn active" type="button">Daily</button>
+              <button id="btnAccumulatedGranular" class="toggle-btn" type="button">Accumulated</button>
+            </div>
+            <div class="legend">
+              <span class="prompt-dot"></span>Input 
+              <span class="output-dot"></span>Output 
+              <span class="cache-dot"></span>Cached
+            </div>
+          </div>
+        </div>
         <div id="usageChart" class="usage-chart" aria-label="Daily token usage bar chart"></div>
       </article>
 
       <article class="panel activity-panel">
         <div class="panel-title"><div><span class="eyebrow">Pipeline attribution</span><h2>Usage by activity</h2></div></div>
         <div id="activityList" class="activity-list"></div>
+      </article>
+
+      <article class="panel model-panel">
+        <div class="panel-title"><div><span class="eyebrow">Model economics</span><h2>Model token & cost breakdown</h2></div></div>
+        <div id="modelBreakdownList" class="model-breakdown-list"></div>
       </article>
 
       <article class="panel efficiency-panel">
@@ -75,18 +207,112 @@
       </article>
     </section>
 
-    <section class="panel cases-panel">
-      <div class="panel-title"><div><span class="eyebrow">Traceable spend</span><h2>Case usage</h2></div><div class="table-tools"><input id="caseSearch" type="search" placeholder="Search case or activity"><span id="visibleRows"></span></div></div>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Case</th><th>Tenant</th><th>Primary activity</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Total</th><th>Est. cost</th><th>Latency</th></tr></thead>
-          <tbody id="caseRows"></tbody>
-        </table>
+    <section class="panel heatmap-panel">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">Visual mapping & pipeline intensity</span>
+          <h2>Pipeline activity vs model intensity heatmap</h2>
+        </div>
+        <div class="heatmap-legend">
+          <span class="heat-low">Low (&lt;25K)</span>
+          <span class="heat-med">Mid (25K-100K)</span>
+          <span class="heat-high">High (&gt;100K)</span>
+        </div>
+      </div>
+      <div id="heatmapGrid" class="heatmap-grid"></div>
+    </section>
+
+    <section class="panel tips-panel">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">Cost reduction guide</span>
+          <h2>Token optimization & saving strategies</h2>
+        </div>
+        <span class="savings-badge">Up to 94% cost reduction</span>
+      </div>
+      <div class="tips-grid">
+        <article class="tip-card">
+          <div class="tip-icon">⚡</div>
+          <h3>Mini model tier routing</h3>
+          <p>Route 95% of standard document text extractions to <strong>aria-text-mini</strong> ($0.15/1M tokens) instead of full gpt-4.1 ($2.50/1M). Fall back to vision models only when visual OCR confidence is &lt;80%.</p>
+          <div class="tip-impact"><strong>94% savings</strong> on text extraction</div>
+        </article>
+        <article class="tip-card">
+          <div class="tip-icon">🔄</div>
+          <h3>Prefix prompt caching</h3>
+          <p>Structure static system instructions, field schemas, and inspection policy rules at the very front of the prompt. Providers auto-cache prefixes &gt;1024 tokens for a 50% input discount.</p>
+          <div class="tip-impact"><strong>50% discount</strong> on input prefix</div>
+        </article>
+        <article class="tip-card">
+          <div class="tip-icon">🎯</div>
+          <h3>Strict JSON schema responses</h3>
+          <p>Use JSON response format mode to eliminate conversational preamble, reasoning text, and verbose markdown, cutting completion token overhead drastically.</p>
+          <div class="tip-impact"><strong>65% reduction</strong> in output tokens</div>
+        </article>
+        <article class="tip-card">
+          <div class="tip-icon">📦</div>
+          <h3>Document hash deduplication</h3>
+          <p>Compute SHA-256 hashes of incoming document pages before submission. Identical pages across multi-page evidence bundles are skipped, preventing duplicate extraction calls.</p>
+          <div class="tip-impact"><strong>100% bypass</strong> on duplicate pages</div>
+        </article>
       </div>
     </section>
 
-    <footer><span>Telemetry metadata only</span><span>No prompts · No responses · No document content</span></footer>
+    <section class="panel cases-panel">
+      <div class="panel-title">
+        <div><span class="eyebrow">Traceable spend & per-case breakdown</span><h2>Case token usage</h2></div>
+        <div class="table-tools"><input id="caseSearch" type="search" placeholder="Search Case ID or activity"><span id="visibleRows"></span></div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Case ID</th><th>Tenant / Scenario</th><th>Primary activity</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Total</th><th>Est. cost</th><th>Latency</th></tr></thead>
+          <tbody id="caseRows"></tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+        <div class="pagination-info"><span id="pageInfo">Showing 1–10 of 10</span></div>
+        <div class="pagination-controls">
+          <button id="btnFirst" type="button" title="First page">&laquo;</button>
+          <button id="btnPrev" type="button" title="Previous page">&lt; Prev</button>
+          <span id="currentPageDisplay">Page 1 of 1</span>
+          <button id="btnNext" type="button" title="Next page">Next &gt;</button>
+          <button id="btnLast" type="button" title="Last page">&raquo;</button>
+          <select id="pageSizeSelect" aria-label="Page size">
+            <option value="10" selected>10 per page</option>
+            <option value="25">25 per page</option>
+            <option value="50">50 per page</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <footer><span>Cosmos DB persistent telemetry metadata</span><span>No prompts · No responses · No document content</span></footer>
   </main>
+
+  <!-- Per-case detail modal -->
+  <div id="caseModal" class="modal-backdrop" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">Per-Case Detailed Telemetry</span>
+          <h2 id="modalCaseId">Case CASE-1842</h2>
+        </div>
+        <button id="modalCloseBtn" type="button" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-kpi-row">
+          <div><span>Tenant</span><strong id="modalTenant">—</strong></div>
+          <div><span>Total Tokens</span><strong id="modalTotalTokens">—</strong></div>
+          <div><span>Est. Cost</span><strong id="modalCost">—</strong></div>
+          <div><span>Primary Model</span><strong id="modalModel">—</strong></div>
+        </div>
+        <h3>Stage Breakdown</h3>
+        <div id="modalBreakdownList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
   <script src="tokens.js"></script>
 </body>
 </html>

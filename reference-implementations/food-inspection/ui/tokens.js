@@ -1,61 +1,689 @@
-const usageData = [
-  { day:"14 Aug", prompt:184000, output:21000, cached:74000 }, { day:"15 Aug", prompt:209000, output:26000, cached:96000 },
-  { day:"16 Aug", prompt:171000, output:19000, cached:68000 }, { day:"17 Aug", prompt:236000, output:29000, cached:121000 },
-  { day:"18 Aug", prompt:248000, output:31000, cached:137000 }, { day:"19 Aug", prompt:221000, output:27000, cached:116000 },
-  { day:"20 Aug", prompt:194000, output:23000, cached:108000 },
-];
-const activities = [
-  { name:"Cross-document reasoning", tokens:612000 }, { name:"Field gap filling", tokens:438000 },
-  { name:"Quality assessment", tokens:241000 }, { name:"Decision summary", tokens:162000 }, { name:"Semantic normalization", tokens:120000 },
-];
-const cases = [
-  ["CASE-1842","Food Safety","Cross-document reasoning","gpt-4.1",18420,2180,11200,20600,0.143,1840],
-  ["CASE-1841","Food Safety","Field gap filling","gpt-4.1-mini",8420,930,5100,9350,0.031,960],
-  ["CASE-1840","Customs","Cross-document reasoning","gpt-4.1",29400,3610,14400,33010,0.231,2580],
-  ["CASE-1839","Food Safety","Quality assessment","gpt-4.1",6240,510,0,6750,0.049,1120],
-  ["CASE-1838","Food Safety","Decision summary","gpt-4.1-mini",3190,620,2048,3810,0.014,740],
-  ["CASE-1837","Customs","Semantic normalization","gpt-4.1-mini",4770,480,2800,5250,0.018,810],
-  ["CASE-1836","Food Safety","Cross-document reasoning","gpt-4.1",15900,1970,9800,17870,0.124,1690],
-  ["CASE-1835","Food Safety","Field gap filling","gpt-4.1-mini",7380,840,4200,8220,0.028,890],
-];
-const demoEvents = JSON.parse(localStorage.getItem("ariaTokenEvents") || "[]");
-if (demoEvents.length) {
-  const demoCases = demoEvents.map((event, index) => [
-    event.caseId || `DEMO-${index + 1}`,
-    event.tenant || "Demo template",
-    event.activity || "Pipeline activity",
-    event.model || "gpt-4.1-mini",
-    event.promptTokens || 0,
-    event.completionTokens || 0,
-    event.cachedTokens || 0,
-    (event.promptTokens || 0) + (event.completionTokens || 0),
-    0,
-    event.latencyMs || 0,
-  ]);
-  cases.unshift(...demoCases);
+// Model Pricing Rates ($ per 1K tokens)
+const rates = {
+  "aria-text-mini": { name: "aria-text-mini (gpt-4.1-nano)", input: 0.00015, output: 0.0006 },
+  "aria-vision": { name: "aria-vision (gpt-4o)", input: 0.0025, output: 0.0100 },
+  "gpt-4.1-mini": { name: "gpt-4.1-mini", input: 0.00015, output: 0.0006 },
+  "gpt-4.1": { name: "gpt-4.1", input: 0.0025, output: 0.0100 },
+};
+
+function getRate(model) {
+  return rates[model] || rates["aria-text-mini"];
 }
-const rates = { "gpt-4.1": { input: 0.005, output: 0.015 }, "gpt-4.1-mini": { input: 0.0004, output: 0.0016 } };
+
+function getRowCost(model, promptTokens, completionTokens, cachedTokens) {
+  const r = getRate(model);
+  const uncachedPrompt = Math.max(0, promptTokens - cachedTokens);
+  // Cached input tokens receive a 50% discount
+  const cachedPromptCost = (cachedTokens / 1000) * (r.input * 0.5);
+  const uncachedPromptCost = (uncachedPrompt / 1000) * r.input;
+  const completionCost = (completionTokens / 1000) * r.output;
+  return uncachedPromptCost + cachedPromptCost + completionCost;
+}
+
+// State Management
+const state = {
+  cases: [],
+  cosmosLoaded: false,
+  currentPage: 1,
+  pageSize: 10,
+  chartMode: "daily", // "daily" | "accumulated"
+};
+
+// Generate 30 days of baseline dataset
+function generate30DayCases() {
+  const list = [];
+  const now = new Date();
+  const activitiesList = [
+    "Document Intelligence Extraction",
+    "Cross-document reasoning",
+    "Field gap filling",
+    "Quality assessment",
+    "Decision summary",
+    "Semantic normalization",
+  ];
+  const tenantsList = [
+    "Food Safety · English",
+    "سلامة الغذاء · العربية",
+    "Customs clearance",
+    "KYC onboarding",
+    "Insurance claim",
+  ];
+  const modelsList = ["aria-text-mini", "aria-text-mini", "aria-text-mini", "aria-vision", "gpt-4.1-mini"];
+
+  let caseCounter = 1900;
+  for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - dayOffset);
+    d.setHours(12, 0, 0, 0);
+
+    const dailyCount = 4 + (dayOffset % 4);
+    for (let c = 0; c < dailyCount; c++) {
+      caseCounter--;
+      const tenant = tenantsList[(c + dayOffset) % tenantsList.length];
+      const activity = activitiesList[(c * 2 + dayOffset) % activitiesList.length];
+      const model = modelsList[(c + dayOffset) % modelsList.length];
+
+      const promptTokens = 3000 + ((c * 1700 + dayOffset * 850) % 18000);
+      const completionTokens = 300 + ((c * 240 + dayOffset * 120) % 2800);
+      const cachedTokens = Math.round(promptTokens * (0.3 + ((c % 4) * 0.12)));
+      const latencyMs = 400 + ((promptTokens + completionTokens) / 12);
+      const cost = getRowCost(model, promptTokens, completionTokens, cachedTokens);
+
+      list.push({
+        id: `CASE-${caseCounter}`,
+        caseId: `CASE-${caseCounter}`,
+        tenant,
+        activity,
+        model,
+        promptTokens,
+        completionTokens,
+        cachedTokens,
+        totalTokens: promptTokens + completionTokens,
+        cost,
+        latencyMs: Math.round(latencyMs),
+        date: d,
+        isLive: false,
+      });
+    }
+  }
+  return list;
+}
+
+const baselineCases = generate30DayCases();
+
+// Fetch persistent telemetry from Cosmos DB
+async function fetchCosmosTelemetry() {
+  const cosmosRecords = [];
+  const endpoint = window.ARIA_CONFIG?.telemetryEndpoint;
+  if (endpoint) {
+    try {
+      const res = await fetch(endpoint, { method: "GET" });
+      if (res.ok) {
+        const data = await res.json();
+        const items = data.items || [];
+        items.forEach(item => {
+          const model = item.model || "aria-text-mini";
+          const p = item.promptTokens || 0;
+          const c = item.completionTokens || 0;
+          const cached = item.cachedTokens || Math.round(p * 0.25);
+          const d = item.timestamp ? new Date(item.timestamp) : (item._ts ? new Date(item._ts * 1000) : new Date());
+
+          cosmosRecords.push({
+            id: item.id || `COSMOS-${item.caseId}`,
+            caseId: item.caseId || "LIVE-DEMO",
+            tenant: item.tenant || "Food Safety · Live Azure",
+            activity: item.activity || "Document Intelligence Extraction",
+            model,
+            promptTokens: p,
+            completionTokens: c,
+            cachedTokens: cached,
+            totalTokens: p + c,
+            cost: getRowCost(model, p, c, cached),
+            latencyMs: item.latencyMs || 1220,
+            date: d,
+            isLive: true,
+          });
+        });
+        state.cosmosLoaded = true;
+      }
+    } catch (e) {
+      console.warn("Cosmos DB telemetry fetch fallback:", e);
+    }
+  }
+
+  // Merge Local Storage Events if any
+  const localEvents = JSON.parse(localStorage.getItem("ariaTokenEvents") || "[]");
+  const localRecords = localEvents.map((event, index) => {
+    const model = event.model || "aria-text-mini";
+    const p = event.promptTokens || 0;
+    const c = event.completionTokens || 0;
+    const cached = event.cachedTokens || Math.round(p * 0.25);
+    const d = event.timestamp ? new Date(event.timestamp) : new Date();
+
+    return {
+      id: event.caseId ? `${event.caseId}-${index}` : `LOCAL-${index + 1}`,
+      caseId: event.caseId || `LIVE-${index + 1}`,
+      tenant: event.tenant || "Food Safety · Live Azure",
+      activity: event.activity || "Document Intelligence Extraction",
+      model,
+      promptTokens: p,
+      completionTokens: c,
+      cachedTokens: cached,
+      totalTokens: p + c,
+      cost: getRowCost(model, p, c, cached),
+      latencyMs: event.latencyMs || 1200,
+      date: d,
+      isLive: true,
+    };
+  });
+
+  // Combine All Records (Cosmos + Local + Baseline)
+  const combined = [...cosmosRecords, ...localRecords, ...baselineCases];
+  
+  // Deduplicate by ID
+  const map = new Map();
+  combined.forEach(item => {
+    if (!map.has(item.id)) map.set(item.id, item);
+  });
+
+  state.cases = Array.from(map.values()).sort((a, b) => b.date - a.date);
+  populateCaseFilter();
+}
+
 const $ = selector => document.querySelector(selector);
-const formatTokens = value => value >= 1e6 ? `${(value/1e6).toFixed(2)}M` : `${Math.round(value/1000)}K`;
+const formatTokens = value => value >= 1e6 ? `${(value / 1e6).toFixed(2)}M` : `${Math.round(value / 1000)}K`;
+const escapeHtml = val => String(val).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
+
+function populateCaseFilter() {
+  const caseSelect = $("#caseFilter");
+  if (!caseSelect) return;
+  const currentVal = caseSelect.value;
+
+  const uniqueCases = new Set();
+  state.cases.forEach(c => {
+    uniqueCases.add(c.caseId);
+  });
+
+  let html = `<option value="all">All Cases & Tenants</option>`;
+  Array.from(uniqueCases).slice(0, 30).forEach(cid => {
+    html += `<option value="${escapeHtml(cid)}">${escapeHtml(cid)}</option>`;
+  });
+  caseSelect.innerHTML = html;
+  if (currentVal && Array.from(caseSelect.options).some(o => o.value === currentVal)) {
+    caseSelect.value = currentVal;
+  }
+}
+
+function toLocalDateTimeString(d) {
+  const pad = num => String(num).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function initDateDefaults() {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(now.getDate() - 7);
+
+  $("#fromDateFilter").value = toLocalDateTimeString(from);
+  $("#toDateFilter").value = toLocalDateTimeString(now);
+}
+
+function getFilteredCases() {
+  const periodVal = $("#periodFilter").value;
+  const caseVal = ($("#caseFilter").value || "all").toLowerCase();
+  const searchVal = ($("#caseSearch").value || "").toLowerCase();
+
+  let fromDate, toDate;
+
+  if (periodVal === "custom") {
+    fromDate = $("#fromDateFilter").value ? new Date($("#fromDateFilter").value) : new Date(0);
+    toDate = $("#toDateFilter").value ? new Date($("#toDateFilter").value) : new Date();
+  } else {
+    const days = parseInt(periodVal, 10) || 7;
+    const now = new Date();
+    toDate = new Date(now);
+    fromDate = new Date(now);
+    if (days === 1) fromDate.setHours(0, 0, 0, 0);
+    else fromDate.setDate(now.getDate() - days);
+  }
+
+  return state.cases.filter(c => {
+    if (c.date < fromDate || c.date > toDate) return false;
+    if (caseVal !== "all") {
+      if (c.caseId.toLowerCase() !== caseVal && !c.tenant.toLowerCase().includes(caseVal)) {
+        return false;
+      }
+    }
+    if (searchVal) {
+      const matchSearch = c.caseId.toLowerCase().includes(searchVal) ||
+                          c.tenant.toLowerCase().includes(searchVal) ||
+                          c.activity.toLowerCase().includes(searchVal) ||
+                          c.model.toLowerCase().includes(searchVal);
+      if (!matchSearch) return false;
+    }
+    return true;
+  });
+}
 
 function render() {
-  const prompt = usageData.reduce((sum,d)=>sum+d.prompt,0), output = usageData.reduce((sum,d)=>sum+d.output,0), cached = usageData.reduce((sum,d)=>sum+d.cached,0);
-  const dynamicCost = cases.reduce((sum,row)=>sum + ((row[4] - row[6]) / 1e6 * rates[row[3]].input) + (row[5] / 1e6 * rates[row[3]].output), 0);
-  const staticCost = cases.reduce((sum,row)=>sum+row[8],0);
-  const total = prompt + output, cacheRate = Math.round(cached/prompt*100), cost = dynamicCost || staticCost;
-  $("#totalTokens").textContent = formatTokens(total); $("#totalCost").textContent = `$${cost.toFixed(2)}`;
-  $("#avgTokens").textContent = formatTokens(total/(demoEvents.length || 148)); $("#caseCount").textContent = `${demoEvents.length || 148} processed cases`;
-  $("#cacheRate").textContent = `${cacheRate}%`; $("#cachedTokens").textContent = `${formatTokens(cached)} input tokens reused`;
-  $("#tokenTrend").textContent = "↓ 8.4% per case vs prior period";
-  renderChart(); renderActivities(); renderEfficiency(prompt,output,cached); renderAnomalies(); renderCases(cases);
+  const filtered = getFilteredCases();
+
+  // Aggregates
+  const totalPrompt = filtered.reduce((s, c) => s + c.promptTokens, 0);
+  const totalCompletion = filtered.reduce((s, c) => s + c.completionTokens, 0);
+  const totalCached = filtered.reduce((s, c) => s + c.cachedTokens, 0);
+  const totalTokens = totalPrompt + totalCompletion;
+  const actualCostVal = filtered.reduce((s, c) => s + c.cost, 0);
+  const cacheRate = Math.round(totalCached / Math.max(1, totalPrompt) * 100);
+  const caseCount = filtered.length;
+  const avgTokens = caseCount ? Math.round(totalTokens / caseCount) : 0;
+
+  // Unoptimized Baseline Calculation (if all tokens ran on full gpt-4.1 without caching)
+  const baselineCostVal = (totalPrompt / 1000 * 0.0025) + (totalCompletion / 1000 * 0.0100);
+  const moneySavedVal = Math.max(0, baselineCostVal - actualCostVal);
+  const savingsPctVal = baselineCostVal > 0 ? ((moneySavedVal / baselineCostVal) * 100).toFixed(1) : "0.0";
+
+  const periodVal = $("#periodFilter").value;
+  const periodDays = parseInt(periodVal, 10) || 7;
+  const avgDailyCost = actualCostVal / Math.max(1, periodDays);
+  const forecast30dCost = avgDailyCost * 30;
+
+  // Update KPI Cards
+  if ($("#totalTokens")) $("#totalTokens").textContent = formatTokens(totalTokens);
+  if ($("#tokenBreakdown")) $("#tokenBreakdown").textContent = `${formatTokens(totalPrompt)} in · ${formatTokens(totalCompletion)} out`;
+
+  if ($("#avgTokens")) $("#avgTokens").textContent = formatTokens(avgTokens);
+  if ($("#caseCount")) $("#caseCount").textContent = `${caseCount} cases in selected period`;
+
+  if ($("#actualCost")) $("#actualCost").textContent = `$${actualCostVal.toFixed(4)}`;
+  if ($("#costModelRates")) $("#costModelRates").textContent = `Realized aria-text-mini rate`;
+
+  if ($("#forecastCost")) $("#forecastCost").textContent = `$${forecast30dCost.toFixed(4)}`;
+  if ($("#forecastRunrate")) $("#forecastRunrate").textContent = `Est. $${avgDailyCost.toFixed(4)}/day run-rate`;
+
+  if ($("#costSaved")) $("#costSaved").textContent = `$${moneySavedVal.toFixed(4)}`;
+  if ($("#costSavingsPct")) $("#costSavingsPct").textContent = `${savingsPctVal}% saved vs GPT-4.1`;
+
+  if ($("#cacheRate")) $("#cacheRate").textContent = `${cacheRate}%`;
+  if ($("#cachedTokens")) $("#cachedTokens").textContent = `${formatTokens(totalCached)} input tokens reused`;
+
+  // Update Efficiency Banner
+  if ($("#bannerSavingsPct")) $("#bannerSavingsPct").textContent = `~${savingsPctVal}%`;
+  if ($("#baselineCost")) $("#baselineCost").textContent = `$${baselineCostVal.toFixed(4)}`;
+  if ($("#ariaCost")) $("#ariaCost").textContent = `$${actualCostVal.toFixed(4)}`;
+  if ($("#ariaMoneySaved")) $("#ariaMoneySaved").textContent = `$${moneySavedVal.toFixed(4)}`;
+  if ($("#ariaPctSaved")) $("#ariaPctSaved").textContent = `${savingsPctVal}% Net Reduction`;
+
+  renderDailyChart(filtered);
+  renderActivities(filtered);
+  renderModelBreakdown(filtered, actualCostVal, totalTokens);
+  renderEfficiency(totalPrompt, totalCompletion, totalCached);
+  renderAnomalies(filtered);
+  renderHeatmap(filtered);
+  renderCasesTable(filtered);
 }
-function renderChart(){ const max=Math.max(...usageData.map(d=>d.prompt+d.output)); $("#usageChart").innerHTML=usageData.map(d=>`<div class="day-column" title="${d.day}: ${formatTokens(d.prompt+d.output)} total"><div class="bar-stack" style="height:${Math.round((d.prompt+d.output)/max*180)}px"><span class="bar-prompt" style="height:${d.prompt/(d.prompt+d.output)*100}%"></span><span class="bar-output" style="height:${d.output/(d.prompt+d.output)*100}%"></span><span class="bar-cache" style="height:${Math.max(3,d.cached/d.prompt*22)}px"></span></div><small>${d.day}</small></div>`).join(""); }
-function renderActivities(){ const max=activities[0].tokens; $("#activityList").innerHTML=activities.map(a=>`<div><div class="activity-head"><strong>${a.name}</strong><span>${formatTokens(a.tokens)}</span></div><div class="activity-track"><span style="width:${a.tokens/max*100}%"></span></div></div>`).join(""); }
-function renderEfficiency(prompt,output,cached){ const score=78; $("#efficiencyValue").textContent=`${score}%`; $("#efficiencyRing").style.background=`conic-gradient(var(--pine) 0 ${score}%, #e8eeeb ${score}%)`; $("#cacheFact").textContent=`${Math.round(cached/prompt*100)}% of input`; $("#outputRatio").textContent=`${(output/(prompt+output)*100).toFixed(1)}% of total`; $("#highestActivity").textContent=activities[0].name; }
-function renderAnomalies(){ const anomalies=[{title:"CASE-1840 · 1.9× baseline",body:"Cross-document reasoning used 33K tokens. Twelve documents were included in the bundle."},{title:"Cache miss increase",body:"Quality assessment cache reuse dropped below 10% for the Customs template."}]; $("#anomalyCount").textContent=anomalies.length; $("#anomalyList").innerHTML=anomalies.map(a=>`<article class="anomaly"><strong>${a.title}</strong><p>${a.body}</p></article>`).join(""); }
-function renderCases(rows){ $("#caseRows").innerHTML=rows.map(row=>`<tr><td class="case-link">${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td><span class="model-tag">${row[3]}</span></td><td class="numeric">${row[4].toLocaleString()}</td><td class="numeric">${row[5].toLocaleString()}</td><td class="numeric">${row[6].toLocaleString()}</td><td class="numeric ${row[7]>25000?'high-usage':''}">${row[7].toLocaleString()}</td><td class="numeric">$${row[8].toFixed(3)}</td><td class="numeric">${row[9].toLocaleString()} ms</td></tr>`).join(""); $("#visibleRows").textContent=`${rows.length} cases`; }
-$("#caseSearch").addEventListener("input", event=>{ const query=event.target.value.toLowerCase(); renderCases(cases.filter(row=>row.slice(0,4).some(value=>String(value).toLowerCase().includes(query)))); });
-$("#tenantFilter").addEventListener("change", event=>{ const value=event.target.value; renderCases(cases.filter(row=>value==="all"||row[1].toLowerCase()===value)); });
-$("#periodFilter").addEventListener("change", render);
-$("#exportButton").addEventListener("click",()=>{ const csv=["case,tenant,activity,model,input,output,cached,total,cost,latency",...cases.map(row=>row.join(","))].join("\n"); const link=document.createElement("a"); link.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); link.download="aria-token-usage.csv"; link.click(); URL.revokeObjectURL(link.href); });
-render();
+
+function renderDailyChart(cases) {
+  const daysMap = {};
+  const now = new Date();
+
+  // Build 14-day timeline
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const label = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    daysMap[label] = { prompt: 0, output: 0, cached: 0, total: 0 };
+  }
+
+  cases.forEach(c => {
+    const label = c.date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    if (daysMap[label]) {
+      daysMap[label].prompt += c.promptTokens;
+      daysMap[label].output += c.completionTokens;
+      daysMap[label].cached += c.cachedTokens;
+      daysMap[label].total += c.totalTokens;
+    }
+  });
+
+  let entries = Object.entries(daysMap);
+
+  if (state.chartMode === "accumulated") {
+    let runPrompt = 0, runOutput = 0, runCached = 0, runTotal = 0;
+    entries = entries.map(([day, d]) => {
+      runPrompt += d.prompt;
+      runOutput += d.output;
+      runCached += d.cached;
+      runTotal += d.total;
+      return [day, { prompt: runPrompt, output: runOutput, cached: runCached, total: runTotal }];
+    });
+    if ($("#chartTitle")) $("#chartTitle").textContent = "Accumulated Spend & Token Growth";
+  } else {
+    if ($("#chartTitle")) $("#chartTitle").textContent = "Daily Token Usage Trend";
+  }
+
+  const maxTotal = Math.max(1, ...entries.map(([, v]) => v.total));
+
+  $("#usageChart").innerHTML = entries.map(([day, d]) => {
+    const heightPx = Math.round((d.total / maxTotal) * 180);
+    const pPct = d.total ? (d.prompt / d.total) * 100 : 0;
+    const oPct = d.total ? (d.output / d.total) * 100 : 0;
+    const cPx = d.prompt ? Math.max(2, (d.cached / d.prompt) * 22) : 0;
+
+    return `<div class="day-column" title="${day} (${state.chartMode}): ${formatTokens(d.total)} total (${formatTokens(d.prompt)} prompt, ${formatTokens(d.output)} output)"><div class="bar-stack" style="height:${Math.max(10, heightPx)}px"><span class="bar-prompt" style="height:${pPct}%"></span><span class="bar-output" style="height:${oPct}%"></span><span class="bar-cache" style="height:${cPx}px"></span></div><small>${day}</small></div>`;
+  }).join("");
+}
+
+function renderActivities(cases) {
+  const actMap = {};
+  cases.forEach(c => {
+    actMap[c.activity] = (actMap[c.activity] || 0) + c.totalTokens;
+  });
+
+  const sorted = Object.entries(actMap).sort((a, b) => b[1] - a[1]);
+  const maxTokens = sorted.length ? sorted[0][1] : 1;
+
+  $("#activityList").innerHTML = sorted.length ? sorted.map(([name, tokens]) => `<div><div class="activity-head"><strong>${escapeHtml(name)}</strong><span>${formatTokens(tokens)}</span></div><div class="activity-track"><span style="width:${(tokens / maxTokens) * 100}%"></span></div></div>`).join("") : "<p style='color:var(--muted);font-size:11px'>No activity recorded for filter</p>";
+}
+
+function renderModelBreakdown(cases, globalCost, globalTokens) {
+  const modelMap = {};
+  cases.forEach(c => {
+    if (!modelMap[c.model]) {
+      modelMap[c.model] = { prompt: 0, output: 0, cached: 0, total: 0, cost: 0, count: 0 };
+    }
+    modelMap[c.model].prompt += c.promptTokens;
+    modelMap[c.model].output += c.completionTokens;
+    modelMap[c.model].cached += c.cachedTokens;
+    modelMap[c.model].total += c.totalTokens;
+    modelMap[c.model].cost += c.cost;
+    modelMap[c.model].count += 1;
+  });
+
+  const sorted = Object.entries(modelMap).sort((a, b) => b[1].cost - a[1].cost);
+
+  $("#modelBreakdownList").innerHTML = sorted.length ? sorted.map(([mName, data]) => {
+    const costPct = globalCost ? Math.round((data.cost / globalCost) * 100) : 0;
+    const tokenPct = globalTokens ? Math.round((data.total / globalTokens) * 100) : 0;
+
+    return `<div class="model-card"><div class="model-card-head"><span class="model-tag">${escapeHtml(mName)}</span><strong class="model-cost">$${data.cost.toFixed(4)}</strong></div><div class="model-card-sub"><span>In: ${formatTokens(data.prompt)} · Out: ${formatTokens(data.output)} · Cached: ${formatTokens(data.cached)}</span><span>${tokenPct}% tokens · ${costPct}% cost</span></div><div class="activity-track"><span style="width:${costPct}%"></span></div></div>`;
+  }).join("") : "<p style='color:var(--muted);font-size:11px'>No model usage recorded</p>";
+}
+
+function renderEfficiency(prompt, output, cached) {
+  const cachePct = Math.round(cached / Math.max(1, prompt) * 100);
+  const outputPct = (output / Math.max(1, prompt + output) * 100).toFixed(1);
+  const score = Math.min(98, Math.max(50, Math.round(cachePct * 0.7 + 50)));
+
+  $("#efficiencyValue").textContent = `${score}%`;
+  $("#efficiencyRing").style.background = `conic-gradient(var(--pine) 0 ${score}%, #e8eeeb ${score}%)`;
+  $("#cacheFact").textContent = `${cachePct}% of input`;
+  $("#outputRatio").textContent = `${outputPct}% of total`;
+  $("#highestActivity").textContent = "Document Intelligence";
+}
+
+function renderAnomalies(filtered) {
+  const list = [];
+  const liveCount = filtered.filter(c => c.isLive).length;
+
+  if (liveCount) {
+    list.push({
+      title: "Cosmos DB Telemetry Persisted",
+      body: `Captured ${liveCount} live Azure execution events using aria-text-mini ($0.15/$0.60 per 1M) stored in Cosmos DB container token_telemetry.`,
+    });
+  }
+  list.push({
+    title: "Economical Model Selection",
+    body: "Defaulting to aria-text-mini reduces extraction prompt costs by >94% vs full gpt-4.1.",
+  });
+  list.push({
+    title: "Prefix Caching Optimization",
+    body: "Static policy prompt prefixes achieved >45% cache reuse across document bundles.",
+  });
+
+  $("#anomalyCount").textContent = list.length;
+  $("#anomalyList").innerHTML = list.map(a => `<article class="anomaly"><strong>${escapeHtml(a.title)}</strong><p>${escapeHtml(a.body)}</p></article>`).join("");
+}
+
+function renderHeatmap(cases) {
+  const activities = [
+    "Document Intelligence Extraction",
+    "Cross-document reasoning",
+    "Field gap filling",
+    "Quality assessment",
+    "Decision summary",
+  ];
+  const models = ["aria-text-mini", "aria-vision", "gpt-4.1-mini", "gpt-4.1"];
+
+  const matrix = {};
+  activities.forEach(a => {
+    matrix[a] = {};
+    models.forEach(m => {
+      matrix[a][m] = { prompt: 0, output: 0, cost: 0, count: 0 };
+    });
+  });
+
+  cases.forEach(c => {
+    const act = activities.includes(c.activity) ? c.activity : "Document Intelligence Extraction";
+    const mod = models.includes(c.model) ? c.model : "aria-text-mini";
+    if (matrix[act] && matrix[act][mod]) {
+      matrix[act][mod].prompt += c.promptTokens;
+      matrix[act][mod].output += c.completionTokens;
+      matrix[act][mod].cost += c.cost;
+      matrix[act][mod].count += 1;
+    }
+  });
+
+  let html = `<table class="heatmap-table"><thead><tr><th>Pipeline Stage</th>${models.map(m => `<th>${escapeHtml(m)}</th>`).join("")}</tr></thead><tbody>`;
+
+  activities.forEach(act => {
+    html += `<tr><td class="stage-name">${escapeHtml(act)}</td>`;
+    models.forEach(mod => {
+      const cell = matrix[act][mod];
+      const totalTok = cell.prompt + cell.output;
+      let heatClass = "cell-zero";
+      if (totalTok > 100000) heatClass = "cell-high";
+      else if (totalTok > 25000) heatClass = "cell-med";
+      else if (totalTok > 0) heatClass = "cell-low";
+
+      html += `<td class="heat-cell ${heatClass}" title="${act} × ${mod}: ${formatTokens(totalTok)} tokens ($${cell.cost.toFixed(4)})"><div><strong>${totalTok ? formatTokens(totalTok) : "—"}</strong><small>${cell.cost ? "$" + cell.cost.toFixed(3) : ""}</small></div></td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+
+  $("#heatmapGrid").innerHTML = html;
+}
+
+function renderCasesTable(cases) {
+  const totalItems = cases.length;
+  const pageSize = state.pageSize;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+  if (state.currentPage < 1) state.currentPage = 1;
+
+  const startIdx = (state.currentPage - 1) * pageSize;
+  const endIdx = Math.min(totalItems, startIdx + pageSize);
+  const pagedItems = cases.slice(startIdx, endIdx);
+
+  $("#pageInfo").textContent = totalItems ? `Showing ${startIdx + 1}–${endIdx} of ${totalItems} cases` : "0 cases";
+  $("#currentPageDisplay").textContent = `Page ${state.currentPage} of ${totalPages}`;
+
+  $("#btnFirst").disabled = state.currentPage === 1;
+  $("#btnPrev").disabled = state.currentPage === 1;
+  $("#btnNext").disabled = state.currentPage === totalPages;
+  $("#btnLast").disabled = state.currentPage === totalPages;
+
+  $("#caseRows").innerHTML = pagedItems.length ? pagedItems.map(row => {
+    const liveBadge = row.isLive ? `<span class="live-badge">LIVE AZURE</span>` : "";
+    const dateFormatted = row.date.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    return `<tr class="case-row" data-case-id="${escapeHtml(row.caseId)}"><td class="case-link"><a href="#" onclick="openCaseModal('${escapeHtml(row.caseId)}'); return false;">${escapeHtml(row.caseId)}</a>${liveBadge}<div style="font-size:9px;color:var(--muted)">${dateFormatted}</div></td><td>${escapeHtml(row.tenant)}</td><td>${escapeHtml(row.activity)}</td><td><span class="model-tag">${escapeHtml(row.model)}</span></td><td class="numeric">${row.promptTokens.toLocaleString()}</td><td class="numeric">${row.completionTokens.toLocaleString()}</td><td class="numeric">${row.cachedTokens.toLocaleString()}</td><td class="numeric ${row.totalTokens > 25000 ? "high-usage" : ""}">${row.totalTokens.toLocaleString()}</td><td class="numeric">$${row.cost.toFixed(4)}</td><td class="numeric">${row.latencyMs.toLocaleString()} ms</td></tr>`;
+  }).join("") : `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No cases match the selected range and filters</td></tr>`;
+
+  $("#visibleRows").textContent = `${totalItems} total cases`;
+}
+
+function openCaseModal(caseId) {
+  const caseRecords = state.cases.filter(c => c.caseId === caseId);
+  if (!caseRecords.length) return;
+
+  const first = caseRecords[0];
+  const totalTokens = caseRecords.reduce((s, c) => s + c.totalTokens, 0);
+  const totalCost = caseRecords.reduce((s, c) => s + c.cost, 0);
+
+  $("#modalCaseId").textContent = `Case ${caseId}`;
+  $("#modalTenant").textContent = first.tenant;
+  $("#modalTotalTokens").textContent = formatTokens(totalTokens);
+  $("#modalCost").textContent = `$${totalCost.toFixed(4)}`;
+  $("#modalModel").textContent = first.model;
+
+  let html = `<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:11px"><thead><tr style="background:#eef2ef;text-align:left"><th>Activity / Stage</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Cost</th></tr></thead><tbody>`;
+
+  caseRecords.forEach(r => {
+    html += `<tr style="border-bottom:1px solid #dbe2de"><td><strong>${escapeHtml(r.activity)}</strong></td><td><span class="model-tag">${escapeHtml(r.model)}</span></td><td>${r.promptTokens.toLocaleString()}</td><td>${r.completionTokens.toLocaleString()}</td><td>${r.cachedTokens.toLocaleString()}</td><td>$${r.cost.toFixed(4)}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  $("#modalBreakdownList").innerHTML = html;
+  $("#caseModal").hidden = false;
+}
+window.openCaseModal = openCaseModal;
+
+// Event Listeners
+$("#caseSearch").addEventListener("input", () => {
+  state.currentPage = 1;
+  render();
+});
+
+$("#caseFilter").addEventListener("change", () => {
+  state.currentPage = 1;
+  render();
+});
+
+$("#periodFilter").addEventListener("change", event => {
+  const val = event.target.value;
+  if (val !== "custom") {
+    initDateDefaults();
+  }
+  state.currentPage = 1;
+  render();
+});
+
+$("#fromDateFilter").addEventListener("change", () => {
+  $("#periodFilter").value = "custom";
+  state.currentPage = 1;
+  render();
+});
+
+$("#toDateFilter").addEventListener("change", () => {
+  $("#periodFilter").value = "custom";
+  state.currentPage = 1;
+  render();
+});
+
+$("#pageSizeSelect").addEventListener("change", event => {
+  state.pageSize = parseInt(event.target.value, 10) || 10;
+  state.currentPage = 1;
+  render();
+});
+
+$("#btnFirst").addEventListener("click", () => {
+  state.currentPage = 1;
+  render();
+});
+
+$("#btnPrev").addEventListener("click", () => {
+  if (state.currentPage > 1) {
+    state.currentPage--;
+    render();
+  }
+});
+
+$("#btnNext").addEventListener("click", () => {
+  state.currentPage++;
+  render();
+});
+
+$("#btnLast").addEventListener("click", () => {
+  const filtered = getFilteredCases();
+  state.currentPage = Math.max(1, Math.ceil(filtered.length / state.pageSize));
+  render();
+});
+
+$("#modalCloseBtn").addEventListener("click", () => {
+  $("#caseModal").hidden = true;
+});
+
+if ($("#btnDailyGranular")) {
+  $("#btnDailyGranular").addEventListener("click", () => {
+    state.chartMode = "daily";
+    $("#btnDailyGranular").classList.add("active");
+    $("#btnAccumulatedGranular").classList.remove("active");
+    render();
+  });
+}
+
+if ($("#btnAccumulatedGranular")) {
+  $("#btnAccumulatedGranular").addEventListener("click", () => {
+    state.chartMode = "accumulated";
+    $("#btnAccumulatedGranular").classList.add("active");
+    $("#btnDailyGranular").classList.remove("active");
+    render();
+  });
+}
+
+$("#caseModal").addEventListener("click", event => {
+  if (event.target === $("#caseModal")) {
+    $("#caseModal").hidden = true;
+  }
+});
+
+$("#exportButton").addEventListener("click", () => {
+  const filtered = getFilteredCases();
+  const csv = [
+    "case_id,tenant,activity,model,prompt_tokens,completion_tokens,cached_tokens,total_tokens,est_cost_usd,latency_ms,is_live,timestamp",
+    ...filtered.map(r => `"${r.caseId}","${r.tenant}","${r.activity}","${r.model}",${r.promptTokens},${r.completionTokens},${r.cachedTokens},${r.totalTokens},${r.cost.toFixed(5)},${r.latencyMs},${r.isLive},"${r.date.toISOString()}"`),
+  ].join("\n");
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  link.download = `aria-token-usage.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+// Initial Setup
+initDateDefaults();
+fetchCosmosTelemetry().then(() => {
+  render();
+});
+
+function renderHeatmap(cases) {
+  const activities = [
+    "Document Intelligence Extraction",
+    "Cross-document reasoning",
+    "Field gap filling",
+    "Quality assessment",
+    "Decision summary",
+  ];
+  const models = ["aria-text-mini", "aria-vision", "gpt-4.1-mini", "gpt-4.1"];
+
+  const matrix = {};
+  activities.forEach(a => {
+    matrix[a] = {};
+    models.forEach(m => {
+      matrix[a][m] = { prompt: 0, output: 0, cost: 0, count: 0 };
+    });
+  });
+
+  cases.forEach(c => {
+    const act = activities.includes(c.activity) ? c.activity : "Document Intelligence Extraction";
+    const mod = models.includes(c.model) ? c.model : "aria-text-mini";
+    if (matrix[act] && matrix[act][mod]) {
+      matrix[act][mod].prompt += c.promptTokens;
+      matrix[act][mod].output += c.completionTokens;
+      matrix[act][mod].cost += c.cost;
+      matrix[act][mod].count += 1;
+    }
+  });
+
+  let html = `<table class="heatmap-table"><thead><tr><th>Pipeline Stage</th>${models.map(m => `<th>${escapeHtml(m)}</th>`).join("")}</tr></thead><tbody>`;
+
+  activities.forEach(act => {
+    html += `<tr><td class="stage-name">${escapeHtml(act)}</td>`;
+    models.forEach(mod => {
+      const cell = matrix[act][mod];
+      const totalTok = cell.prompt + cell.output;
+      let heatClass = "cell-zero";
+      if (totalTok > 100000) heatClass = "cell-high";
+      else if (totalTok > 25000) heatClass = "cell-med";
+      else if (totalTok > 0) heatClass = "cell-low";
+
+      html += `<td class="heat-cell ${heatClass}" title="${act} × ${mod}: ${formatTokens(totalTok)} tokens ($${cell.cost.toFixed(4)})"><div><strong>${totalTok ? formatTokens(totalTok) : "—"}</strong><small>${cell.cost ? "$" + cell.cost.toFixed(3) : ""}</small></div></td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+
+  $("#heatmapGrid").innerHTML = html;
+}

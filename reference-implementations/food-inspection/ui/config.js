@@ -2,7 +2,8 @@
 window.ARIA_CONFIG = Object.freeze({
   apiBaseUrl: "https://apim-aria-infra.azure-api.net/inspections",
   functionAppBaseUrl: "https://func-aria-pipeline.azurewebsites.net",
-  liveEndpoint: "https://func-aria-pipeline.azurewebsites.net/api/live/inspections",
+  liveEndpoint: "https://apim-aria-infra.azure-api.net/aria-demo/live/inspections",
+  telemetryEndpoint: "https://apim-aria-infra.azure-api.net/aria-demo/telemetry",
   apiKey: "",
-  mode: "demo",
+  mode: "live",
 });
