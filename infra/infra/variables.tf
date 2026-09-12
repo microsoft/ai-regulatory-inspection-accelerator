@@ -101,6 +101,12 @@ variable "openai_name" {
   default     = "oai-aria-infra"
 }
 
+variable "key_vault_name" {
+  description = "Name of the Key Vault holding runtime secrets"
+  type        = string
+  default     = "kv-aria-infra"
+}
+
 variable "azure_openai_deployment" {
   description = "Name of the Azure OpenAI chat model deployment (deploy the model separately - not managed by this stack, matching the reference project)"
   type        = string

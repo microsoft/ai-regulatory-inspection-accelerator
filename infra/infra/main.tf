@@ -17,6 +17,8 @@
 #   8. api_management    - APIM + backends (needs function_apps host key)
 #   9. webapp            - chat UI (needs api_management gateway URL + subscription key)
 
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
@@ -105,7 +107,34 @@ module "app_configuration" {
 }
 
 # ============================================================================
-# 7. Function App (Pipeline)
+# 7. Key Vault runtime secrets
+# ============================================================================
+resource "azurerm_key_vault" "runtime" {
+  name                       = var.key_vault_name
+  resource_group_name        = azurerm_resource_group.main.name
+  location                   = azurerm_resource_group.main.location
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = "standard"
+  purge_protection_enabled   = false
+  soft_delete_retention_days = 7
+  rbac_authorization_enabled = true
+  tags                       = var.tags
+}
+
+resource "azurerm_key_vault_secret" "azure_openai_api_key" {
+  name         = "AZURE-OPENAI-API-KEY"
+  value        = module.ai_foundry.openai_primary_key
+  key_vault_id = azurerm_key_vault.runtime.id
+}
+
+resource "azurerm_role_assignment" "pipeline_key_vault_secrets_user" {
+  scope                = azurerm_key_vault.runtime.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = module.function_apps.user_assigned_identity_principal_id
+}
+
+# ============================================================================
+# 8. Function App (Pipeline)
 # ============================================================================
 module "function_apps" {
   source = "./modules/function_apps"
@@ -136,6 +165,7 @@ module "function_apps" {
   azure_openai_id                   = module.ai_foundry.openai_id
   azure_openai_endpoint             = module.ai_foundry.openai_endpoint
   azure_openai_key                  = module.ai_foundry.openai_primary_key
+  azure_openai_key_vault_secret_uri = azurerm_key_vault_secret.azure_openai_api_key.versionless_id
   azure_openai_deployment           = var.azure_openai_deployment
   azure_openai_vision_deployment    = var.azure_openai_vision_deployment
   azure_openai_embedding_deployment = var.azure_openai_embedding_deployment
