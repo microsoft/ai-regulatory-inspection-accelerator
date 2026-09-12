@@ -104,7 +104,13 @@ variable "openai_name" {
 variable "azure_openai_deployment" {
   description = "Name of the Azure OpenAI chat model deployment (deploy the model separately - not managed by this stack, matching the reference project)"
   type        = string
-  default     = "gpt-4o"
+  default     = "aria-text-mini"
+}
+
+variable "azure_openai_vision_deployment" {
+  description = "Name of the low-volume Azure OpenAI vision fallback deployment"
+  type        = string
+  default     = "aria-vision"
 }
 
 variable "azure_openai_embedding_deployment" {

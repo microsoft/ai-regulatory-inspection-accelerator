@@ -137,6 +137,7 @@ module "function_apps" {
   azure_openai_endpoint             = module.ai_foundry.openai_endpoint
   azure_openai_key                  = module.ai_foundry.openai_primary_key
   azure_openai_deployment           = var.azure_openai_deployment
+  azure_openai_vision_deployment    = var.azure_openai_vision_deployment
   azure_openai_embedding_deployment = var.azure_openai_embedding_deployment
 
   azure_search_id       = module.ai_search.search_service_id

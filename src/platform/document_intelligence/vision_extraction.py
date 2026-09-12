@@ -141,13 +141,13 @@ def extract_metadata_vision(
     fields: list[str],
     *,
     loader: TemplateLoader | None = None,
-    deployment: str = "gpt-5.4",
+    deployment: str = "aria-vision",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Extract structured metadata from a document image using GPT-5.4 vision.
+    """Extract structured metadata from a document image using the vision fallback.
 
     ``fields`` is sourced from ``TemplateLoader`` by the caller.
     """
@@ -243,7 +243,7 @@ def extract_metadata_hybrid(
     fields: list[str],
     *,
     loader: TemplateLoader | None = None,
-    deployment: str = "gpt-5.4",
+    deployment: str = "aria-vision",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
     case_id: str = "unattributed",
@@ -397,7 +397,7 @@ def extract_metadata_ensemble(
     fields: list[str],
     *,
     loader: TemplateLoader | None = None,
-    deployment: str = "gpt-5.4",
+    deployment: str = "aria-vision",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
     confidence_threshold: float = 0.6,
@@ -466,7 +466,7 @@ def cross_validate_with_ocr(
     allowed_fields: list[str],
     *,
     loader: TemplateLoader | None = None,
-    deployment: str = "gpt-5.4",
+    deployment: str = "aria-vision",
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[dict, list[str]]:

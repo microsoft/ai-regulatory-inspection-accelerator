@@ -19,6 +19,12 @@ future backend mode:
 * Inspection API: `POST https://apim-aria-infra.azure-api.net/inspections`
 * Function App: `https://func-aria-pipeline.azurewebsites.net`
 
+The personal-subscription model profile uses:
+
+* `aria-text-mini` -> `gpt-4.1-nano` for ordinary text extraction/reasoning
+* `aria-vision` -> `gpt-4o` for the handwriting/ambiguous-evidence fallback
+* `aria-embed-small` -> `text-embedding-3-small` for retrieval features
+
 No secrets are embedded in the browser demo. APIM subscription/authentication
 is required for live backend submissions.
 

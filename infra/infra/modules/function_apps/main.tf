@@ -146,6 +146,7 @@ resource "azurerm_function_app_flex_consumption" "pipeline" {
     # Azure OpenAI
     "AZURE_OPENAI_ENDPOINT"             = var.azure_openai_endpoint
     "AZURE_OPENAI_DEPLOYMENT"           = var.azure_openai_deployment
+    "AZURE_OPENAI_VISION_DEPLOYMENT"    = var.azure_openai_vision_deployment
     "AZURE_OPENAI_API_KEY"              = var.azure_openai_key
     "AZURE_OPENAI_EMBEDDING_DEPLOYMENT" = var.azure_openai_embedding_deployment
 
