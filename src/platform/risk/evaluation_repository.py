@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
+
 class RiskEvaluationRepository(Protocol):
     """Repository contract used by scoring and review APIs."""
 
@@ -84,9 +85,14 @@ class AzureRiskEvaluationRepository:
         return rows[0] if rows else None
 
     def get_evaluation(self, request_id: str, evaluation_id: str) -> dict | None:
+        from azure.cosmos.exceptions import CosmosResourceNotFoundError
+
         try:
-            return self._container.read_item(f"{request_id}#{evaluation_id}", partition_key=request_id)
-        except Exception:
+            return self._container.read_item(
+                f"{request_id}#{evaluation_id}",
+                partition_key=request_id,
+            )
+        except CosmosResourceNotFoundError:
             return None
 
     def list_evaluations(self, request_id: str) -> list[dict]:
