@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -32,6 +33,7 @@ from src.platform.policy.risk_assessment import assess_risk
 from src.platform.risk.evaluation_repository import AzureRiskEvaluationRepository
 
 logger = logging.getLogger(__name__)
+_telemetry_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
 _FIELD_ALIASES = {
     "net_weight": "net_weight", "total_net_weight": "net_weight", "netweight": "net_weight", "weight": "net_weight",
@@ -282,6 +284,7 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     extracted: dict[str, dict] = {}
 
     def _extract_single_doc(item_tuple: tuple[int, dict]) -> tuple[str, dict, dict]:
+        extraction_started = time.perf_counter()
         index, document = item_tuple
         document_id = str(document.get("documentId", index + 1))
         doc_name = document.get("name") or document.get("type") or f"Document {document_id}"
@@ -346,6 +349,7 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
             "promptTokens": getattr(response_usage, "prompt_tokens", 0),
             "completionTokens": getattr(response_usage, "completion_tokens", 0),
             "totalTokens": getattr(response_usage, "total_tokens", 0),
+            "durationMs": round((time.perf_counter() - extraction_started) * 1000),
         }
         return document_id, doc_data, usage_data
 
@@ -359,7 +363,22 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as error:  # noqa: BLE001 - return a structured demo failure
         stage("document-intelligence", "failed", str(error))
         return _json_response(502, {"code": "LIVE_EXTRACTION_FAILED", "message": str(error), "stages": stages})
-    stage("document-intelligence", "completed", f"Extracted {len(extracted)} documents with {text_model}")
+    durations = sorted(
+        (
+            str(item.get("documentId", "document")),
+            int(item.get("durationMs", 0)),
+        )
+        for item in usage
+    )
+    duration_detail = ", ".join(
+        f"{document_id}: {duration_ms / 1000:.1f}s" for document_id, duration_ms in durations
+    )
+    stage(
+        "document-intelligence",
+        "completed",
+        f"Extracted {len(extracted)} documents with {text_model} in parallel"
+        + (f" ({duration_detail})" if duration_detail else ""),
+    )
 
     stage("cross-document-reasoning", "completed", "Compared extracted fields across the bundle")
     comparisons = []
@@ -403,21 +422,70 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
         s = str(val).strip().casefold()
         return re.sub(r"(\d+),(\d+)", r"\1\2", s)
 
+    def _field_label(field_name: str) -> str:
+        label = str(field_name).replace("_", " ").strip()
+        if not label:
+            return "Field"
+        return label.title()
+
+    def _comparison_message(field_name: str, values: dict[str, Any], result: str) -> str:
+        if result == "PASS":
+            return f"All documents agree on { _field_label(field_name).lower() } across the evidence bundle."
+        value_list = []
+        for doc_name, value in values.items():
+            value_list.append(f"{doc_name}: {value}")
+        return f"Mismatch detected for { _field_label(field_name).lower() }: {' · '.join(value_list)}"
+
+    def _suggested_action(field_name: str, result: str) -> str:
+        if result == "PASS":
+            return "No corrective action required. Keep the current evidence bundle as-is."
+        field_key = str(field_name).lower()
+        if "weight" in field_key:
+            return "Verify the declared net weight with the importer and document issuer before releasing the shipment."
+        if "commodity" in field_key or "product" in field_key:
+            return "Reconcile the product description with the trading documents and confirm the declared commodity class."
+        if "origin" in field_key or "country" in field_key:
+            return "Confirm the country of origin against the shipping records and supplier declarations."
+        if "hs" in field_key or "code" in field_key:
+            return "Check the tariff code and product classification before customs clearance."
+        return "Review the discrepancy with the responsible party and document the resolution before release."
+
     for field_name, values in field_values.items():
         if len(values) < 2:
             continue
         unique = {_normalize_cmp_value(value) for value in values.values()}
-        comparisons.append({"field": field_name, "values": values, "result": "PASS" if len(unique) == 1 else "FAIL"})
+        result = "PASS" if len(unique) == 1 else "FAIL"
+        comparison = {
+            "field": field_name,
+            "fieldLabel": _field_label(field_name),
+            "values": values,
+            "result": result,
+            "title": f"{_field_label(field_name)} {'aligned' if result == 'PASS' else 'mismatch'}",
+            "message": _comparison_message(field_name, values, result),
+            "suggestedAction": _suggested_action(field_name, result),
+            "riskLevel": "Low" if result == "PASS" else "Medium",
+        }
+        comparisons.append(comparison)
 
     findings = [
-        {"ruleCode": f"CROSS_{item['field'].upper()}", "result": item["result"], "riskWeight": 0.4 if item["result"] == "FAIL" else 0.0, "evidence": item["values"]}
+        {
+            "ruleCode": f"CROSS_{item['field'].upper()}",
+            "result": item["result"],
+            "riskWeight": 0.4 if item["result"] == "FAIL" else 0.0,
+            "title": item["title"],
+            "message": item["message"],
+            "suggestedAction": item["suggestedAction"],
+            "riskLevel": item["riskLevel"],
+            "evidence": item["values"],
+        }
         for item in comparisons
     ]
     risk = assess_risk(request_id, findings, extracted)
     stage("policy-evaluation", "completed", f"Evaluated policy rules & risk band: {risk['aiRiskLevel']} (score: {risk['compositeRiskScore']})")
     stage("delivery", "completed", "Live result prepared for authenticated delivery")
 
-    _save_telemetry(request_id, usage, text_model)
+    # Do not make the inspection response wait on the analytics write.
+    _telemetry_executor.submit(_save_telemetry, request_id, usage, text_model)
 
     return _json_response(200, {
         "requestId": request_id,

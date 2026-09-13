@@ -1,15 +1,15 @@
 ---
-title: ARIA Hackathon Demo & Walkthrough Guide
-description: Quick-start guide for evaluating the ARIA hackathon demo hosted on Azure
+title: ARIA Demo & Walkthrough Guide
+description: Quick-start guide for evaluating the ARIA demo hosted on Azure
 ms.date: 2026-09-13
 ms.topic: how-to
 ---
 
-# ARIA Hackathon Demo & Walkthrough Guide
+# ARIA Demo & Walkthrough Guide
 
 The **AI Regulatory Inspection Accelerator (ARIA)** includes a hosted, interactive **Inspection Workbench** and **Token Analytics Dashboard** designed for rapid evaluation.
 
-> 💡 **Note on Demo vs. Production**: This guide covers the **Quick Hackathon Demo**. For enterprise production deployment instructions with Terraform, Key Vault references, and zero-secrets RBAC, see the [Enterprise Production Deployment Guide](DeploymentGuide.md).
+> **Note on demo vs. production**: This guide covers the hosted ARIA demo. For enterprise production deployment instructions with Terraform, Key Vault references, and zero-secrets RBAC, see the [Enterprise Production Deployment Guide](DeploymentGuide.md).
 
 ---
 

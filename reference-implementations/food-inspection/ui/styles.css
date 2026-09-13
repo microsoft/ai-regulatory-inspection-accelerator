@@ -226,6 +226,8 @@ h3 { font-size: 13px; }
 .processing-copy strong { margin-top: 4px; font-size: 12px; color: #ffffff; }
 .progress-track, .confidence-track { height: 6px; overflow: hidden; background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
 .progress-track span, .confidence-track span { display: block; width: 0; height: 100%; background: #facc15; transition: width 350ms ease; border-radius: 3px; }
+.processing-strip:not([hidden]) .progress-track span { animation: live-progress-pulse 1.4s ease-in-out infinite; }
+@keyframes live-progress-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 #progressPercent { font-size: 11px; font-weight: 700; color: #facc15; text-align: right; }
 
 .decision-heading { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
@@ -237,6 +239,7 @@ h3 { font-size: 13px; }
 .decision-empty p { max-width: 220px; font-size: 12px; line-height: 1.6; }
 .label { color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .verdict-block { padding: 4px 0 19px; border-bottom: 1px solid var(--line); }
+.case-reference { margin-top: 6px; color: var(--pine); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; }
 .verdict-line { display: flex; gap: 10px; align-items: center; margin: 9px 0; }
 .verdict-line strong { font: 800 21px "Manrope"; color: var(--ink); }
 .verdict-icon { width: 30px; height: 30px; display: grid; place-items: center; color: #92400e; background: var(--amber-soft); border-radius: 6px; font-weight: 800; }
@@ -249,10 +252,12 @@ h3 { font-size: 13px; }
 .section-title { display: flex; justify-content: space-between; margin-bottom: 10px; }
 .section-title span { color: var(--muted); font-size: 10px; font-weight: 700; }
 .findings-list { display: flex; flex-direction: column; gap: 8px; }
-.finding { padding: 12px; border-left: 4px solid var(--amber); background: #fffbe6; border-radius: 4px; border: 1px solid #fef08a; border-left-width: 4px; }
+.finding { padding: 12px 12px 10px; border-left: 4px solid var(--amber); background: #fffbe6; border-radius: 6px; border: 1px solid #fef08a; }
 .finding.pass { border-color: #99f6e4; border-left-color: var(--pine); background: #f0fdf4; }
 .finding strong { display: block; font-size: 11px; color: var(--ink); }
-.finding p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.finding p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.finding p strong { display: inline; font-size: inherit; color: inherit; }
+.finding-action { margin-top: 7px !important; padding-top: 6px; border-top: 1px dashed rgba(15, 23, 42, 0.15); }
 .trace-list { margin: 0; padding: 0; list-style: none; }
 .trace-list li { position: relative; padding: 0 0 14px 20px; color: var(--muted); font-size: 10px; }
 .trace-list li::before { content: ""; position: absolute; left: 2px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--pine); }

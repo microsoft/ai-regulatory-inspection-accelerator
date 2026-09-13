@@ -17,7 +17,7 @@ This folder contains supporting documentation for **ARIA - AI Regulatory Inspect
 ## Deployment and operations
 
 - [Enterprise Production Deployment Guide](DeploymentGuide.md) - provisioning and deploying the platform into production Azure environments (Durable Functions, Azure OpenAI, Document Intelligence, Cosmos DB, Key Vault, APIM).
-- [Hackathon Demo & Walkthrough Guide](HackathonDemo.md) - quick evaluation guide for the hosted demo UI, sample scenarios, and live vs. synthetic mode switching.
+- [ARIA Demo & Walkthrough Guide](HackathonDemo.md) - quick evaluation guide for the hosted demo UI, sample scenarios, and live vs. synthetic mode switching.
 - [Local Development & Testing Setup](LocalDevelopmentSetup.md) - running tests locally (`pytest`), Python virtual environment setup, and local runtime configuration.
 - [Troubleshooting & Diagnostics Guide](TroubleshootingSteps.md) - common deployment, APIM policy, quota, and runtime diagnostics.
 

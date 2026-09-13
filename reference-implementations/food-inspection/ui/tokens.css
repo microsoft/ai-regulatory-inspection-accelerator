@@ -45,7 +45,17 @@ button, input, select { font: inherit; }
 .back-link { justify-self: end; color: #e2e8f0; font-size: 11px; font-weight: 700; text-decoration: none; padding: 6px 12px; border-radius: 4px; transition: all 0.15s ease; }
 .back-link:hover { background: rgba(255, 255, 255, 0.1); color: #fef08a; }
 
-.dashboard-shell { max-width: 1540px; margin: auto; padding: 28px; }
+.dashboard-shell { max-width: 1540px; margin: auto; padding: 28px; display: flex; flex-direction: column; }
+.dashboard-heading { order: 1; }
+.kpi-grid { order: 2; }
+.efficiency-banner { order: 3; }
+.analytics-grid { order: 4; }
+.heatmap-panel { order: 5; }
+.cases-panel { order: 6; }
+.cache-explainer { order: 7; }
+.perf-explainer { order: 8; }
+.production-roadmap { order: 9; }
+.insights-floating-bar { order: 10; }
 .dashboard-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; margin-bottom: 22px; }
 .eyebrow { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 h1,h2,p { margin-top: 0; } h1,h2 { font-family: "Manrope", sans-serif; letter-spacing: -0.02em; }
@@ -113,6 +123,7 @@ h1 { margin-bottom: 5px; font-size: 28px; color: var(--ink); } h2 { margin-botto
 .efficiency-badge-tag { display: inline-block; padding: 3px 8px; background: rgba(250, 204, 21, 0.2); border: 1px solid #facc15; color: #fef08a; font-size: 10px; font-weight: 800; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 .efficiency-banner-content p { color: #cbd5e1 !important; font-size: 12px; max-width: 900px; line-height: 1.5; margin-bottom: 16px; }
 .efficiency-banner-content p strong { color: #34d399 !important; }
+.efficiency-method { margin: 12px 0 0; color: #cbd5e1; font-size: 10px; }
 
 /* Performance Governance Section */
 .perf-explainer { margin-top: 14px; background: #faf5ff; border-left: 4px solid #8b5cf6; }

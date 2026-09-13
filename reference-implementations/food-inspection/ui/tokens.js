@@ -215,15 +215,23 @@ function populateCaseFilter(casesInPeriod) {
 
   const uniqueCasesMap = new Map();
   casesInPeriod.forEach(c => {
-    if (c.caseId && !uniqueCasesMap.has(c.caseId)) {
-      uniqueCasesMap.set(c.caseId, c.tenant || "Food Safety");
+    if (c.caseId) {
+      const existing = uniqueCasesMap.get(c.caseId);
+      if (!existing || c.date > existing.latestDate) {
+        uniqueCasesMap.set(c.caseId, {
+          tenant: c.tenant || "Food Safety",
+          latestDate: c.date,
+        });
+      }
     }
   });
 
   let html = `<option value="all">All Cases & Tenants (${casesInPeriod.length} in timeframe)</option>`;
-  uniqueCasesMap.forEach((tenant, caseId) => {
-    html += `<option value="${escapeHtml(caseId)}">${escapeHtml(caseId)} · ${escapeHtml(tenant)}</option>`;
-  });
+  Array.from(uniqueCasesMap.entries())
+    .sort(([, left], [, right]) => right.latestDate - left.latestDate)
+    .forEach(([caseId, details]) => {
+      html += `<option value="${escapeHtml(caseId)}">${escapeHtml(caseId)} · ${escapeHtml(details.tenant)}</option>`;
+    });
 
   caseSelect.innerHTML = html;
 
@@ -349,7 +357,7 @@ function render() {
   renderDailyChart(filtered);
   renderActivities(filtered);
   renderModelBreakdown(filtered, actualCostVal, totalTokens);
-  renderEfficiency(totalPrompt, totalCompletion, totalCached);
+  renderEfficiency(totalPrompt, totalCompletion, totalCached, filtered);
   renderAnomalies(filtered);
   renderHeatmap(filtered);
   renderCasesTable(filtered);
@@ -441,16 +449,21 @@ function renderModelBreakdown(cases, globalCost, globalTokens) {
   }).join("") : "<p style='color:var(--muted);font-size:11px'>No model usage recorded</p>";
 }
 
-function renderEfficiency(prompt, output, cached) {
+function renderEfficiency(prompt, output, cached, cases) {
   const cachePct = Math.round(cached / Math.max(1, prompt) * 100);
   const outputPct = (output / Math.max(1, prompt + output) * 100).toFixed(1);
   const score = Math.min(98, Math.max(50, Math.round(cachePct * 0.7 + 50)));
+  const activityTotals = {};
+  cases.forEach(item => {
+    activityTotals[item.activity] = (activityTotals[item.activity] || 0) + item.totalTokens;
+  });
+  const highestActivity = Object.entries(activityTotals).sort(([, left], [, right]) => right - left)[0]?.[0] || "No data";
 
   $("#efficiencyValue").textContent = `${score}%`;
   $("#efficiencyRing").style.background = `conic-gradient(var(--pine) 0 ${score}%, #e8eeeb ${score}%)`;
   $("#cacheFact").textContent = `${cachePct}% of input`;
   $("#outputRatio").textContent = `${outputPct}% of total`;
-  $("#highestActivity").textContent = "Document Intelligence";
+  $("#highestActivity").textContent = highestActivity;
 }
 
 function renderAnomalies(filtered) {

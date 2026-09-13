@@ -1,6 +1,6 @@
 ---
 title: ARIA Phase 2 Backlog
-description: Post-hackathon implementation backlog for production hardening and platform completeness
+description: Post-demo implementation backlog for production hardening and platform completeness
 ms.date: 2026-09-12
 ms.topic: roadmap
 keywords:
@@ -12,11 +12,11 @@ keywords:
 
 ## Purpose
 
-The hackathon scope demonstrates the ARIA evidence-to-decision flow with
+The demo scope demonstrates the ARIA evidence-to-decision flow with
 synthetic scenarios, deterministic policy behavior, risk scoring, review
 primitives, audit primitives, and Azure-hosted browser delivery. The following
 work remains in Phase 2 and is intentionally not represented as complete in
-the hackathon demo.
+the hosted demo.
 
 ## Phase 2 work items
 
@@ -33,7 +33,7 @@ the hackathon demo.
 | #18 | Connector Framework | Add file, SharePoint, and Dynamics adapters, manifests, registration, isolation checks, and connector CI | Connector contract suite and one end-to-end external-system test |
 | #19 | Deployment and Operations | Complete deployment topologies, evaluation gate, monitoring dashboards, private networking, and operational runbooks | Repeatable deployment and approved operations readiness review |
 
-## Hackathon boundary
+## Demo boundary
 
 The hosted demo at
 <https://stariainfra.z13.web.core.windows.net/> remains a deterministic,

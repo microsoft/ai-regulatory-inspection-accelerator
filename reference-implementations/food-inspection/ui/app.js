@@ -22,6 +22,7 @@ const els = {
   decisionContent: document.querySelector("#decisionContent"), recommendationHeading: document.querySelector("#recommendationHeading"),
   riskBadge: document.querySelector("#riskBadge"), verdictText: document.querySelector("#verdictText"),
   verdictIcon: document.querySelector("#verdictIcon"), verdictSummary: document.querySelector("#verdictSummary"),
+  caseReference: document.querySelector("#caseReference"),
   confidenceValue: document.querySelector("#confidenceValue"), confidenceBar: document.querySelector("#confidenceBar"),
   findingCount: document.querySelector("#findingCount"), findingsList: document.querySelector("#findingsList"),
   traceList: document.querySelector("#traceList"),
@@ -241,6 +242,30 @@ function fileToBase64(file) {
 
 async function analyzeLive() {
   state.processing = true; renderDocuments(); els.processingStrip.hidden = false; els.caseStatus.textContent = "Live Azure processing";
+  const processingStarted = performance.now();
+  const updateLiveProgress = () => {
+    const elapsedSeconds = Math.floor((performance.now() - processingStarted) / 1000);
+    let phase = "Sending evidence to Azure";
+    let detail = `${state.documents.length} document${state.documents.length === 1 ? "" : "s"} queued`;
+    if (elapsedSeconds >= 3) {
+      phase = "Azure is processing the evidence bundle";
+      detail = "Document extraction and model reasoning are still running";
+    }
+    if (elapsedSeconds >= 30) {
+      phase = "Waiting for the slowest document extraction";
+      detail = "The other documents continue in parallel; the result will appear when all finish";
+    }
+    if (elapsedSeconds >= 60) {
+      phase = "Azure is completing the inspection";
+      detail = "Finalizing cross-document checks and the recommendation";
+    }
+    els.processingLabel.textContent = phase;
+    els.processingDetail.textContent = `${detail} · ${elapsedSeconds}s elapsed`;
+    els.progressBar.style.width = `${Math.min(92, 18 + (elapsedSeconds % 12) * 6)}%`;
+    els.progressPercent.textContent = `${elapsedSeconds}s`;
+  };
+  updateLiveProgress();
+  const progressTimer = window.setInterval(updateLiveProgress, 1000);
   const documents = await Promise.all(state.documents.map(async doc => {
     const item = {
       documentId: doc.id,
@@ -264,13 +289,15 @@ async function analyzeLive() {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Live inspection failed");
+    els.caseId.textContent = `Case ${result.requestId}`;
+    els.caseReference.textContent = `Case reference: ${result.requestId}`;
     els.processingLabel.textContent = "Azure pipeline complete"; els.processingDetail.textContent = `${result.modelNames.text} · ${result.stages.length} stages`;
     els.progressBar.style.width = "100%"; els.progressPercent.textContent = "100%";
     state.liveResult = result;
 
     if (result.tokenUsage && Array.isArray(result.tokenUsage) && result.tokenUsage.length) {
       const scenario = scenarios[state.scenario];
-      const caseId = scenario?.caseId || result.requestId || `LIVE-${Date.now()}`;
+      const caseId = result.requestId || scenario?.caseId || `LIVE-${Date.now()}`;
       const tenant = scenario?.label || "Food Safety · Live Azure";
       const liveEvents = result.tokenUsage.map(tu => {
         const p = tu.promptTokens || 0;
@@ -298,25 +325,51 @@ async function analyzeLive() {
     els.caseStatus.textContent = "Live unavailable · demo fallback";
     state.processing = false; els.processingStrip.hidden = true;
     showDecision();
-  } finally { state.processing = false; renderDocuments(); await delay(300); els.processingStrip.hidden = true; }
+  } finally {
+    window.clearInterval(progressTimer);
+    state.processing = false; renderDocuments(); await delay(300); els.processingStrip.hidden = true;
+  }
 }
 
 function formatEvidence(obj) {
   if (!obj || typeof obj !== "object") return String(obj);
   return Object.entries(obj).map(([docKey, value]) => {
-    const doc = state.documents.find(d => d.id === docKey);
+    const doc = state.documents.find(d => d.id === docKey || d.name === docKey);
     const label = doc ? doc.name : docKey;
     return `${label}: "${value}"`;
   }).join(" · ");
 }
 
+function safeText(value, fallback = "—") {
+  if (value === null || value === undefined || value === "") return fallback;
+  return String(value);
+}
+
+function formatStageTrace(stages) {
+  if (!Array.isArray(stages) || !stages.length) return "";
+
+  let previousTs = null;
+  return stages.map(stage => {
+    const name = safeText(stage.name || "Stage");
+    const status = safeText(stage.status || "updated");
+    const detail = safeText(stage.detail || "");
+    const currentTs = stage.timestamp ? new Date(stage.timestamp).getTime() : null;
+    const elapsedMs = previousTs && currentTs ? Math.max(0, currentTs - previousTs) : 0;
+    previousTs = currentTs ?? previousTs;
+    const elapsed = elapsedMs > 0 ? ` · ${Math.round(elapsedMs / 100) / 10}s` : "";
+    return `<li><strong>${escapeHtml(name)}</strong> · ${escapeHtml(status)}${elapsed}${detail ? ` · ${escapeHtml(detail)}` : ""}</li>`;
+  }).join("");
+}
+
 function showLiveDecision(result) {
   const risk = result.riskEvaluation || {};
   const comparisons = result.comparisons || [];
+  const findings = result.findings || [];
   els.decisionEmpty.hidden = true; els.decisionContent.hidden = false;
   els.recommendationHeading.textContent = "Azure inspection complete";
   els.riskBadge.textContent = risk.aiRiskLevel || "REVIEW"; els.riskBadge.className = `risk-badge ${risk.aiRiskLevel === "Low" ? "low" : "medium"}`;
   els.verdictText.textContent = risk.recommendationLabel || risk.recommendation || "Review required";
+  els.caseReference.textContent = `Case reference: ${result.requestId || "—"}`;
   els.verdictIcon.textContent = risk.aiRiskLevel === "Low" ? "✓" : "!";
   els.verdictSummary.textContent = `Live models: ${result.modelNames.text}; ${result.delivery.status}.`;
   
@@ -340,19 +393,26 @@ function showLiveDecision(result) {
   els.confidenceValue.textContent = `${confidencePct}%`;
   els.confidenceBar.style.width = `${confidencePct}%`;
 
-  els.findingCount.textContent = result.findings.length;
-  els.findingsList.innerHTML = result.findings.map(item => {
-    const pass = item.result === "PASS";
-    const evText = formatEvidence(item.evidence);
-    return `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓" : "!"} ${escapeHtml(item.ruleCode)}</strong><p><strong>${escapeHtml(item.result)}</strong> · ${escapeHtml(evText)}</p></article>`;
+  els.findingCount.textContent = findings.length;
+  els.findingsList.innerHTML = findings.map(item => {
+    const status = String(item.result || "FAIL").toUpperCase();
+    const pass = status === "PASS";
+    const title = safeText(item.title || item.ruleCode || "Finding");
+    const message = safeText(item.message || item.summary || formatEvidence(item.evidence), "No details provided.");
+    const action = safeText(item.suggestedAction || "Review the discrepancy before release.");
+    return `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓" : "!"} ${escapeHtml(title)}</strong><p><strong>${escapeHtml(status)}</strong> · ${escapeHtml(message)}</p><p class="finding-action"><strong>Action:</strong> ${escapeHtml(action)}</p></article>`;
   }).join("");
+
   els.comparisonCount.textContent = comparisons.length;
   els.comparisonList.innerHTML = comparisons.map(item => {
-    const pass = item.result === "PASS";
-    const valsText = formatEvidence(item.values);
-    return `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓" : "!"} ${escapeHtml(item.field)}</strong><p>${escapeHtml(valsText)}</p></article>`;
+    const status = String(item.result || "FAIL").toUpperCase();
+    const pass = status === "PASS";
+    const label = safeText(item.fieldLabel || item.field || "Check");
+    const text = safeText(item.message || formatEvidence(item.values), "No comparison details available.");
+    const action = safeText(item.suggestedAction || "Review and reconcile the variance before release.");
+    return `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓" : "!"} ${escapeHtml(label)}</strong><p>${escapeHtml(text)}</p><p class="finding-action"><strong>Action:</strong> ${escapeHtml(action)}</p></article>`;
   }).join("");
-  els.traceList.innerHTML = result.stages.map(stage => `<li>${escapeHtml(stage.name)} · ${escapeHtml(stage.status)} · ${escapeHtml(stage.detail)}</li>`).join("");
+  els.traceList.innerHTML = formatStageTrace(result.stages || []);
 }
 
 function showDecision() {
@@ -362,6 +422,7 @@ function showDecision() {
   els.recommendationHeading.textContent = "Inspection complete";
   els.riskBadge.textContent = result.risk; els.riskBadge.className = `risk-badge ${result.risk === "LOW" ? "low" : "medium"}`;
   els.verdictText.textContent = result.verdict; els.verdictIcon.textContent = result.risk === "LOW" ? "✓" : "!";
+  els.caseReference.textContent = `Case reference: ${scenario?.caseId || els.caseId.textContent.replace("Case ", "")}`;
   els.verdictSummary.textContent = result.summary;
   els.confidenceValue.textContent = `${result.confidence}%`; els.confidenceBar.style.width = `${result.confidence}%`;
   const findings = result.findings.map(([title, detail, pass]) => ({ title, detail, pass }));
@@ -370,14 +431,20 @@ function showDecision() {
   const comparisons = result.comparisons || [];
   els.comparisonCount.textContent = comparisons.length;
   els.comparisonList.innerHTML = comparisons.map(([field, sources, outcome, pass]) => `<article class="finding${pass ? " pass" : ""}"><strong>${pass ? "✓ " : "! "}${escapeHtml(field)}</strong><p>${escapeHtml(sources)}</p><p><strong>${escapeHtml(outcome)}</strong></p></article>`).join("");
-  els.traceList.innerHTML = ["Bundle accepted", `${state.documents.length} documents extracted`, "Evidence facts reconciled", "Template policy evaluated", result.risk === "LOW" ? "Approval recommendation prepared" : "Human review threshold applied"].map(item => `<li>${item}</li>`).join("");
+  els.traceList.innerHTML = [
+    { name: "Bundle accepted", detail: "Input validated", elapsed: 0.2 },
+    { name: "Documents extracted", detail: `${state.documents.length} files processed`, elapsed: 0.8 },
+    { name: "Evidence reconciled", detail: "Cross-document facts aligned", elapsed: 1.4 },
+    { name: "Policy evaluated", detail: "Inspection rules applied", elapsed: 2.1 },
+    { name: "Recommendation prepared", detail: result.risk === "LOW" ? "Approval recommendation ready" : "Human review threshold applied", elapsed: 2.8 },
+  ].map(item => `<li><strong>${escapeHtml(item.name)}</strong> · ${item.elapsed.toFixed(1)}s${item.detail ? ` · ${escapeHtml(item.detail)}` : ""}</li>`).join("");
 }
 
 function reset(clearFiles = true) {
   if (clearFiles) state.documents.forEach(doc => doc.url && URL.revokeObjectURL(doc.url));
   state.documents = []; state.selectedId = null; state.zoom = 1; state.processing = false;
   if (els.fileInput) els.fileInput.value = "";
-  els.caseId.textContent = "Case —"; els.caseStatus.textContent = "Ready"; els.processingStrip.hidden = true;
+  els.caseId.textContent = "Case —"; els.caseStatus.textContent = "Ready"; els.caseReference.textContent = "Case reference: —"; els.processingStrip.hidden = true;
   els.decisionEmpty.hidden = false; els.decisionContent.hidden = true; els.recommendationHeading.textContent = "Awaiting evidence";
   els.riskBadge.textContent = "—"; els.riskBadge.className = "risk-badge neutral";
   renderDocuments(); renderViewer();

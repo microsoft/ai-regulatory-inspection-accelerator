@@ -2,7 +2,7 @@
 
 This guide provides the authoritative, production-grade instructions for deploying the **AI Regulatory Inspection Accelerator (ARIA)** into an enterprise Azure environment.
 
-Unlike the quick-start hackathon demo (which runs browser-local synthetic data), this guide details the full multi-tenant or single-tenant enterprise deployment topology using **Azure Durable Functions, Azure AI Document Intelligence, Azure OpenAI, Azure Cosmos DB, Azure Key Vault, Managed Identity, and Azure API Management (APIM)**.
+Unlike the quick-start browser demo (which runs synthetic data locally), this guide details the full multi-tenant or single-tenant enterprise deployment topology using **Azure Durable Functions, Azure AI Document Intelligence, Azure OpenAI, Azure Cosmos DB, Azure Key Vault, Managed Identity, and Azure API Management (APIM)**.
 
 ---
 
