@@ -1,17 +1,4 @@
----
-title: ARIA - AI Regulatory Inspection Accelerator
-description: A tested evidence-to-decision platform for explainable multi-document regulatory review
-author: ARIA Engineering
-ms.date: 2026-09-13
-ms.topic: overview
-keywords:
-  - ARIA
-  - regulatory inspection
-  - document intelligence
-  - Azure OpenAI
-  - explainable AI
-estimated_reading_time: 4
----
+# ARIA - AI Regulatory Inspection Accelerator
 
 ARIA turns a related evidence bundle into a reviewable recommendation. It extracts facts, reconciles them across documents, applies deterministic policy rules, scores risk, and preserves the evidence and timing trace for a human reviewer.
 
