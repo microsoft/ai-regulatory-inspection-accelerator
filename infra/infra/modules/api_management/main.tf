@@ -109,6 +109,55 @@ resource "azurerm_api_management_api" "inspector" {
   }
 }
 
+# Public hackathon route. It is intentionally separate from the authenticated
+# inspection API and is rate-limited to protect a personal subscription.
+resource "azurerm_api_management_backend" "live_demo" {
+  name                = "inspector-live-demo-backend"
+  resource_group_name = var.resource_group_name
+  api_management_name = azurerm_api_management.apim.name
+  protocol            = "http"
+  url                 = "https://${var.pipeline_function_app_hostname}/api"
+
+  credentials {
+    header = {
+      "x-functions-key" = "{{inspector-pipeline-function-key}}"
+    }
+  }
+
+  depends_on = [azurerm_api_management_named_value.function_key]
+}
+
+resource "azurerm_api_management_api" "live_demo" {
+  name                = "aria-live-demo-api"
+  resource_group_name = var.resource_group_name
+  api_management_name = azurerm_api_management.apim.name
+  revision            = "1"
+  display_name        = "ARIA Hackathon Live Demo"
+  path                = "aria-demo"
+  protocols           = ["https"]
+  subscription_required = false
+}
+
+resource "azurerm_api_management_api_operation" "live_demo" {
+  operation_id        = "live-demo-inspection"
+  api_name            = azurerm_api_management_api.live_demo.name
+  api_management_name = azurerm_api_management.apim.name
+  resource_group_name = var.resource_group_name
+  display_name        = "Run Live Hackathon Inspection"
+  method              = "POST"
+  url_template        = "/live/inspections"
+}
+
+resource "azurerm_api_management_api_operation" "get_telemetry" {
+  operation_id        = "get-telemetry"
+  api_name            = azurerm_api_management_api.live_demo.name
+  api_management_name = azurerm_api_management.apim.name
+  resource_group_name = var.resource_group_name
+  display_name        = "Get Cosmos DB Token Telemetry"
+  method              = "GET"
+  url_template        = "/telemetry"
+}
+
 resource "azurerm_api_management_api_operation" "post_inspection" {
   operation_id        = "post-inspection"
   api_name            = azurerm_api_management_api.inspector.name

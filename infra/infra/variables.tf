@@ -47,7 +47,7 @@ variable "storage_account_name" {
 variable "cors_allowed_origins" {
   description = "Allowed origins for CORS on the storage account + APIM APIs (e.g. the chat UI web app URL). Empty disables CORS."
   type        = list(string)
-  default     = []
+  default     = ["https://stariainfra.z13.web.core.windows.net"]
 }
 
 # ============================================================================
