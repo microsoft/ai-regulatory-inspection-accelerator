@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import concurrent.futures
 import json
 import logging
 import os
@@ -31,6 +32,21 @@ from src.platform.policy.risk_assessment import assess_risk
 from src.platform.risk.evaluation_repository import AzureRiskEvaluationRepository
 
 logger = logging.getLogger(__name__)
+
+_FIELD_ALIASES = {
+    "net_weight": "net_weight", "total_net_weight": "net_weight", "netweight": "net_weight", "weight": "net_weight",
+    "gross_weight": "gross_weight", "total_gross_weight": "gross_weight", "grossweight": "gross_weight",
+    "country_of_origin": "origin", "origin_country": "origin", "origin": "origin", "country": "origin",
+    "hs_code": "hs_code", "hscode": "hs_code", "tariff_code": "hs_code",
+    "importer": "importer", "consignee": "importer", "importer_name": "importer", "consignee_name": "importer", "importer_consignee_name": "importer",
+    "exporter": "exporter", "shipper": "exporter", "exporter_name": "exporter", "shipper_name": "exporter", "exporter_shipper_name": "exporter",
+    "commodity": "commodity", "goods_description": "commodity", "product": "commodity", "item_description": "commodity", "goods_type": "commodity",
+}
+
+
+def _canonical_field_name(field_name: str) -> str:
+    clean = field_name.strip().casefold()
+    return _FIELD_ALIASES.get(clean, clean)
 
 
 def _risk_repository() -> AzureRiskEvaluationRepository:
@@ -264,70 +280,82 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
         return _json_response(503, {"code": "LIVE_MODEL_CONFIGURATION_MISSING", "message": str(error)})
 
     extracted: dict[str, dict] = {}
-    try:
-        for index, document in enumerate(documents):
-            document_id = str(document.get("documentId", index + 1))
-            raw = base64.b64decode(document["contentBase64"]) if document.get("contentBase64") else None
-            if raw:
-                blob_path = f"live/{request_id}/{document_id}-{document.get('name', 'document')}"
-                blob_resolver.container.upload_blob(blob_path, raw, overwrite=True)
-                poller = di_client.begin_analyze_document(
-                    model_id=document.get("diModel", "prebuilt-layout"),
-                    body=AnalyzeDocumentRequest(bytes_source=raw),
-                    output_content_format=DocumentContentFormat.MARKDOWN,
-                )
-                di_result = poller.result()
-                text = di_result.content or ""
-            else:
-                text = str(document.get("text", ""))
-            result = ai_client.chat.completions.create(
-                model=text_model,
-                temperature=0.0,
-                seed=42,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": (
-                        "Extract structured key-value fields from this document into JSON format with two top-level keys:\n"
-                        "1. 'shared_claims': Object containing facts expected to agree across multi-document inspection bundles "
-                        "(e.g., commodity, net_weight, gross_weight, origin, consignee, importer, exporter, hs_code, claimant, total_amount, packages, full_name, nationality).\n"
-                        "2. 'document_metadata': Object containing document-unique identifiers or metadata "
-                        "(e.g., document_number, invoice_number, certificate_number, issue_date, expiry_date).\n"
-                        "Do not invent values."
-                    )},
-                    {"role": "user", "content": f"Document type: {document.get('type', 'Evidence')}\n\n{text[:12000]}"},
-                ],
-            )
-            content = result.choices[0].message.content or "{}"
-            raw_parsed = json.loads(content)
-            
-            # Combine all fields for flat representation
-            flat_fields = {}
-            shared_claims = {}
-            if "shared_claims" in raw_parsed and isinstance(raw_parsed["shared_claims"], dict):
-                shared_claims = raw_parsed["shared_claims"]
-                flat_fields.update(shared_claims)
-            if "document_metadata" in raw_parsed and isinstance(raw_parsed["document_metadata"], dict):
-                flat_fields.update(raw_parsed["document_metadata"])
-            if not flat_fields and isinstance(raw_parsed, dict):
-                flat_fields = {k: v for k, v in raw_parsed.items() if isinstance(v, (str, int, float, bool))}
-                shared_claims = flat_fields
 
-            extracted[document_id] = {
-                "documentType": document.get("type", "Evidence"),
-                "fields": {key: {"value": value, "confidence": 0.9} for key, value in flat_fields.items()},
-                "sharedClaims": shared_claims,
-                "qualityCheck": {"quality_score": 0.95},
-                "lowConfidenceFields": [],
-            }
-            response_usage = result.usage
-            usage.append({
-                "stage": "document-intelligence",
-                "documentId": document_id,
-                "model": text_model,
-                "promptTokens": getattr(response_usage, "prompt_tokens", 0),
-                "completionTokens": getattr(response_usage, "completion_tokens", 0),
-                "totalTokens": getattr(response_usage, "total_tokens", 0),
-            })
+    def _extract_single_doc(item_tuple: tuple[int, dict]) -> tuple[str, dict, dict]:
+        index, document = item_tuple
+        document_id = str(document.get("documentId", index + 1))
+        doc_name = document.get("name") or document.get("type") or f"Document {document_id}"
+        raw = base64.b64decode(document["contentBase64"]) if document.get("contentBase64") else None
+        if raw:
+            blob_path = f"live/{request_id}/{document_id}-{document.get('name', 'document')}"
+            blob_resolver.container.upload_blob(blob_path, raw, overwrite=True)
+            poller = di_client.begin_analyze_document(
+                model_id=document.get("diModel", "prebuilt-layout"),
+                body=AnalyzeDocumentRequest(bytes_source=raw),
+                output_content_format=DocumentContentFormat.MARKDOWN,
+            )
+            di_result = poller.result()
+            text = di_result.content or ""
+        else:
+            text = str(document.get("text", ""))
+
+        result = ai_client.chat.completions.create(
+            model=text_model,
+            temperature=0.0,
+            seed=42,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": (
+                    "Extract structured key-value fields from this document into JSON format with two top-level keys:\n"
+                    "1. 'shared_claims': Object containing facts expected to agree across multi-document inspection bundles "
+                    "(e.g., commodity, net_weight, gross_weight, origin, consignee, importer, exporter, hs_code, claimant, total_amount, packages, full_name, nationality).\n"
+                    "2. 'document_metadata': Object containing document-unique identifiers or metadata "
+                    "(e.g., document_number, invoice_number, certificate_number, issue_date, expiry_date).\n"
+                    "Do not invent values."
+                )},
+                {"role": "user", "content": f"Document type: {document.get('type', 'Evidence')}\n\n{text[:12000]}"},
+            ],
+        )
+        content = result.choices[0].message.content or "{}"
+        raw_parsed = json.loads(content)
+
+        flat_fields = {}
+        shared_claims = {}
+        if "shared_claims" in raw_parsed and isinstance(raw_parsed["shared_claims"], dict):
+            shared_claims = raw_parsed["shared_claims"]
+            flat_fields.update(shared_claims)
+        if "document_metadata" in raw_parsed and isinstance(raw_parsed["document_metadata"], dict):
+            flat_fields.update(raw_parsed["document_metadata"])
+        if not flat_fields and isinstance(raw_parsed, dict):
+            flat_fields = {k: v for k, v in raw_parsed.items() if isinstance(v, (str, int, float, bool))}
+            shared_claims = flat_fields
+
+        doc_data = {
+            "name": doc_name,
+            "documentType": document.get("type", "Evidence"),
+            "fields": {key: {"value": value, "confidence": 0.9} for key, value in flat_fields.items()},
+            "sharedClaims": shared_claims,
+            "qualityCheck": {"quality_score": 0.95},
+            "lowConfidenceFields": [],
+        }
+        response_usage = result.usage
+        usage_data = {
+            "stage": "document-intelligence",
+            "documentId": document_id,
+            "model": text_model,
+            "promptTokens": getattr(response_usage, "prompt_tokens", 0),
+            "completionTokens": getattr(response_usage, "completion_tokens", 0),
+            "totalTokens": getattr(response_usage, "total_tokens", 0),
+        }
+        return document_id, doc_data, usage_data
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(documents), 5)) as executor:
+            futures = [executor.submit(_extract_single_doc, (idx, doc)) for idx, doc in enumerate(documents)]
+            for future in concurrent.futures.as_completed(futures):
+                doc_id, doc_data, usage_data = future.result()
+                extracted[doc_id] = doc_data
+                usage.append(usage_data)
     except Exception as error:  # noqa: BLE001 - return a structured demo failure
         stage("document-intelligence", "failed", str(error))
         return _json_response(502, {"code": "LIVE_EXTRACTION_FAILED", "message": str(error), "stages": stages})
@@ -344,8 +372,7 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     for document_id, document in extracted.items():
         doc_key = document.get("name") or document.get("documentType") or document_id
         doc_labels[document_id] = doc_key
-        
-        # Determine which fields participate in cross-document comparison
+
         claims = document.get("sharedClaims", {})
         all_fields = document.get("fields", {})
 
@@ -354,25 +381,23 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
             if val is None:
                 continue
             fn_clean = field_name.strip().casefold()
+            canon_name = _canonical_field_name(fn_clean)
 
-            # Rule 1: If caller requested explicit mandatory fields, include exact or matching claims
             if requested_set:
-                if fn_clean in requested_set:
-                    field_values.setdefault(field_name, {})[doc_key] = val
+                if fn_clean in requested_set or canon_name in requested_set:
+                    field_values.setdefault(canon_name, {})[doc_key] = val
                 continue
 
-            # Rule 2: Dynamic LLM claim classification from extraction stage
             if claims and field_name in claims:
-                field_values.setdefault(field_name, {})[doc_key] = val
+                field_values.setdefault(canon_name, {})[doc_key] = val
                 continue
 
-            # Rule 3: Dynamic fallback heuristic — exclude document-unique IDs/dates
             IS_DOC_SPECIFIC_ID = any(tag in fn_clean for tag in (
                 "invoice_num", "cert_num", "doc_num", "document_num", "reference", "serial",
                 "issue_date", "expiry_date", "validity", "document_title", "title", "header"
             ))
             if not IS_DOC_SPECIFIC_ID:
-                field_values.setdefault(field_name, {})[doc_key] = val
+                field_values.setdefault(canon_name, {})[doc_key] = val
 
     def _normalize_cmp_value(val: Any) -> str:
         s = str(val).strip().casefold()

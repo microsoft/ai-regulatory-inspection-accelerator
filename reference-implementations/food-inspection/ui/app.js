@@ -241,7 +241,7 @@ function fileToBase64(file) {
 
 async function analyzeLive() {
   state.processing = true; renderDocuments(); els.processingStrip.hidden = false; els.caseStatus.textContent = "Live Azure processing";
-  const documents = await Promise.all(state.documents.slice(0, 2).map(async doc => {
+  const documents = await Promise.all(state.documents.map(async doc => {
     const item = {
       documentId: doc.id,
       name: doc.name,
