@@ -49,7 +49,21 @@ const scenarios = {
       { name: "شهادة_صحية.pdf", type: "شهادة صحية", size: 684000, title: "شهادة صحية", rows: [["رقم الشهادة", "HC-AR-4412"], ["وصف المنتج", "منتجات دواجن مجمدة"], ["الوزن الصافي", "8,200 كجم"], ["الصلاحية", "2027-01-20"]], rtl: true },
       { name: "شهادة_الحلال.pdf", type: "شهادة حلال", size: 401000, title: "شهادة حلال", rows: [["رقم الشهادة", "HAL-AR-1188"], ["وصف المنتج", "قطع لحم مجمدة"], ["الوزن الصافي", "8,200 كجم"], ["الصلاحية", "2026-12-14"]], rtl: true },
     ],
-    result: { risk: "MEDIUM", confidence: 86, verdict: "Hold for review", summary: "تفاوت في وصف المنتج بين الفاتورة وشهادة الحلال يتطلب مراجعة المفتش قبل الإفراج. (Product description mismatch requires inspector review).", comparisons: [["وصف المنتج (Product Description)", "الفاتورة التجارية · الشهادة الصحية · شهادة الحلال", "غير مطابق · منتجات دواجن مجمدة مقابل قطع لحم مجمدة", false], ["الوزن الصافي (Net Weight)", "الفاتورة ↔ الشهادة الصحية ↔ شهادة الحلال", "مطابق · 8,200 كجم", true]], findings: [["Product description discrepancy / تفاوت وصف المنتج", "Halal certificate states 'قطع لحم مجمدة'; invoice and health certificate state 'منتجات دواجن مجمدة'."], ["Arabic fields normalized", "RTL labels and numerals were normalized before comparison.", true], ["Dates remain valid", "All certificate expiry dates extend beyond the inspection date.", true]] },
+    result: {
+      risk: "MEDIUM",
+      confidence: 86,
+      verdict: "احتجاز للمراجعة",
+      summary: "تفاوت في وصف المنتج بين الفاتورة وشهادة الحلال يتطلب مراجعة المفتش قبل الإفراج.",
+      comparisons: [
+        ["وصف المنتج", "الفاتورة التجارية · الشهادة الصحية · شهادة الحلال", "غير مطابق · منتجات دواجن مجمدة مقابل قطع لحم مجمدة", false],
+        ["الوزن الصافي", "الفاتورة ↔ الشهادة الصحية ↔ شهادة الحلال", "مطابق · 8,200 كجم", true]
+      ],
+      findings: [
+        ["تفاوت في وصف المنتج", "تشير شهادة الحلال إلى 'قطع لحم مجمدة' بينما تنص الفاتورة والشهادة الصحية على 'منتجات دواجن مجمدة'."],
+        ["تطبيق معايير اللغة العربية والأرقام الشرقية", "تم توحيد خانات النص العربي والأرقام وعلامات الاتجاه (RTL) تلقائياً قبل المقارنة.", true],
+        ["صلاحية الشهادات", "جميع تواريخ انتهاء الشهادات سارية وتتجاوز تاريخ التفتيش الحالي.", true]
+      ]
+    },
   },
   customs: {
     label: "Customs clearance",
