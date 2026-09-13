@@ -436,7 +436,6 @@ if (authForm) {
   authForm.addEventListener("submit", e => {
     e.preventDefault();
     const val = (passcodeInput?.value || "").trim().toLowerCase();
-    // Default Passcode: aria2026 or aria
     if (val === "aria2026" || val === "aria") {
       state.liveUnlocked = true;
       state.mode = "live";
