@@ -220,6 +220,13 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     usage: list[dict[str, Any]] = []
 
     def stage(name: str, status: str, detail: str) -> None:
+        # Update existing stage entry if present, otherwise append
+        for s in stages:
+            if s["name"] == name:
+                s["status"] = status
+                s["detail"] = detail
+                s["timestamp"] = datetime.now(timezone.utc).isoformat()
+                return
         stages.append({
             "name": name,
             "status": status,
@@ -256,7 +263,6 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     except KeyError as error:
         return _json_response(503, {"code": "LIVE_MODEL_CONFIGURATION_MISSING", "message": str(error)})
 
-    stage("document-intelligence", "running", "Staging documents and extracting OCR/layout")
     extracted: dict[str, dict] = {}
     try:
         for index, document in enumerate(documents):
@@ -383,8 +389,7 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
         for item in comparisons
     ]
     risk = assess_risk(request_id, findings, extracted)
-    stage("policy-evaluation", "completed", "Applied deterministic template policy")
-    stage("risk-assessment", "completed", f"Risk {risk['aiRiskLevel']} at {risk['compositeRiskScore']}")
+    stage("policy-evaluation", "completed", f"Evaluated policy rules & risk band: {risk['aiRiskLevel']} (score: {risk['compositeRiskScore']})")
     stage("delivery", "completed", "Live result prepared for authenticated delivery")
 
     _save_telemetry(request_id, usage, text_model)
