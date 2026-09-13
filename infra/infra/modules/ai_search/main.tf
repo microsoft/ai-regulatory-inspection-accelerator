@@ -8,6 +8,9 @@ terraform {
     azapi = {
       source = "azure/azapi"
     }
+    time = {
+      source = "hashicorp/time"
+    }
   }
 }
 
@@ -22,6 +25,11 @@ resource "azurerm_search_service" "main" {
   authentication_failure_mode   = "http403"
 
   tags = var.tags
+}
+
+resource "time_sleep" "wait_for_search_service" {
+  depends_on      = [azurerm_search_service.main]
+  create_duration = "2m"
 }
 
 locals {
@@ -51,7 +59,11 @@ resource "azapi_data_plane_resource" "search_index_case_summaries" {
   name      = "case-summaries"
   parent_id = "${var.search_service_name}.search.windows.net"
 
-  depends_on = [azurerm_search_service.main]
+  depends_on = [time_sleep.wait_for_search_service]
+
+  timeouts {
+    read = "10m"
+  }
 
   body = {
     fields = [
@@ -106,7 +118,14 @@ resource "azapi_data_plane_resource" "search_index_document_fields" {
   name      = "document-fields"
   parent_id = "${var.search_service_name}.search.windows.net"
 
-  depends_on = [azurerm_search_service.main]
+  depends_on = [
+    time_sleep.wait_for_search_service,
+    azapi_data_plane_resource.search_index_case_summaries,
+  ]
+
+  timeouts {
+    read = "10m"
+  }
 
   body = {
     fields = [
@@ -161,7 +180,14 @@ resource "azapi_data_plane_resource" "search_index_inspector_feedback" {
   name      = "inspector-feedback"
   parent_id = "${var.search_service_name}.search.windows.net"
 
-  depends_on = [azurerm_search_service.main]
+  depends_on = [
+    time_sleep.wait_for_search_service,
+    azapi_data_plane_resource.search_index_document_fields,
+  ]
+
+  timeouts {
+    read = "10m"
+  }
 
   body = {
     fields = [

@@ -10,6 +10,10 @@ terraform {
       source  = "azure/azapi"
       version = "~> 2.12"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.13"
+    }
   }
 
   # Fixed backend config - points at the storage account created by

@@ -102,6 +102,7 @@ jobs:
         run: |
           set -o pipefail
           terraform plan \
+            -parallelism=1 \
             -lock-timeout=5m \
             -input=false \
             -no-color \
