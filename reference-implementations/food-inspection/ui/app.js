@@ -372,7 +372,7 @@ function showLiveDecision(result) {
   els.caseReference.textContent = `Case reference: ${result.requestId || "—"}`;
   els.verdictIcon.textContent = risk.aiRiskLevel === "Low" ? "✓" : "!";
   els.verdictSummary.textContent = `Live models: ${result.modelNames.text}; ${result.delivery.status}.`;
-  
+
   let confidencePct = 90;
   if (result.extractedFields && typeof result.extractedFields === "object") {
     let sumConf = 0, countConf = 0;

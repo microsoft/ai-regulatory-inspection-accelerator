@@ -159,7 +159,7 @@ async function fetchCosmosTelemetry() {
 
   // Combine All Records (Cosmos + Local + Baseline)
   const combined = [...cosmosRecords, ...localRecords, ...baselineCases];
-  
+
   // Deduplicate by ID
   const map = new Map();
   combined.forEach(item => {
@@ -258,10 +258,10 @@ function initDateDefaults() {
 
 function getFilteredCases() {
   const { fromDate, toDate, periodLabel } = getPeriodDateRange();
-  
+
   // Filter state.cases by date window
   const casesInPeriod = state.cases.filter(c => c.date >= fromDate && c.date <= toDate);
-  
+
   // Dynamically populate Case / Tenant filter for this time period
   populateCaseFilter(casesInPeriod);
 
