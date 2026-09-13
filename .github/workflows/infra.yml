@@ -69,11 +69,11 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -input=false -out=tfplan
+        run: terraform plan -lock-timeout=5m -input=false -out=tfplan
 
       - name: Terraform Apply
         if: github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
-        run: terraform apply -input=false -auto-approve tfplan
+        run: terraform apply -lock-timeout=5m -input=false -auto-approve tfplan
 
   deploy-infra:
     name: "Deploy: platform infra"
@@ -99,8 +99,8 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -input=false -out=tfplan
+        run: terraform plan -lock-timeout=5m -input=false -out=tfplan
 
       - name: Terraform Apply
         if: github.event_name == 'workflow_dispatch' && inputs.action == 'apply'
-        run: terraform apply -input=false -auto-approve tfplan
+        run: terraform apply -lock-timeout=5m -input=false -auto-approve tfplan
