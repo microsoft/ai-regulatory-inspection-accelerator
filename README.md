@@ -7,7 +7,7 @@ Extract facts. Reconcile evidence. Apply policy. Explain the recommendation.
 
 <br>
 
-[**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**WINNING FORMULA**](#winning-formula) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**QUICK DEPLOY**](#quick-deploy) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
+[**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**BUSINESS USE CASES**](#business-use-cases) &nbsp;|&nbsp; [**WINNING FORMULA**](#winning-formula) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**QUICK DEPLOY**](#quick-deploy) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
 
 </div>
 
@@ -60,6 +60,20 @@ python -m http.server 4173 --directory reference-implementations/food-inspection
 
 Open <http://localhost:4173/index.html>, keep **Synthetic** mode selected, load a sample case, and run the inspection. This local path does not call Azure AI services.
 
+## Business use cases
+
+ARIA is designed for decisions that depend on several documents agreeing:
+
+| Domain | Evidence bundle | Reviewer outcome |
+|---|---|---|
+| Food import inspection | Invoice, declaration, health and Halal certificates | Pass, hold, or fail |
+| Customs clearance | Bill of lading, declaration, invoice, origin certificate | Clear, hold, or detain |
+| KYC and AML | Identity, ownership, address, and transaction records | Approve, review, or reject |
+| Healthcare authorization | Request form, clinical notes, and policy evidence | Authorize, review, or deny |
+| Licensing and certification | Application, credentials, and prior certificates | Approve, provision, or deny |
+
+![ARIA business use case showing evidence flowing through extraction, reconciliation, and policy checks to a human-reviewed recommendation](docs/images/readme/business-use-case.png)
+
 ## Winning formula
 
 | Capability | ARIA outcome |
@@ -72,21 +86,18 @@ Open <http://localhost:4173/index.html>, keep **Synthetic** mode selected, load 
 | Human control | The system recommends; the reviewer decides and can override with a reason |
 | Operational governance | Cosmos DB telemetry, token attribution, cost views, and auditable case history |
 
-## Solution implementation
+## Implementation
 
-The tested reference implementation combines:
+The tested reference implementation combines a domain-neutral platform, configurable industry templates, and isolated connectors:
 
-* Python Azure Functions for authenticated live inspection and delivery
-* Azure AI Document Intelligence for OCR and layout extraction
-* Azure OpenAI `aria-text-mini` for structured field extraction, with a vision deployment available for fallback
-* A domain-neutral platform under `src/platform/`
-* Food-safety configuration under `templates/food-safety/`
-* Azure Blob Storage for evidence and the hosted workbench
-* Cosmos DB for telemetry and case records
-* Azure API Management for the public API facade
-* Azure Terraform infrastructure under `infra/infra/`
+* Python Azure Functions, Durable Functions, and Azure API Management
+* Azure AI Document Intelligence and Azure OpenAI structured extraction
+* Deterministic reconciliation, policy, risk, delivery, and audit components
+* Industry configuration under `templates/` and integration contracts under `connectors/`
 
 The live path extracts documents concurrently, reports per-document duration, and keeps telemetry persistence off the response critical path. The complete automated test suite currently passes 426 tests.
+
+Technical setup, security, deployment topology, and local development instructions are maintained in the [Technical Architecture](docs/architecture/TechnicalArchitecture.md), [Deployment Guide](docs/DeploymentGuide.md), and [Local Development Setup](docs/LocalDevelopmentSetup.md).
 
 ## Agentic framework
 
@@ -139,15 +150,7 @@ Example mandatory evidence configuration:
 
 ## Quick deploy
 
-The public synthetic demo requires no Azure subscription. For an owned deployment, follow the [Deployment Guide](docs/DeploymentGuide.md) and configure the Azure reference topology with your own resources and identities.
-
-### Prerequisites
-
-* Python 3.10 or later
-* Azure subscription for live deployment
-* Azure Functions, Storage, Cosmos DB, Document Intelligence, Azure OpenAI, Key Vault, and API Management for the full reference topology
-* Managed identity and role assignments for service-to-service access
-* Representative English and Arabic evidence, reviewer-approved expected outcomes, and an evaluation corpus
+The public synthetic demo requires no Azure subscription. For an owned deployment, use the [Deployment Guide](docs/DeploymentGuide.md), which contains the Azure prerequisites, identity requirements, service topology, and configuration steps.
 
 ## Future scope
 
