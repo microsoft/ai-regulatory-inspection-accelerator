@@ -128,13 +128,13 @@ resource "azurerm_api_management_backend" "live_demo" {
 }
 
 resource "azurerm_api_management_api" "live_demo" {
-  name                = "aria-live-demo-api"
-  resource_group_name = var.resource_group_name
-  api_management_name = azurerm_api_management.apim.name
-  revision            = "1"
-  display_name        = "ARIA Hackathon Live Demo"
-  path                = "aria-demo"
-  protocols           = ["https"]
+  name                  = "aria-live-demo-api"
+  resource_group_name   = var.resource_group_name
+  api_management_name   = azurerm_api_management.apim.name
+  revision              = "1"
+  display_name          = "ARIA Hackathon Live Demo"
+  path                  = "aria-demo"
+  protocols             = ["https"]
   subscription_required = false
 }
 
@@ -212,7 +212,10 @@ resource "azurerm_api_management_api_operation_policy" "post_inspection" {
           <set-header name="Content-Type" exists-action="override">
             <value>application/json</value>
           </set-header>
-          <set-body>@(new JObject(new JProperty("code", "INVALID_SUBMISSION_SCHEMA"), new JProperty("message", "The request body does not match the evidence submission schema."), new JProperty("errors", context.Variables.GetValueOrDefault&lt;IEnumerable&lt;Microsoft.Azure.ApiManagement.Policy.Expressions.JsonSchemaError&gt;&gt;("validationErrors"))))</set-body>
+          <set-body>{
+  "code": "INVALID_SUBMISSION_SCHEMA",
+  "message": "The request body does not match the evidence submission schema."
+}</set-body>
         </return-response>
       </when>
     </choose>

@@ -99,7 +99,20 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -lock-timeout=5m -input=false -out=tfplan
+        run: |
+          set -o pipefail
+          terraform plan \
+            -lock-timeout=5m \
+            -input=false \
+            -no-color \
+            -out=tfplan 2>&1 | tee terraform-plan.log
+
+      - name: Upload Terraform diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-log
+          path: infra/infra/terraform-plan.log
 
       - name: Terraform Apply
         if: github.event_name == 'workflow_dispatch' && inputs.action == 'apply'

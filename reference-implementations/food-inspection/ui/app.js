@@ -305,7 +305,27 @@ function showLiveDecision(result) {
   els.verdictText.textContent = risk.recommendationLabel || risk.recommendation || "Review required";
   els.verdictIcon.textContent = risk.aiRiskLevel === "Low" ? "✓" : "!";
   els.verdictSummary.textContent = `Live models: ${result.modelNames.text}; ${result.delivery.status}.`;
-  els.confidenceValue.textContent = "Live"; els.confidenceBar.style.width = "100%";
+  
+  let confidencePct = 90;
+  if (result.extractedFields && typeof result.extractedFields === "object") {
+    let sumConf = 0, countConf = 0;
+    Object.values(result.extractedFields).forEach(doc => {
+      if (doc && doc.fields && typeof doc.fields === "object") {
+        Object.values(doc.fields).forEach(f => {
+          if (f && typeof f.confidence === "number") {
+            sumConf += f.confidence;
+            countConf++;
+          }
+        });
+      }
+    });
+    if (countConf > 0) {
+      confidencePct = Math.round((sumConf / countConf) * 100);
+    }
+  }
+  els.confidenceValue.textContent = `${confidencePct}%`;
+  els.confidenceBar.style.width = `${confidencePct}%`;
+
   els.findingCount.textContent = result.findings.length;
   els.findingsList.innerHTML = result.findings.map(item => {
     const pass = item.result === "PASS";
