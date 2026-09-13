@@ -4,8 +4,8 @@ const state = {
   zoom: 1,
   processing: false,
   scenario: "food-en",
-  mode: sessionStorage.getItem("ariaMode") || "synthetic",
-  liveUnlocked: sessionStorage.getItem("ariaLiveUnlocked") === "true",
+  mode: "synthetic",
+  liveUnlocked: false,
 };
 
 const els = {
@@ -103,6 +103,7 @@ function addFiles(files) {
   const accepted = [...files].filter(file => /pdf|png|jpeg|jpg|tiff/i.test(file.type) || /\.(pdf|png|jpe?g|tiff?)$/i.test(file.name));
   accepted.forEach(file => state.documents.push({ id: id(), name: file.name, type: inferType(file.name), size: file.size, file, url: URL.createObjectURL(file) }));
   if (!state.selectedId && state.documents.length) state.selectedId = state.documents[0].id;
+  if (els.fileInput) els.fileInput.value = "";
   renderDocuments(); renderViewer();
 }
 
@@ -211,13 +212,32 @@ async function analyze() {
   await delay(300); els.processingStrip.hidden = true;
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result;
+      const base64 = typeof res === "string" && res.includes(",") ? res.split(",")[1] : res;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function analyzeLive() {
   state.processing = true; renderDocuments(); els.processingStrip.hidden = false; els.caseStatus.textContent = "Live Azure processing";
-  const documents = state.documents.slice(0, 2).map(doc => ({
-    documentId: doc.id,
-    name: doc.name,
-    type: doc.type,
-    text: doc.rows ? doc.rows.map(([label, value]) => `${label}: ${value}`).join("\n") : "",
+  const documents = await Promise.all(state.documents.slice(0, 2).map(async doc => {
+    const item = {
+      documentId: doc.id,
+      name: doc.name,
+      type: doc.type,
+      text: doc.rows ? doc.rows.map(([label, value]) => `${label}: ${value}`).join("\n") : "",
+    };
+    if (doc.file) {
+      item.contentBase64 = await fileToBase64(doc.file);
+    }
+    return item;
   }));
   try {
     const response = await fetch(window.ARIA_CONFIG.liveEndpoint, {
@@ -322,6 +342,7 @@ function showDecision() {
 function reset(clearFiles = true) {
   if (clearFiles) state.documents.forEach(doc => doc.url && URL.revokeObjectURL(doc.url));
   state.documents = []; state.selectedId = null; state.zoom = 1; state.processing = false;
+  if (els.fileInput) els.fileInput.value = "";
   els.caseId.textContent = "Case —"; els.caseStatus.textContent = "Ready"; els.processingStrip.hidden = true;
   els.decisionEmpty.hidden = false; els.decisionContent.hidden = true; els.recommendationHeading.textContent = "Awaiting evidence";
   els.riskBadge.textContent = "—"; els.riskBadge.className = "risk-badge neutral";
@@ -394,23 +415,20 @@ function updateModeUI() {
 if (btnSyntheticMode) {
   btnSyntheticMode.addEventListener("click", () => {
     state.mode = "synthetic";
+    state.liveUnlocked = false;
     sessionStorage.setItem("ariaMode", "synthetic");
+    sessionStorage.removeItem("ariaLiveUnlocked");
     updateModeUI();
   });
 }
 
 if (btnLiveMode) {
   btnLiveMode.addEventListener("click", () => {
-    if (state.liveUnlocked) {
-      state.mode = "live";
-      sessionStorage.setItem("ariaMode", "live");
-      updateModeUI();
-    } else {
-      if (authError) authError.hidden = true;
-      if (passcodeInput) passcodeInput.value = "";
-      if (liveAuthModal) liveAuthModal.hidden = false;
-      if (passcodeInput) setTimeout(() => passcodeInput.focus(), 100);
-    }
+    if (state.mode === "live") return;
+    if (authError) authError.hidden = true;
+    if (passcodeInput) passcodeInput.value = "";
+    if (liveAuthModal) liveAuthModal.hidden = false;
+    if (passcodeInput) setTimeout(() => passcodeInput.focus(), 100);
   });
 }
 
