@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import base64
+import json
+import logging
 import os
 import re
 from datetime import datetime, timezone
@@ -13,6 +14,7 @@ import azure.durable_functions as df
 import azure.functions as func
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeDocumentRequest, DocumentContentFormat
+from azure.core.exceptions import AzureError
 from azure.identity import ManagedIdentityCredential, get_bearer_token_provider
 from openai import AzureOpenAI
 
@@ -25,8 +27,10 @@ from src.platform.intake.azure_adapters import (
 )
 from src.platform.intake.pre_validation import run as run_pre_validation
 from src.platform.intake.submission_service import submit
-from src.platform.risk.evaluation_repository import AzureRiskEvaluationRepository
 from src.platform.policy.risk_assessment import assess_risk
+from src.platform.risk.evaluation_repository import AzureRiskEvaluationRepository
+
+logger = logging.getLogger(__name__)
 
 
 def _risk_repository() -> AzureRiskEvaluationRepository:
@@ -42,10 +46,12 @@ def _get_cosmos_container():
         return None
     try:
         from azure.cosmos import CosmosClient
+
         client = CosmosClient(endpoint, credential=key)
         database = client.get_database_client(db_name)
         return database.get_container_client(container_name)
-    except Exception:
+    except (AzureError, ValueError):
+        logger.exception("Unable to initialize the Cosmos telemetry container")
         return None
 
 
@@ -69,8 +75,12 @@ def _save_telemetry(request_id: str, usage_items: list[dict], model_name: str, t
         }
         try:
             container.upsert_item(doc)
-        except Exception:
-            pass
+        except AzureError:
+            logger.warning(
+                "Unable to persist telemetry item for request %s",
+                request_id,
+                exc_info=True,
+            )
 
 
 def _fetch_telemetry():
@@ -80,10 +90,11 @@ def _fetch_telemetry():
     try:
         items = list(container.query_items(
             query="SELECT * FROM c ORDER BY c._ts DESC",
-            enable_cross_partition_query=True
+            enable_cross_partition_query=True,
         ))
         return items
-    except Exception:
+    except AzureError:
+        logger.exception("Unable to fetch telemetry from Cosmos DB")
         return []
 
 app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
