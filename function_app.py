@@ -269,15 +269,36 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
                 seed=42,
                 response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": "Extract the useful fields from this document as JSON. Do not invent values."},
+                    {"role": "system", "content": (
+                        "Extract structured key-value fields from this document into JSON format with two top-level keys:\n"
+                        "1. 'shared_claims': Object containing facts expected to agree across multi-document inspection bundles "
+                        "(e.g., commodity, net_weight, gross_weight, origin, consignee, importer, exporter, hs_code, claimant, total_amount, packages, full_name, nationality).\n"
+                        "2. 'document_metadata': Object containing document-unique identifiers or metadata "
+                        "(e.g., document_number, invoice_number, certificate_number, issue_date, expiry_date).\n"
+                        "Do not invent values."
+                    )},
                     {"role": "user", "content": f"Document type: {document.get('type', 'Evidence')}\n\n{text[:12000]}"},
                 ],
             )
             content = result.choices[0].message.content or "{}"
-            fields = json.loads(content)
+            raw_parsed = json.loads(content)
+            
+            # Combine all fields for flat representation
+            flat_fields = {}
+            shared_claims = {}
+            if "shared_claims" in raw_parsed and isinstance(raw_parsed["shared_claims"], dict):
+                shared_claims = raw_parsed["shared_claims"]
+                flat_fields.update(shared_claims)
+            if "document_metadata" in raw_parsed and isinstance(raw_parsed["document_metadata"], dict):
+                flat_fields.update(raw_parsed["document_metadata"])
+            if not flat_fields and isinstance(raw_parsed, dict):
+                flat_fields = {k: v for k, v in raw_parsed.items() if isinstance(v, (str, int, float, bool))}
+                shared_claims = flat_fields
+
             extracted[document_id] = {
                 "documentType": document.get("type", "Evidence"),
-                "fields": {key: {"value": value, "confidence": 0.9} for key, value in fields.items()},
+                "fields": {key: {"value": value, "confidence": 0.9} for key, value in flat_fields.items()},
+                "sharedClaims": shared_claims,
                 "qualityCheck": {"quality_score": 0.95},
                 "lowConfidenceFields": [],
             }
@@ -299,13 +320,42 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
     comparisons = []
     field_values: dict[str, dict[str, Any]] = {}
     doc_labels: dict[str, str] = {}
+
+    requested_fields = payload.get("mandatoryFields") or payload.get("crossDocumentFields") or []
+    requested_set = {str(f).strip().casefold() for f in requested_fields} if requested_fields else None
+
     for document_id, document in extracted.items():
-        doc_labels[document_id] = document.get("name") or document.get("documentType") or document_id
-        for field_name, field in document["fields"].items():
-            if field_name in ("document_type", "documentType"):
+        doc_key = document.get("name") or document.get("documentType") or document_id
+        doc_labels[document_id] = doc_key
+        
+        # Determine which fields participate in cross-document comparison
+        claims = document.get("sharedClaims", {})
+        all_fields = document.get("fields", {})
+
+        for field_name, field_obj in all_fields.items():
+            val = field_obj.get("value") if isinstance(field_obj, dict) else field_obj
+            if val is None:
                 continue
-            doc_key = doc_labels[document_id]
-            field_values.setdefault(field_name, {})[doc_key] = field["value"]
+            fn_clean = field_name.strip().casefold()
+
+            # Rule 1: If caller requested explicit mandatory fields, include exact or matching claims
+            if requested_set:
+                if fn_clean in requested_set:
+                    field_values.setdefault(field_name, {})[doc_key] = val
+                continue
+
+            # Rule 2: Dynamic LLM claim classification from extraction stage
+            if claims and field_name in claims:
+                field_values.setdefault(field_name, {})[doc_key] = val
+                continue
+
+            # Rule 3: Dynamic fallback heuristic — exclude document-unique IDs/dates
+            IS_DOC_SPECIFIC_ID = any(tag in fn_clean for tag in (
+                "invoice_num", "cert_num", "doc_num", "document_num", "reference", "serial",
+                "issue_date", "expiry_date", "validity", "document_title", "title", "header"
+            ))
+            if not IS_DOC_SPECIFIC_ID:
+                field_values.setdefault(field_name, {})[doc_key] = val
 
     def _normalize_cmp_value(val: Any) -> str:
         s = str(val).strip().casefold()
