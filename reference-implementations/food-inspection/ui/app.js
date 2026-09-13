@@ -27,6 +27,7 @@ const els = {
   traceList: document.querySelector("#traceList"),
   comparisonCount: document.querySelector("#comparisonCount"), comparisonList: document.querySelector("#comparisonList"),
   scenarioSelect: document.querySelector("#scenarioSelect"),
+  clearCaseBtn: document.querySelector("#clearCaseBtn"),
 };
 
 const scenarios = {
@@ -332,6 +333,7 @@ els.dropZone.addEventListener("dragover", event => { event.preventDefault(); els
 els.dropZone.addEventListener("dragleave", () => els.dropZone.classList.remove("dragging"));
 els.dropZone.addEventListener("drop", event => { event.preventDefault(); els.dropZone.classList.remove("dragging"); addFiles(event.dataTransfer.files); });
 els.sampleButton.addEventListener("click", loadSample); els.analyzeButton.addEventListener("click", analyze); els.resetButton.addEventListener("click", () => reset());
+if (els.clearCaseBtn) els.clearCaseBtn.addEventListener("click", () => reset());
 els.zoomIn.addEventListener("click", () => { state.zoom = Math.min(1.5, state.zoom + 0.1); renderViewer(); });
 els.zoomOut.addEventListener("click", () => { state.zoom = Math.max(0.7, state.zoom - 0.1); renderViewer(); });
 Object.entries(scenarios).forEach(([key, scenario]) => {
