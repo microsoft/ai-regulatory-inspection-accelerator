@@ -1,66 +1,65 @@
 ---
-title: ARIA Hackathon Demo
-description: Run the browser demo locally or from the Azure static website
-ms.date: 2026-09-12
+title: ARIA Hackathon Demo & Walkthrough Guide
+description: Quick-start guide for evaluating the ARIA hackathon demo hosted on Azure
+ms.date: 2026-09-13
 ms.topic: how-to
 ---
 
-## Hosted demo
+# ARIA Hackathon Demo & Walkthrough Guide
 
-The current Azure-hosted browser demo is:
+The **AI Regulatory Inspection Accelerator (ARIA)** includes a hosted, interactive **Inspection Workbench** and **Token Analytics Dashboard** designed for rapid evaluation.
 
-<https://stariainfra.z13.web.core.windows.net/>
+> 💡 **Note on Demo vs. Production**: This guide covers the **Quick Hackathon Demo**. For enterprise production deployment instructions with Terraform, Key Vault references, and zero-secrets RBAC, see the [Enterprise Production Deployment Guide](DeploymentGuide.md).
 
-It is a browser-local synthetic demonstration. The scenario fields, cross-
-document outcomes, and recommendation are deterministic demo data in the
-browser. It does not send sample files to Azure. The public configuration
-points at the deployed ARIA APIM gateway for future backend mode:
+---
 
-* APIM base: `https://apim-aria-infra.azure-api.net`
-* Inspection API: `POST https://apim-aria-infra.azure-api.net/inspections`
-* Durable Function App: `https://func-aria-pipeline.azurewebsites.net`
-* Live extraction route: `POST /api/live/inspections` with a Function key
+## Live Hosted Demo Endpoints
 
-The personal-subscription model profile uses:
+* 🌐 **ARIA Inspection Workbench**: <https://stariainfra.z13.web.core.windows.net/index.html>
+* 📊 **ARIA Token Analytics**: <https://stariainfra.z13.web.core.windows.net/tokens.html>
 
-* `aria-text-mini` -> `gpt-4.1-nano` for ordinary text extraction/reasoning
-* `aria-vision` -> `gpt-4o` for the handwriting/ambiguous-evidence fallback
-* `aria-embed-small` -> `text-embedding-3-small` for retrieval features
+---
 
-No secrets are embedded in the browser demo. Live backend mode is enabled only
-in a local/private configuration that supplies the Function key. The public
-hosted page remains synthetic by default.
+## Core Demo Features
 
-## Local demo
+### 1. Dual Execution Modes (Synthetic vs. Live Azure)
+* **Synthetic Mode (Default)**: Executes locally in the browser with zero token cost or Azure resource consumption. Ideal for public walkthroughs and offline testing.
+* **Live Azure Mode (`🔒 Live Azure`)**: Calls live Azure Durable Functions (`func-aria-pipeline`), Document Intelligence, Azure OpenAI (`aria-text-mini`), and Cosmos DB (`cosmos-aria-telemetry`).
+  * **Passcode Protected**: Unlocking Live mode requires entering the Admin Passcode (`aria2026`).
+
+### 2. Cross-Industry Sample Scenarios
+Choose from 5 pre-configured multi-document inspection scenarios:
+1. **Food Safety (English)**: Commercial Invoice, Health Certificate, Halal Certificate.
+2. **Food Safety (Arabic / RTL)**: فاتورة تجارية, شهادة صحية, شهادة حلال.
+3. **Customs Clearance**: Bill of Lading, Customs Declaration, Certificate of Origin.
+4. **KYC Onboarding**: Identity Document, Beneficial Ownership Record, Proof of Address.
+5. **Insurance Claim**: Claim Form, Adjuster Report, Repair Invoice.
+
+### 3. Custom File Upload & Reset Workflow
+* Drag and drop or select your own custom `.pdf`, `.png`, or `.jpg` evidence bundles.
+* Once processing completes, click **`↺ Clear Case for New Inspection`** to reset the workbench state for the next case.
+
+### 4. Platform Architecture & Differentiators Modal
+Click **`⚡ Platform Architecture`** in the header to view ARIA's 4 Enterprise Pillars:
+* **Probabilistic Extraction vs. 100% Deterministic Code Rules**
+* **AI Tokenomics Cost Governance** ($0.15/1M vs $2.50/1M)
+* **N-Way Cross-Document Integrity Engine**
+* **Immutable Audit Trail & Human Control**
+
+### 5. Token Analytics & Cost Governance Dashboard (`tokens.html`)
+* **Live Telemetry Connection**: Real-time token consumption logs fetched directly from Azure Cosmos DB.
+* **6 KPI Metrics Cards**: Total Tokens, Avg Tokens/Case, Realized Cost, 30-Day Forecast, Net Money Saved vs. Naive GPT-4o, Cache Hit Rate.
+* **ARIA Efficiency Proof Banner**: Highlights ~80.1% cost reduction achieved via micro-model tier routing and prompt prefix caching.
+* **Pipeline Activity vs. Model Intensity Heatmap**: Matrix mapping stages to model consumption.
+* **Per-Case Traceable Table**: Paged table (10 per page) with popup modal for per-case stage breakdowns.
+* **Expandable Floating Insight Tabs**: Bottom toolbar with expandable overlays for Prompt Caching, Accuracy Governance, React Production Roadmap, and Token Saving Strategies.
+
+---
+
+## Running the Demo Locally
 
 ```powershell
 python -m http.server 4173 --directory reference-implementations/food-inspection/ui
 ```
 
-Open <http://localhost:4173/index.html>, load the sample case, and run the
-inspection walkthrough.
-
-## Demo path
-
-1. Load the sample evidence bundle.
-2. Review the document viewer and extracted evidence.
-3. Run the five-stage walkthrough.
-4. Review the risk band, recommendation, findings, and decision trace.
-5. Open Token analytics for the token/cost view.
-
-The hackathon demo uses deterministic browser-local sample data. Azure backend
-integration remains an optional authenticated deployment path.
-
-## Vision strategy
-
-AI vision is not the default path for ordinary printed documents. ARIA uses a
-hybrid strategy:
-
-* Python preprocessing and deterministic quality checks run first.
-* Azure Document Intelligence handles OCR and layout for printed evidence.
-* Template-driven extraction and normalization fill structured fields.
-* Vision is reserved for handwritten, mixed-script, low-quality, or ambiguous
-	evidence where OCR confidence is insufficient.
-
-This keeps the common path cheaper and more reproducible while preserving a
-fallback for evidence that conventional OCR cannot read reliably.
+Open <http://localhost:4173/index.html> in your browser.
