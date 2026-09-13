@@ -26,7 +26,11 @@
       </div>
     </div>
     <div class="case-meta">
-      <span class="environment">LIVE AZURE · DURABLE FUNCTIONS</span>
+      <div class="mode-toggle-pill" aria-label="Mode switch">
+        <button id="btnSyntheticMode" type="button" class="mode-toggle-btn active">Synthetic</button>
+        <button id="btnLiveMode" type="button" class="mode-toggle-btn">🔒 Live Azure</button>
+      </div>
+      <span id="envBadge" class="environment synthetic">DEMO · SYNTHETIC (LOCAL)</span>
       <span id="caseId">Case —</span>
       <span id="caseStatus" class="status-dot">Ready</span>
     </div>
@@ -199,6 +203,34 @@
             <p>Every decision step is recorded as an immutable execution event in Azure Durable Functions and Cosmos DB. Reviewers retain 100% override control with reason logging.</p>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Auth Modal for Live Azure Mode -->
+  <div id="liveAuthModal" class="modal-backdrop" hidden>
+    <div class="modal-content auth-modal-content">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">Security Governance</span>
+          <h2>Unlock Live Azure Execution</h2>
+        </div>
+        <button id="authModalCloseBtn" type="button" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body auth-modal-body">
+        <p class="auth-desc">Live Mode calls active Azure Durable Functions & Document Intelligence endpoints. Enter the admin passcode to unlock Live Azure processing.</p>
+        <form id="authForm" onsubmit="return false;">
+          <div class="auth-input-group">
+            <label for="passcodeInput" class="auth-label">Admin Passcode</label>
+            <input id="passcodeInput" type="password" class="auth-input" placeholder="Enter admin passcode" autocomplete="off">
+          </div>
+          <div id="authError" class="auth-error" hidden>Incorrect passcode. Live Azure access denied.</div>
+          <div class="auth-actions">
+            <button id="authCancelBtn" type="button" class="auth-btn-secondary">Cancel</button>
+            <button id="authSubmitBtn" type="submit" class="auth-btn-primary">Unlock Live Azure</button>
+          </div>
+        </form>
+        <div class="auth-hint">Default Passcode: <code>aria2026</code></div>
       </div>
     </div>
   </div>

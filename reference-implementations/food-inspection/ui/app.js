@@ -1,4 +1,12 @@
-const state = { documents: [], selectedId: null, zoom: 1, processing: false, scenario: "food-en" };
+const state = {
+  documents: [],
+  selectedId: null,
+  zoom: 1,
+  processing: false,
+  scenario: "food-en",
+  mode: sessionStorage.getItem("ariaMode") || "synthetic",
+  liveUnlocked: sessionStorage.getItem("ariaLiveUnlocked") === "true",
+};
 
 const els = {
   fileInput: document.querySelector("#fileInput"), dropZone: document.querySelector("#dropZone"),
@@ -160,7 +168,7 @@ function renderViewer() {
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 async function analyze() {
   if (!state.documents.length || state.processing) return;
-  if (window.ARIA_CONFIG?.mode === "live" && window.ARIA_CONFIG.liveEndpoint) {
+  if (state.mode === "live" && window.ARIA_CONFIG?.liveEndpoint) {
     return analyzeLive();
   }
   state.processing = true; renderDocuments();
@@ -349,4 +357,97 @@ if (diffTrigger && diffModal && diffClose) {
   });
 }
 
+// Mode Toggle & Password Lock Controls
+const btnSyntheticMode = document.querySelector("#btnSyntheticMode");
+const btnLiveMode = document.querySelector("#btnLiveMode");
+const envBadge = document.querySelector("#envBadge");
+const liveAuthModal = document.querySelector("#liveAuthModal");
+const authModalCloseBtn = document.querySelector("#authModalCloseBtn");
+const authCancelBtn = document.querySelector("#authCancelBtn");
+const authForm = document.querySelector("#authForm");
+const passcodeInput = document.querySelector("#passcodeInput");
+const authError = document.querySelector("#authError");
+
+function updateModeUI() {
+  const isLive = state.mode === "live";
+  if (btnSyntheticMode) {
+    btnSyntheticMode.classList.toggle("active", !isLive);
+  }
+  if (btnLiveMode) {
+    btnLiveMode.classList.toggle("active", isLive);
+    btnLiveMode.classList.toggle("live-active", isLive);
+    btnLiveMode.textContent = state.liveUnlocked ? (isLive ? "🟢 Live Azure" : "🔓 Live Azure") : "🔒 Live Azure";
+  }
+  if (envBadge) {
+    if (isLive) {
+      envBadge.textContent = "LIVE AZURE · DURABLE FUNCTIONS";
+      envBadge.className = "environment live";
+    } else {
+      envBadge.textContent = "DEMO · SYNTHETIC (LOCAL)";
+      envBadge.className = "environment synthetic";
+    }
+  }
+}
+
+if (btnSyntheticMode) {
+  btnSyntheticMode.addEventListener("click", () => {
+    state.mode = "synthetic";
+    sessionStorage.setItem("ariaMode", "synthetic");
+    updateModeUI();
+  });
+}
+
+if (btnLiveMode) {
+  btnLiveMode.addEventListener("click", () => {
+    if (state.liveUnlocked) {
+      state.mode = "live";
+      sessionStorage.setItem("ariaMode", "live");
+      updateModeUI();
+    } else {
+      if (authError) authError.hidden = true;
+      if (passcodeInput) passcodeInput.value = "";
+      if (liveAuthModal) liveAuthModal.hidden = false;
+      if (passcodeInput) setTimeout(() => passcodeInput.focus(), 100);
+    }
+  });
+}
+
+if (authForm) {
+  authForm.addEventListener("submit", e => {
+    e.preventDefault();
+    const val = (passcodeInput?.value || "").trim().toLowerCase();
+    // Default Passcode: aria2026 or aria
+    if (val === "aria2026" || val === "aria") {
+      state.liveUnlocked = true;
+      state.mode = "live";
+      sessionStorage.setItem("ariaLiveUnlocked", "true");
+      sessionStorage.setItem("ariaMode", "live");
+      if (liveAuthModal) liveAuthModal.hidden = true;
+      updateModeUI();
+    } else {
+      if (authError) authError.hidden = false;
+    }
+  });
+}
+
+if (authCancelBtn && liveAuthModal) {
+  authCancelBtn.addEventListener("click", () => {
+    liveAuthModal.hidden = true;
+  });
+}
+
+if (authModalCloseBtn && liveAuthModal) {
+  authModalCloseBtn.addEventListener("click", () => {
+    liveAuthModal.hidden = true;
+  });
+}
+
+if (liveAuthModal) {
+  liveAuthModal.addEventListener("click", e => {
+    if (e.target === liveAuthModal) liveAuthModal.hidden = true;
+  });
+}
+
+// Initial Mode UI sync
+updateModeUI();
 renderDocuments();

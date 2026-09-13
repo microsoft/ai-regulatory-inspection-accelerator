@@ -5,5 +5,5 @@ window.ARIA_CONFIG = Object.freeze({
   liveEndpoint: "https://apim-aria-infra.azure-api.net/aria-demo/live/inspections",
   telemetryEndpoint: "https://apim-aria-infra.azure-api.net/aria-demo/telemetry",
   apiKey: "",
-  mode: "live",
+  mode: "synthetic",
 });
