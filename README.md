@@ -1,8 +1,31 @@
+<div align="center">
+
 # ARIA - AI Regulatory Inspection Accelerator
+
+<strong>Evidence to decision for regulated multi-document review.</strong><br>
+Extract facts. Reconcile evidence. Apply policy. Explain the recommendation.
+
+<br>
+
+[**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**WINNING FORMULA**](#winning-formula) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**QUICK DEPLOY**](#quick-deploy) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
+
+</div>
 
 ARIA turns a related evidence bundle into a reviewable recommendation. It extracts facts, reconciles them across documents, applies deterministic policy rules, scores risk, and preserves the evidence and timing trace for a human reviewer.
 
-The reference implementation is validated with food import inspection evidence and supports English and Arabic documents, including mixed right-to-left content. Additional languages can be added through reviewed evaluation data, field aliases, normalization, and domain templates.
+The reference implementation supports English and Arabic documents, including mixed right-to-left content. Additional languages can be added through reviewed evaluation data, field aliases, normalization, and domain templates.
+
+## Solution overview
+
+ARIA treats the case, not the individual document, as the unit of review:
+
+1. **Validate** the submission and mandatory evidence.
+2. **Extract** structured facts from each document.
+3. **Reconcile** shared fields across the bundle.
+4. **Evaluate** deterministic policy rules and risk.
+5. **Deliver** an explainable recommendation for human review.
+
+The first reference implementation covers food import inspection with invoices, declarations, health certificates, certificates of origin, and Halal certificates.
 
 ## Try the demo
 
@@ -114,7 +137,11 @@ Example mandatory evidence configuration:
 }
 ```
 
-## Prerequisites
+## Quick deploy
+
+The public synthetic demo requires no Azure subscription. For an owned deployment, follow the [Deployment Guide](docs/DeploymentGuide.md) and configure the Azure reference topology with your own resources and identities.
+
+### Prerequisites
 
 * Python 3.10 or later
 * Azure subscription for live deployment
