@@ -20,15 +20,6 @@ function getRowCost(model, promptTokens, completionTokens, cachedTokens) {
   return uncachedPromptCost + cachedPromptCost + completionCost;
 }
 
-// State Management
-const state = {
-  cases: [],
-  cosmosLoaded: false,
-  currentPage: 1,
-  pageSize: 10,
-  chartMode: "daily", // "daily" | "accumulated"
-};
-
 // Generate 30 days of baseline dataset
 function generate30DayCases() {
   const list = [];
@@ -90,6 +81,15 @@ function generate30DayCases() {
 }
 
 const baselineCases = generate30DayCases();
+
+// State Management
+const state = {
+  cases: [...baselineCases],
+  cosmosLoaded: false,
+  currentPage: 1,
+  pageSize: 10,
+  chartMode: "daily", // "daily" | "accumulated"
+};
 
 // Fetch persistent telemetry from Cosmos DB
 async function fetchCosmosTelemetry() {
@@ -174,23 +174,63 @@ const $ = selector => document.querySelector(selector);
 const formatTokens = value => value >= 1e6 ? `${(value / 1e6).toFixed(2)}M` : `${Math.round(value / 1000)}K`;
 const escapeHtml = val => String(val).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
 
-function populateCaseFilter() {
+function getPeriodDateRange() {
+  const periodVal = $("#periodFilter").value;
+  let fromDate, toDate;
+  let periodLabel = "Last 7 days";
+
+  if (periodVal === "custom") {
+    fromDate = $("#fromDateFilter").value ? new Date($("#fromDateFilter").value) : new Date(0);
+    toDate = $("#toDateFilter").value ? new Date($("#toDateFilter").value) : new Date();
+    const fStr = fromDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    const tStr = toDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    periodLabel = `Custom Range (${fStr} – ${tStr})`;
+  } else if (periodVal === "1") {
+    const now = new Date();
+    toDate = new Date(now);
+    fromDate = new Date(now);
+    fromDate.setHours(0, 0, 0, 0);
+    periodLabel = "Today (Last 24h)";
+  } else if (periodVal === "30") {
+    const now = new Date();
+    toDate = new Date(now);
+    fromDate = new Date(now);
+    fromDate.setDate(now.getDate() - 30);
+    periodLabel = "Last 30 days";
+  } else {
+    const now = new Date();
+    toDate = new Date(now);
+    fromDate = new Date(now);
+    fromDate.setDate(now.getDate() - 7);
+    periodLabel = "Last 7 days";
+  }
+
+  return { fromDate, toDate, periodLabel };
+}
+
+function populateCaseFilter(casesInPeriod) {
   const caseSelect = $("#caseFilter");
   if (!caseSelect) return;
-  const currentVal = caseSelect.value;
+  const currentVal = caseSelect.value || "all";
 
-  const uniqueCases = new Set();
-  state.cases.forEach(c => {
-    uniqueCases.add(c.caseId);
+  const uniqueCasesMap = new Map();
+  casesInPeriod.forEach(c => {
+    if (c.caseId && !uniqueCasesMap.has(c.caseId)) {
+      uniqueCasesMap.set(c.caseId, c.tenant || "Food Safety");
+    }
   });
 
-  let html = `<option value="all">All Cases & Tenants</option>`;
-  Array.from(uniqueCases).slice(0, 30).forEach(cid => {
-    html += `<option value="${escapeHtml(cid)}">${escapeHtml(cid)}</option>`;
+  let html = `<option value="all">All Cases & Tenants (${casesInPeriod.length} in timeframe)</option>`;
+  uniqueCasesMap.forEach((tenant, caseId) => {
+    html += `<option value="${escapeHtml(caseId)}">${escapeHtml(caseId)} · ${escapeHtml(tenant)}</option>`;
   });
+
   caseSelect.innerHTML = html;
-  if (currentVal && Array.from(caseSelect.options).some(o => o.value === currentVal)) {
+
+  if (currentVal !== "all" && Array.from(caseSelect.options).some(o => o.value === currentVal)) {
     caseSelect.value = currentVal;
+  } else {
+    caseSelect.value = "all";
   }
 }
 
@@ -209,26 +249,18 @@ function initDateDefaults() {
 }
 
 function getFilteredCases() {
-  const periodVal = $("#periodFilter").value;
+  const { fromDate, toDate, periodLabel } = getPeriodDateRange();
+  
+  // Filter state.cases by date window
+  const casesInPeriod = state.cases.filter(c => c.date >= fromDate && c.date <= toDate);
+  
+  // Dynamically populate Case / Tenant filter for this time period
+  populateCaseFilter(casesInPeriod);
+
   const caseVal = ($("#caseFilter").value || "all").toLowerCase();
   const searchVal = ($("#caseSearch").value || "").toLowerCase();
 
-  let fromDate, toDate;
-
-  if (periodVal === "custom") {
-    fromDate = $("#fromDateFilter").value ? new Date($("#fromDateFilter").value) : new Date(0);
-    toDate = $("#toDateFilter").value ? new Date($("#toDateFilter").value) : new Date();
-  } else {
-    const days = parseInt(periodVal, 10) || 7;
-    const now = new Date();
-    toDate = new Date(now);
-    fromDate = new Date(now);
-    if (days === 1) fromDate.setHours(0, 0, 0, 0);
-    else fromDate.setDate(now.getDate() - days);
-  }
-
-  return state.cases.filter(c => {
-    if (c.date < fromDate || c.date > toDate) return false;
+  const filteredCases = casesInPeriod.filter(c => {
     if (caseVal !== "all") {
       if (c.caseId.toLowerCase() !== caseVal && !c.tenant.toLowerCase().includes(caseVal)) {
         return false;
@@ -243,10 +275,30 @@ function getFilteredCases() {
     }
     return true;
   });
+
+  return { filteredCases, casesInPeriod, periodLabel, caseVal };
 }
 
 function render() {
-  const filtered = getFilteredCases();
+  const { filteredCases: filtered, casesInPeriod, periodLabel, caseVal } = getFilteredCases();
+
+  // Dynamic Titles Update
+  const caseSelect = $("#caseFilter");
+  const selectedOptionText = caseSelect && caseSelect.selectedIndex > 0 ? caseSelect.options[caseSelect.selectedIndex].text : null;
+  const activeSelectionLabel = selectedOptionText && caseVal !== "all" ? selectedOptionText : periodLabel;
+
+  if ($("#pageSubtitle")) {
+    $("#pageSubtitle").textContent = `Persisted Cosmos DB telemetry & usage attribution for ${activeSelectionLabel}.`;
+  }
+
+  if ($("#chartTitle")) {
+    const chartPrefix = state.chartMode === "accumulated" ? "Accumulated Spend & Token Growth" : "Daily Token Usage Trend";
+    $("#chartTitle").textContent = `${chartPrefix} (${activeSelectionLabel})`;
+  }
+
+  if ($("#caseTableTitle")) {
+    $("#caseTableTitle").textContent = `Case Token Usage (${activeSelectionLabel})`;
+  }
 
   // Aggregates
   const totalPrompt = filtered.reduce((s, c) => s + c.promptTokens, 0);
@@ -258,7 +310,7 @@ function render() {
   const caseCount = filtered.length;
   const avgTokens = caseCount ? Math.round(totalTokens / caseCount) : 0;
 
-  // Unoptimized Baseline Calculation (if all tokens ran on full gpt-4.1 without caching)
+  // Unoptimized Baseline Calculation (if all tokens ran on full gpt-4o without caching)
   const baselineCostVal = (totalPrompt / 1000 * 0.0025) + (totalCompletion / 1000 * 0.0100);
   const moneySavedVal = Math.max(0, baselineCostVal - actualCostVal);
   const savingsPctVal = baselineCostVal > 0 ? ((moneySavedVal / baselineCostVal) * 100).toFixed(1) : "0.0";
@@ -282,7 +334,7 @@ function render() {
   if ($("#forecastRunrate")) $("#forecastRunrate").textContent = `Est. $${avgDailyCost.toFixed(4)}/day run-rate`;
 
   if ($("#costSaved")) $("#costSaved").textContent = `$${moneySavedVal.toFixed(4)}`;
-  if ($("#costSavingsPct")) $("#costSavingsPct").textContent = `${savingsPctVal}% saved vs GPT-4.1`;
+  if ($("#costSavingsPct")) $("#costSavingsPct").textContent = `${savingsPctVal}% saved vs GPT-4o`;
 
   if ($("#cacheRate")) $("#cacheRate").textContent = `${cacheRate}%`;
   if ($("#cachedTokens")) $("#cachedTokens").textContent = `${formatTokens(totalCached)} input tokens reused`;
@@ -656,6 +708,7 @@ $("#exportButton").addEventListener("click", () => {
 
 // Initial Setup
 initDateDefaults();
+render();
 fetchCosmosTelemetry().then(() => {
   render();
 });
