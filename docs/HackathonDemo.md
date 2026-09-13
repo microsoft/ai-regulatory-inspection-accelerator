@@ -22,10 +22,9 @@ The **AI Regulatory Inspection Accelerator (ARIA)** includes a hosted, interacti
 
 ## Core Demo Features
 
-### 1. Dual Execution Modes (Synthetic vs. Live Azure)
+### 1. Public Synthetic Mode
 * **Synthetic Mode (Default)**: Executes locally in the browser with zero token cost or Azure resource consumption. Ideal for public walkthroughs and offline testing.
-* **Live Azure Mode (`🔒 Live Azure`)**: Calls live Azure Durable Functions (`func-aria-pipeline`), Document Intelligence, Azure OpenAI (`aria-text-mini`), and Cosmos DB (`cosmos-aria-telemetry`).
-  * **Passcode Protected**: Unlocking Live mode requires entering the Admin Passcode (`aria2026`).
+* **Live Azure Mode (`🔒 Live Azure`)**: Reserved for authorized deployment maintainers. It calls the shared Azure Function, Document Intelligence, Azure OpenAI, and Cosmos DB resources and is not part of the public test path.
 
 ### 2. Cross-Industry Sample Scenarios
 Choose from 5 pre-configured multi-document inspection scenarios:
