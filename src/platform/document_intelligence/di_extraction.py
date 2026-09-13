@@ -6,7 +6,7 @@ Four-step document processing pipeline:
 
   Step 0 – Image Quality Check (LLM Vision)
   Step 1 – Azure Document Intelligence (OCR + Layout → Markdown)
-  Step 2 – LLM Metadata Extraction (GPT-5.4)
+    Step 2 – LLM Metadata Extraction (economical text deployment)
   Step 3 – LLM Field Normalization + Rule-Based Normalization
 
 Design notes:
@@ -74,7 +74,8 @@ logger = logging.getLogger(__name__)
 
 RAW_UPLOADS_CONTAINER = os.environ.get("RAW_UPLOADS_CONTAINER", "raw-uploads")
 DI_CONFIDENCE_THRESHOLD = float(os.environ.get("DI_CONFIDENCE_THRESHOLD", "0.85"))
-AZURE_OPENAI_DEPLOYMENT = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-5.4")
+AZURE_OPENAI_DEPLOYMENT = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "aria-text-mini")
+AZURE_OPENAI_VISION_DEPLOYMENT = os.environ.get("AZURE_OPENAI_VISION_DEPLOYMENT", "aria-vision")
 
 MAX_RETRIES = 3
 RETRY_DELAY_SEC = 2
@@ -271,7 +272,7 @@ def extract_metadata_llm(
     case_id: str = "unattributed",
     tenant_id: str = "unattributed",
 ) -> tuple[ExtractedMetadata, str]:
-    """Extract structured metadata using GPT-5.4.
+    """Extract structured metadata using the configured text deployment.
 
     The prompt is built via ``_build_metadata_extraction_prompt``, which
     sources document-type fields from the ``TemplateLoader``.
@@ -415,7 +416,7 @@ def _is_pdf(file_name: str) -> bool:
 
 
 async def _preprocess_for_vision(blob_data: bytes, file_name: str) -> list[bytes]:
-    """Rasterize PDF or lightly denoise images for GPT-5.4 vision.
+    """Rasterize PDF or lightly denoise images for the vision fallback.
 
     Requires ``pymupdf`` and ``opencv-python`` at runtime.  Returns empty
     list on failure; caller handles the fallback.
@@ -518,7 +519,7 @@ async def run(
                     check_image_quality,
                     openai_client, blob_data, file_name, loader,
                     threshold=loader.get_quality_threshold(doc_type),
-                    deployment=AZURE_OPENAI_DEPLOYMENT,
+                    deployment=AZURE_OPENAI_VISION_DEPLOYMENT,
                     max_retries=max_retries,
                     retry_delay_sec=retry_delay_sec,
                     case_id=request_id,
@@ -602,7 +603,7 @@ async def run(
                                 di_result.markdown_content, doc_type,
                                 allowed_fields,
                                 loader=loader,
-                                deployment=AZURE_OPENAI_DEPLOYMENT,
+                                deployment=AZURE_OPENAI_VISION_DEPLOYMENT,
                                 max_retries=max_retries,
                                 retry_delay_sec=retry_delay_sec,
                                 case_id=request_id,
@@ -617,7 +618,7 @@ async def run(
                                 openai_client, doc_input, vision_input, doc_type,
                                 allowed_fields,
                                 loader=loader,
-                                deployment=AZURE_OPENAI_DEPLOYMENT,
+                                deployment=AZURE_OPENAI_VISION_DEPLOYMENT,
                                 max_retries=max_retries,
                                 retry_delay_sec=retry_delay_sec,
                                 case_id=request_id,

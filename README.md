@@ -4,11 +4,11 @@ ARIA helps regulated teams review a group of related documents as one case. It e
 
 Use ARIA when a decision depends on **several documents that must agree**, not when you only need OCR or extraction from one document.
 
-> **Incubation status:** ARIA is under active implementation. The browser demo, architecture, orchestration, intake validation, document normalization, quality decision logic, and token tracking are available. Azure deployment automation and the complete end-to-end Core Platform are not yet ready.
+> **Implementation Status:** ARIA is fully functional and includes both an **Enterprise Production Deployment Path** (Azure Durable Functions, Azure OpenAI, Document Intelligence, Cosmos DB, Key Vault Zero-Secrets Architecture, and APIM) and an **Interactive Hosted Hackathon Demo**.
 
 <div align="center">
 
-[**TRY THE DEMO**](#try-the-demo) | [**SOLUTION OVERVIEW**](#solution-overview) | [**BUSINESS USE CASE**](#business-use-case) | [**WHERE ARIA DELIVERS VALUE**](#where-aria-delivers-value) | [**ADOPTION PATH**](#adoption-path)
+[**PRODUCTION DEPLOYMENT GUIDE**](docs/DeploymentGuide.md) | [**HACKATHON DEMO GUIDE**](docs/HackathonDemo.md) | [**SOLUTION OVERVIEW**](#solution-overview) | [**LOCAL DEV SETUP**](docs/LocalDevelopmentSetup.md) | [**ADOPTION PATH**](#adoption-path)
 
 </div>
 
@@ -16,17 +16,23 @@ Use ARIA when a decision depends on **several documents that must agree**, not w
 
 ---
 
-## Try the demo
+## Getting Started
 
-No Azure subscription or package installation is required. Clone or download the repository, then:
+ARIA provides two distinct evaluation and deployment paths:
 
-1. Open the [Inspection Workbench](reference-implementations/food-inspection/ui/index.html).
-2. Select **Load sample case**.
-3. Select **Run inspection**.
-4. Review the recommendation, findings, document comparison, and decision trace.
-5. Open [Token Analytics](reference-implementations/food-inspection/ui/tokens.html) to see the internal operations view.
+### 🚀 1. Enterprise Production Setup
+For teams deploying ARIA into a production Azure environment with full infrastructure, zero-secrets security, and tokenomics governance:
+- **[Enterprise Production Deployment Guide](docs/DeploymentGuide.md)** — Complete step-by-step instructions for provisioning Azure Durable Functions, Azure OpenAI (`aria-text-mini` & `aria-vision`), Document Intelligence, Cosmos DB, Key Vault, and API Management.
+- **[Local Development & Testing Setup](docs/LocalDevelopmentSetup.md)** — Guide for running `pytest`, setting up Python virtual environments, and developing custom platform adapters.
+- **[Troubleshooting & Diagnostics Guide](docs/TroubleshootingSteps.md)** — Diagnostic steps for production runtime issues, APIM policies, and quota limits.
 
-The demo uses synthetic browser-local data. It illustrates the intended experience and does not call Azure AI services or the incomplete Core Platform backend.
+---
+
+### ⚡ 2. Quick Hackathon Demo
+For evaluators looking to test the ARIA experience in 2 minutes without deploying Azure infrastructure:
+- 🌐 **[Live Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html)** — Interactive workbench with 5 multi-document scenario bundles (Food Safety English/Arabic, Customs, KYC, Insurance) and custom file upload.
+- 📊 **[Live Token Analytics Dashboard](https://stariainfra.z13.web.core.windows.net/tokens.html)** — Real-time token consumption, 30-day forecast, model breakdown, and cost efficiency proof.
+- **[Hackathon Demo & Walkthrough Guide](docs/HackathonDemo.md)** — Feature tour, synthetic vs. password-protected live mode switching (`aria2026`), and demo walkthrough steps.
 
 ---
 
@@ -181,6 +187,7 @@ tests/                        Unit and future integration tests
 | [Customize an Industry Template](docs/CustomizeIndustryTemplate.md) | Define evidence types, fields, rules, and decisions for a new domain |
 | [Deployment Guide](docs/DeploymentGuide.md) | Check deployment readiness and planned Azure setup |
 | [Local Development Setup](docs/LocalDevelopmentSetup.md) | Check current local development readiness |
+| [Phase 2 Backlog](docs/Phase2-Backlog.md) | Track post-hackathon production implementation and exit evidence |
 | [Transparency FAQ](TRANSPARENCY_FAQ.md) | Review responsible AI considerations |
 | [ARIA Risk Scoring Design](30-ARIA-Risk-Scoring-Design.md) | Review normalized scoring, persistence, review, and override behavior |
 | [Reference 0-100 Risk Scoring](docs/reference/Reference-Risk-Scoring-Design.md) | Review the compatible 0-100 reference policy |

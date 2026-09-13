@@ -148,6 +148,13 @@ ipch/
 *.sap
 
 # Visual Studio Trace Files
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform-plan.log
 *.e2e
 
 # TFS 2012 Local Workspace

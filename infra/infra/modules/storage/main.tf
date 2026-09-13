@@ -29,6 +29,11 @@ resource "azurerm_storage_account" "main" {
   https_traffic_only_enabled        = true
   infrastructure_encryption_enabled = true
 
+  static_website {
+    index_document     = "index.html"
+    error_404_document = "index.html"
+  }
+
   blob_properties {
     versioning_enabled       = true
     change_feed_enabled      = true

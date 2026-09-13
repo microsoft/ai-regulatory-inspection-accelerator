@@ -4,7 +4,10 @@ import re
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 
-import tiktoken
+try:
+    import tiktoken
+except ModuleNotFoundError:  # pragma: no cover - exercised only in minimal deployments
+    tiktoken = None
 
 _PAGE_BREAK = "<!-- PageBreak -->"
 _SELECTION_MARKS_RE = re.compile(r":(?:un)?selected:", re.IGNORECASE)
@@ -46,12 +49,19 @@ class NormalizationReport:
 
 @lru_cache(maxsize=1)
 def _tokenizer():
+    if tiktoken is None:
+        return None
     return tiktoken.get_encoding("o200k_base")
 
 
 def count_tokens(content: str) -> int:
     """Count tokens with the tokenizer used by current Azure OpenAI models."""
-    return len(_tokenizer().encode(content)) if content else 0
+    if not content:
+        return 0
+    tokenizer = _tokenizer()
+    if tokenizer is not None:
+        return len(tokenizer.encode(content))
+    return max(1, len(content.split()))
 
 
 def _remove_repeated_page_lines(

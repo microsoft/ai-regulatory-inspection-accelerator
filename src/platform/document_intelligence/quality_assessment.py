@@ -164,7 +164,7 @@ def check_image_quality(
     loader: TemplateLoader,
     *,
     threshold: float = DEFAULT_QUALITY_SCORE_THRESHOLD,
-    deployment: str = "gpt-4.1",
+    deployment: str = "aria-vision",
     max_retries: int = 3,
     retry_delay_sec: int = 2,
     case_id: str = "unattributed",

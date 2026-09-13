@@ -47,7 +47,7 @@ variable "storage_account_name" {
 variable "cors_allowed_origins" {
   description = "Allowed origins for CORS on the storage account + APIM APIs (e.g. the chat UI web app URL). Empty disables CORS."
   type        = list(string)
-  default     = []
+  default     = ["https://stariainfra.z13.web.core.windows.net"]
 }
 
 # ============================================================================
@@ -101,10 +101,22 @@ variable "openai_name" {
   default     = "oai-aria-infra"
 }
 
+variable "key_vault_name" {
+  description = "Name of the Key Vault holding runtime secrets"
+  type        = string
+  default     = "kv-aria-infra"
+}
+
 variable "azure_openai_deployment" {
   description = "Name of the Azure OpenAI chat model deployment (deploy the model separately - not managed by this stack, matching the reference project)"
   type        = string
-  default     = "gpt-4o"
+  default     = "aria-text-mini"
+}
+
+variable "azure_openai_vision_deployment" {
+  description = "Name of the low-volume Azure OpenAI vision fallback deployment"
+  type        = string
+  default     = "aria-vision"
 }
 
 variable "azure_openai_embedding_deployment" {

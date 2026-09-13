@@ -121,10 +121,22 @@ variable "azure_openai_key" {
   sensitive   = true
 }
 
+variable "azure_openai_key_vault_secret_uri" {
+  description = "Versionless Key Vault secret URI for the Azure OpenAI API key"
+  type        = string
+  default     = ""
+}
+
 variable "azure_openai_deployment" {
   description = "Name of the Azure OpenAI chat model deployment"
   type        = string
-  default     = "gpt-4o"
+  default     = "aria-text-mini"
+}
+
+variable "azure_openai_vision_deployment" {
+  description = "Name of the low-volume Azure OpenAI vision fallback deployment"
+  type        = string
+  default     = "aria-vision"
 }
 
 variable "azure_openai_embedding_deployment" {

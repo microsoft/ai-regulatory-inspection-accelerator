@@ -13,6 +13,11 @@ output "primary_blob_endpoint" {
   value       = azurerm_storage_account.main.primary_blob_endpoint
 }
 
+output "primary_web_endpoint" {
+  description = "Static website endpoint for the hackathon demo"
+  value       = azurerm_storage_account.main.primary_web_endpoint
+}
+
 output "primary_access_key" {
   description = "Primary access key for the storage account"
   value       = azurerm_storage_account.main.primary_access_key
