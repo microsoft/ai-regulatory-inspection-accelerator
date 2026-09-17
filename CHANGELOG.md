@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Responsible AI confidence guardrail for expected-value policy rules: values below the
+  template-configured extraction threshold now emit `LOW_CONFIDENCE_EVIDENCE` and route
+  the case to `HOLD` for human review instead of producing a deterministic PASS/FAIL result
 - Initial README, folder structure, and documentation scaffolding
 - Food Safety Inspection template
 - Customs, KYC/AML, Insurance Claims, Healthcare Prior Auth template placeholders

@@ -18,9 +18,17 @@ Using the included evaluation framework, which measures field-level extraction a
 
 ## What are the limitations?
 
-- AI extraction accuracy is not 100%. Low-confidence fields are flagged and excluded from deterministic evaluation.
+- AI extraction accuracy is not 100%. Expected-value policy rules exclude fields below the active template's extraction-confidence threshold from deterministic PASS/FAIL evaluation. Confidence gating for other rule categories remains under implementation.
 - The system produces AI-assisted recommendations, not autonomous legal decisions. Human review is a first-class capability.
 - Accuracy varies by document quality, language, and domain.
+
+## How are low-confidence expected values handled?
+
+Expected-value rules use the extraction-confidence threshold from the active template's risk configuration (default: 0.85). A value at or above the threshold is eligible for deterministic comparison.
+
+When a required value is present but below the threshold, the policy engine emits a `LOW_CONFIDENCE_EVIDENCE` warning instead of treating the value as a deterministic match, mismatch, or missing value. The extraction-risk assessment then routes the case to `HOLD` for human review. A genuinely absent value continues to use the template's configured missing-evidence rule.
+
+This guardrail applies to both top-level document fields and line-item fields used by expected-value rules. If confident evidence satisfies the rule, an additional uncertain value does not override that result.
 
 ## How should the system be used responsibly?
 
