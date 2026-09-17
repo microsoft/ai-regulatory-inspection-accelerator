@@ -29,6 +29,12 @@ The first reference implementation covers food import inspection with invoices, 
 
 ## Try the demo
 
+
+
+https://github.com/user-attachments/assets/0335c898-4e95-4909-be80-633d0e3eedba
+
+
+
 * [Open the live Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html)
 * [Open Token Analytics](https://stariainfra.z13.web.core.windows.net/tokens.html)
 * [Read the demo walkthrough](docs/HackathonDemo.md)
