@@ -110,3 +110,35 @@ def test_low_quality_does_not_suppress_adverse_rule_recommendation():
     assert result["riskEvaluation"]["scoreBreakdown"]["caseRuleSeverity"] == 1.0
     assert result["recommendation"] == "FAIL"
     assert result["recommendationStatus"] == "ELIGIBLE"
+
+
+def test_low_confidence_expected_value_routes_case_to_review():
+    result = asyncio.run(
+        run(
+            {"requestId": "GENERIC-CASE-6", "items": [], "documents": []},
+            {
+                "permit-1": {
+                    "documentType": "Permit",
+                    "fields": {
+                        "authority_id": {"value": "WRONG", "confidence": 0.91},
+                    },
+                    "lineItems": [],
+                    "lowConfidenceFields": ["authority_id"],
+                }
+            },
+            [{
+                "id": "AUTHORITY_RULES",
+                "category": "ExpectedValue",
+                "expectedValue": "EXPECTED",
+                "documentType": "Permit",
+                "fieldName": "authority_id",
+            }],
+            risk_config={
+                "extraction": {"threshold": 0.92, "impact": 0.45},
+            },
+        )
+    )
+
+    assert result["recommendation"] == "HOLD"
+    assert result["findings"][0]["ruleCode"] == "LOW_CONFIDENCE_EVIDENCE"
+    assert result["findings"][0]["result"] == "WARN"

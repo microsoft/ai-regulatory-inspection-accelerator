@@ -107,6 +107,7 @@ class EvaluationContext:
     rules_list: list
     allowed_fields_by_doc: dict | None = None
     reasoning: dict | None = None
+    extraction_confidence_threshold: float = 0.85
 
 
 def _eval_expected_value(rules: list[dict], ctx: EvaluationContext) -> list[dict]:
@@ -120,6 +121,7 @@ def _eval_expected_value(rules: list[dict], ctx: EvaluationContext) -> list[dict
         field_name=rule["fieldName"],
         missing_rule_code=rule.get("missingRuleCode", "EXPECTED_VALUE_MISSING"),
         mismatch_rule_code=rule.get("mismatchRuleCode", "EXPECTED_VALUE_MISMATCH"),
+        confidence_threshold=ctx.extraction_confidence_threshold,
     )
 
 
@@ -199,6 +201,7 @@ async def run_rules(
     allowed_fields_by_doc: dict | None = None,
     reasoning: dict | None = None,
     evaluation_order: tuple[str, ...] | None = None,
+    extraction_confidence_threshold: float = 0.85,
 ) -> list:
     """Dispatch rules to evaluators by category and return a flat findings list.
 
@@ -220,6 +223,7 @@ async def run_rules(
         rules_list=rules_list,
         allowed_fields_by_doc=allowed_fields_by_doc,
         reasoning=reasoning,
+        extraction_confidence_threshold=extraction_confidence_threshold,
     )
 
     findings: list = []

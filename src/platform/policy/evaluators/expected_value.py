@@ -27,6 +27,7 @@ def validate_expected_value(
     field_name: str,
     missing_rule_code: str = "EXPECTED_VALUE_MISSING",
     mismatch_rule_code: str = "EXPECTED_VALUE_MISMATCH",
+    confidence_threshold: float = 0.85,
 ) -> list[dict]:
     """Check that a configured document contains the expected value.
 
@@ -37,6 +38,7 @@ def validate_expected_value(
         field_name: Field holding one or more values.
         missing_rule_code: Finding code when no value is present.
         mismatch_rule_code: Finding code when the expected value is absent.
+        confidence_threshold: Minimum extraction confidence for deterministic use.
     """
     source_doc = next(
         (d for d in submission if d.get("document") == document_type),
@@ -49,21 +51,33 @@ def validate_expected_value(
 
     fields: dict = source_doc.get("fields", {})
     line_items: list = source_doc.get("lineItems", [])
+    low_confidence_fields = set(source_doc.get("lowConfidenceFields", []))
 
     all_values = []
-    for item in line_items:
+    uncertain_values = []
+    for item_index, item in enumerate(line_items):
         raw = None
+        confidence = None
         if isinstance(item, dict):
             source_field = item.get(field_name)
             if isinstance(source_field, dict):
                 raw = source_field.get("value") or ""
+                confidence = source_field.get("confidence")
             elif source_field is not None:
                 raw = str(source_field)
         if raw and raw.strip():
-            all_values.extend(_parse_values(raw.strip()))
+            parsed = _parse_values(raw.strip())
+            field_path = f"lineItems[{item_index}].{field_name}"
+            if field_path in low_confidence_fields or (
+                confidence is not None and float(confidence) < confidence_threshold
+            ):
+                uncertain_values.extend(parsed)
+            else:
+                all_values.extend(parsed)
 
     if not all_values:
         source_field = fields.get(field_name, {})
+        confidence = source_field.get("confidence") if isinstance(source_field, dict) else None
         raw_value = (
             (source_field.get("value") or "")
             if isinstance(source_field, dict)
@@ -71,7 +85,30 @@ def validate_expected_value(
         )
         raw_value = raw_value.strip()
         if raw_value:
-            all_values = _parse_values(raw_value)
+            parsed = _parse_values(raw_value)
+            if field_name in low_confidence_fields or (
+                confidence is not None and float(confidence) < confidence_threshold
+            ):
+                uncertain_values.extend(parsed)
+            else:
+                all_values = parsed
+
+    if expected_value in all_values:
+        logger.debug("Expected value %s found — check passed", expected_value)
+        return []
+
+    if uncertain_values:
+        return [{
+            "ruleCode": "LOW_CONFIDENCE_EVIDENCE",
+            "result": "WARN",
+            "documentType": document_type,
+            "field": field_name,
+            "message": (
+                f"{field_name.replace('_', ' ').title()} in {document_type} is below "
+                "the extraction confidence threshold. Manual review is required."
+            ),
+            "evidence": {"values": uncertain_values},
+        }]
 
     if not all_values:
         return [
@@ -87,10 +124,6 @@ def validate_expected_value(
         ]
 
     logger.debug("Values extracted from %s: %s", document_type, all_values)
-
-    if expected_value in all_values:
-        logger.debug("Expected value %s found — check passed", expected_value)
-        return []
 
     return [
         {

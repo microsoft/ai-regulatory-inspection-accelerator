@@ -11,14 +11,19 @@ EXPECTED_VALUE_CONFIG = {
 }
 
 
-def _submission(agency_codes_in_line_items=None, top_level_value=None, doc_type="Declaration_Document"):
+def _submission(
+    agency_codes_in_line_items=None,
+    top_level_value=None,
+    doc_type="Declaration_Document",
+    confidence=0.9,
+):
     line_items = []
     if agency_codes_in_line_items:
         for code in agency_codes_in_line_items:
-            line_items.append({"agency_code": {"value": code, "confidence": 0.9}})
+            line_items.append({"agency_code": {"value": code, "confidence": confidence}})
     fields = {}
     if top_level_value is not None:
-        fields["agency_code"] = {"value": top_level_value, "confidence": 0.9}
+        fields["agency_code"] = {"value": top_level_value, "confidence": confidence}
     return [{"document": doc_type, "documentTypeId": "20", "fields": fields, "lineItems": line_items}]
 
 
@@ -36,6 +41,32 @@ class TestValidateExpectedValue:
         assert len(result) == 1
         assert result[0]["ruleCode"] == "AGENCY_CODE_MISMATCH"
         assert result[0]["result"] == "FAIL"
+
+    def test_low_confidence_mismatch_requires_review(self):
+        result = validate_expected_value(
+            _submission(agency_codes_in_line_items=["5"], confidence=0.84),
+            **EXPECTED_VALUE_CONFIG,
+        )
+
+        assert result[0]["ruleCode"] == "LOW_CONFIDENCE_EVIDENCE"
+        assert result[0]["result"] == "WARN"
+
+    def test_value_at_confidence_threshold_is_deterministic(self):
+        result = validate_expected_value(
+            _submission(agency_codes_in_line_items=["5"], confidence=0.85),
+            **EXPECTED_VALUE_CONFIG,
+        )
+
+        assert result[0]["ruleCode"] == "AGENCY_CODE_MISMATCH"
+        assert result[0]["result"] == "FAIL"
+
+    def test_confident_match_wins_when_another_value_is_uncertain(self):
+        submission = _submission(agency_codes_in_line_items=["2"])
+        submission[0]["lineItems"].append(
+            {"agency_code": {"value": "5", "confidence": 0.2}}
+        )
+
+        assert validate_expected_value(submission, **EXPECTED_VALUE_CONFIG) == []
 
     def test_fails_when_no_agency_code_at_all(self):
         result = validate_expected_value(_submission(), **EXPECTED_VALUE_CONFIG)

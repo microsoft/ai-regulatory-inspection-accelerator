@@ -83,6 +83,9 @@ async def run(
             rules_list, payload, submission,
             allowed_fields_by_doc=allowed_fields_by_doc,
             reasoning=reasoning,
+            extraction_confidence_threshold=float(
+                (risk_config or {}).get("extraction", {}).get("threshold", 0.85)
+            ),
         )
     except Exception as exc:  # noqa: BLE001 - convert executor failure to a HOLD verdict
         logger.error("run_rules failed unexpectedly | %s", exc)

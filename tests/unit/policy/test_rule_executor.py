@@ -114,6 +114,29 @@ class TestRunRules:
         assert captured["document_type"] == "Permit"
         assert captured["field_name"] == "authority_id"
 
+    def test_extraction_confidence_threshold_is_forwarded(self):
+        captured = {}
+
+        def capturing_validator(submission, expected_value, **config):
+            captured.update(config)
+            return []
+
+        async def _run_with_threshold():
+            return await run_rules(
+                rules_list=[self.AGENCY_RULE],
+                payload={"requestId": "R1", "items": []},
+                submission=[],
+                extraction_confidence_threshold=0.92,
+            )
+
+        with patch(
+            "src.platform.policy.rule_executor.validate_expected_value",
+            side_effect=capturing_validator,
+        ):
+            asyncio.run(_run_with_threshold())
+
+        assert captured["confidence_threshold"] == 0.92
+
     def test_allowed_fields_forwarded_to_min_fields(self):
         """allowed_fields_by_doc parameter is passed through to validate_min_fields."""
         captured = {}
