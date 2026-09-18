@@ -1,111 +1,133 @@
-// Model Pricing Rates ($ per 1K tokens)
-const rates = {
-  "aria-text-mini": { name: "aria-text-mini (gpt-4.1-nano)", input: 0.00015, output: 0.0006 },
-  "aria-vision": { name: "aria-vision (gpt-4o)", input: 0.0025, output: 0.0100 },
-  "gpt-4.1-mini": { name: "gpt-4.1-mini", input: 0.00015, output: 0.0006 },
-  "gpt-4.1": { name: "gpt-4.1", input: 0.0025, output: 0.0100 },
+// Azure OpenAI Global Standard list prices in USD per 1M tokens.
+// Verified against the Azure pricing page on 2026-09-17. These estimates are
+// not a substitute for the customer's negotiated price or Azure invoice.
+const modelCatalog = {
+  "gpt-4.1-nano": {
+    displayName: "GPT-4.1 nano",
+    version: "2025-04-14",
+    input: 0.10,
+    cachedInput: 0.025,
+    output: 0.40,
+  },
+  "gpt-4o": {
+    displayName: "GPT-4o",
+    version: "2024-11-20",
+    input: 2.50,
+    cachedInput: 1.25,
+    output: 10.00,
+  },
 };
 
-function getRate(model) {
-  return rates[model] || rates["aria-text-mini"];
+function resolveModel(model) {
+  const value = String(model || "").toLowerCase();
+  if (value === "aria-text-mini" || value.includes("gpt-4.1-nano")) return modelCatalog["gpt-4.1-nano"];
+  if (value === "aria-vision" || value.includes("gpt-4o")) return modelCatalog["gpt-4o"];
+  return null;
 }
 
-function getRowCost(model, promptTokens, completionTokens, cachedTokens) {
-  const r = getRate(model);
+function getModelLabel(model) {
+  const resolved = resolveModel(model);
+  return resolved ? `${resolved.displayName} (${resolved.version})` : String(model || "Unknown model");
+}
+
+function getRowCost(model, promptTokens, completionTokens, cachedTokens = 0) {
+  const r = resolveModel(model);
+  if (!r) return null;
   const uncachedPrompt = Math.max(0, promptTokens - cachedTokens);
-  // Cached input tokens receive a 50% discount
-  const cachedPromptCost = (cachedTokens / 1000) * (r.input * 0.5);
-  const uncachedPromptCost = (uncachedPrompt / 1000) * r.input;
-  const completionCost = (completionTokens / 1000) * r.output;
+  const cachedPromptCost = (cachedTokens / 1_000_000) * r.cachedInput;
+  const uncachedPromptCost = (uncachedPrompt / 1_000_000) * r.input;
+  const completionCost = (completionTokens / 1_000_000) * r.output;
   return uncachedPromptCost + cachedPromptCost + completionCost;
 }
 
-// Generate 30 days of baseline dataset
-function generate30DayCases() {
-  const list = [];
-  const now = new Date();
-  const activitiesList = [
-    "Document Intelligence Extraction",
+function generateSyntheticCases() {
+  const annualReviewVolume = 122_433;
+  const cohortCount = 365;
+  const activities = [
+    "Document extraction",
     "Cross-document reasoning",
-    "Field gap filling",
-    "Quality assessment",
+    "Field validation",
     "Decision summary",
-    "Semantic normalization",
   ];
-  const tenantsList = [
-    "Food Safety · English",
-    "سلامة الغذاء · العربية",
-    "Customs clearance",
-    "KYC onboarding",
-    "Insurance claim",
-  ];
-  const modelsList = ["aria-text-mini", "aria-text-mini", "aria-text-mini", "aria-vision", "gpt-4.1-mini"];
+  const scenarios = ["Food safety", "Customs clearance", "Healthcare authorization", "Insurance claims"];
+  const records = [];
+  const now = new Date();
 
-  let caseCounter = 1900;
-  for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - dayOffset);
-    d.setHours(12, 0, 0, 0);
+  for (let index = 0; index < cohortCount; index++) {
+    const projectedCases = Math.floor(annualReviewVolume / cohortCount) + (index < annualReviewVolume % cohortCount ? 1 : 0);
+    const promptTokensPerCase = 6500 + ((index * 977) % 9000);
+    const completionTokensPerCase = 700 + ((index * 211) % 1800);
+    const projectedCacheRate = 0.94 + ((index % 5) * 0.01);
+    const cachedTokensPerCase = Math.round(promptTokensPerCase * projectedCacheRate);
+    const promptTokens = promptTokensPerCase * projectedCases;
+    const completionTokens = completionTokensPerCase * projectedCases;
+    const cachedTokens = cachedTokensPerCase * projectedCases;
+    const date = new Date(now);
+    date.setDate(now.getDate() - index);
+    const modelKey = "gpt-4.1-nano";
 
-    const dailyCount = 4 + (dayOffset % 4);
-    for (let c = 0; c < dailyCount; c++) {
-      caseCounter--;
-      const tenant = tenantsList[(c + dayOffset) % tenantsList.length];
-      const activity = activitiesList[(c * 2 + dayOffset) % activitiesList.length];
-      const model = modelsList[(c + dayOffset) % modelsList.length];
-
-      const promptTokens = 3000 + ((c * 1700 + dayOffset * 850) % 18000);
-      const completionTokens = 300 + ((c * 240 + dayOffset * 120) % 2800);
-      const cachedTokens = Math.round(promptTokens * (0.3 + ((c % 4) * 0.12)));
-      const latencyMs = 400 + ((promptTokens + completionTokens) / 12);
-      const cost = getRowCost(model, promptTokens, completionTokens, cachedTokens);
-
-      list.push({
-        id: `CASE-${caseCounter}`,
-        caseId: `CASE-${caseCounter}`,
-        tenant,
-        activity,
-        model,
-        promptTokens,
-        completionTokens,
-        cachedTokens,
-        totalTokens: promptTokens + completionTokens,
-        cost,
-        latencyMs: Math.round(latencyMs),
-        date: d,
-        isLive: false,
-      });
-    }
+    records.push({
+      id: `PROJECTION-${index + 1}`,
+      caseId: `COHORT-${String(index + 1).padStart(3, "0")}`,
+      tenant: `${scenarios[index % scenarios.length]} · Projected`,
+      activity: activities[index % activities.length],
+      model: getModelLabel(modelKey),
+      modelKey,
+      promptTokens,
+      completionTokens,
+      cachedTokens,
+      totalTokens: promptTokens + completionTokens,
+      cost: getRowCost(modelKey, promptTokens, completionTokens, cachedTokens),
+      latencyMs: 650 + ((index * 173) % 1700),
+      projectedCases,
+      date,
+      isLive: false,
+      cacheMeasured: false,
+      cacheProvenance: "projected",
+      dataSource: "synthetic",
+    });
   }
-  return list;
+
+  return records.sort((left, right) => right.date - left.date);
 }
 
-const baselineCases = generate30DayCases();
+const syntheticCases = generateSyntheticCases();
 
 // State Management
 const state = {
-  cases: [...baselineCases],
+  cases: syntheticCases,
+  liveCases: [],
   cosmosLoaded: false,
+  telemetryError: null,
+  mode: sessionStorage.getItem("ariaMode") === "live" ? "live" : "synthetic",
   currentPage: 1,
   pageSize: 10,
   chartMode: "daily", // "daily" | "accumulated"
 };
 
+if (state.mode === "live") state.cases = [];
+
 // Fetch persistent telemetry from Cosmos DB
 async function fetchCosmosTelemetry() {
   const cosmosRecords = [];
   const endpoint = window.ARIA_CONFIG?.telemetryEndpoint;
-  if (endpoint) {
+  if (!endpoint) {
+    state.telemetryError = "Telemetry endpoint is not configured";
+  } else {
     try {
       const res = await fetch(endpoint, { method: "GET" });
-      if (res.ok) {
-        const data = await res.json();
-        const items = data.items || [];
-        items.forEach(item => {
-          const model = item.model || "aria-text-mini";
+      if (!res.ok) throw new Error(`Telemetry request failed with HTTP ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data.items)) throw new Error("Telemetry response has an invalid format");
+      const items = data.items;
+      items.forEach(item => {
+          const model = item.model || "Unknown model";
           const p = item.promptTokens || 0;
           const c = item.completionTokens || 0;
-          const cached = item.cachedTokens || Math.round(p * 0.25);
+          const cacheMeasurement = item.cacheMeasurement || "unavailable";
+          const cacheMeasured = cacheMeasurement === "provider";
+          const reportedCachedTokens = item.cachedTokens || 0;
+          const cached = cacheMeasured ? reportedCachedTokens : 0;
           const d = item.timestamp ? new Date(item.timestamp) : (item._ts ? new Date(item._ts * 1000) : new Date());
 
           cosmosRecords.push({
@@ -113,66 +135,62 @@ async function fetchCosmosTelemetry() {
             caseId: item.caseId || "LIVE-DEMO",
             tenant: item.tenant || "Food Safety · Live Azure",
             activity: item.activity || "Document Intelligence Extraction",
-            model,
+            model: getModelLabel(model),
+            modelKey: model,
             promptTokens: p,
             completionTokens: c,
             cachedTokens: cached,
+            reportedCachedTokens,
+            cacheMeasurement,
             totalTokens: p + c,
             cost: getRowCost(model, p, c, cached),
-            latencyMs: item.latencyMs || 1220,
+            latencyMs: item.latencyMs || null,
             date: d,
             isLive: true,
+            cacheMeasured,
+            cacheProvenance: cacheMeasurement,
           });
-        });
-        state.cosmosLoaded = true;
-      }
+      });
+      state.cosmosLoaded = true;
+      state.telemetryError = null;
     } catch (e) {
-      console.warn("Cosmos DB telemetry fetch fallback:", e);
+      state.telemetryError = e instanceof Error ? e.message : "Telemetry request failed";
+      console.warn("Cosmos DB telemetry fetch failed:", e);
     }
   }
 
-  // Merge Local Storage Events if any
-  const localEvents = JSON.parse(localStorage.getItem("ariaTokenEvents") || "[]");
-  const localRecords = localEvents.map((event, index) => {
-    const model = event.model || "aria-text-mini";
-    const p = event.promptTokens || 0;
-    const c = event.completionTokens || 0;
-    const cached = event.cachedTokens || Math.round(p * 0.25);
-    const d = event.timestamp ? new Date(event.timestamp) : new Date();
-
-    return {
-      id: event.caseId ? `${event.caseId}-${index}` : `LOCAL-${index + 1}`,
-      caseId: event.caseId || `LIVE-${index + 1}`,
-      tenant: event.tenant || "Food Safety · Live Azure",
-      activity: event.activity || "Document Intelligence Extraction",
-      model,
-      promptTokens: p,
-      completionTokens: c,
-      cachedTokens: cached,
-      totalTokens: p + c,
-      cost: getRowCost(model, p, c, cached),
-      latencyMs: event.latencyMs || 1200,
-      date: d,
-      isLive: true,
-    };
-  });
-
-  // Combine All Records (Cosmos + Local + Baseline)
-  const combined = [...cosmosRecords, ...localRecords, ...baselineCases];
-
   // Deduplicate by ID
   const map = new Map();
-  combined.forEach(item => {
+  cosmosRecords.forEach(item => {
     if (!map.has(item.id)) map.set(item.id, item);
   });
 
-  state.cases = Array.from(map.values()).sort((a, b) => b.date - a.date);
-  populateCaseFilter();
+  state.liveCases = Array.from(map.values()).sort((a, b) => b.date - a.date);
+  if (state.mode === "live") {
+    state.cases = state.liveCases;
+  }
+  populateCaseFilter(state.cases);
 }
 
 const $ = selector => document.querySelector(selector);
-const formatTokens = value => value >= 1e6 ? `${(value / 1e6).toFixed(2)}M` : `${Math.round(value / 1000)}K`;
+const formatTokens = value => {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return Math.round(value).toLocaleString();
+};
+const formatUsd = value => `$${value.toFixed(value >= 1 ? 2 : value < 0.01 ? 6 : 4)}`;
+const formatCachedTokens = row => {
+  if (row.cacheProvenance === "projected") return `${row.cachedTokens.toLocaleString()} projected`;
+  if (row.cacheMeasured) return row.cachedTokens.toLocaleString();
+  return `${(row.reportedCachedTokens || 0).toLocaleString()} ${row.cacheProvenance || "unavailable"}`;
+};
 const escapeHtml = val => String(val).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
+const csvCell = value => {
+  let text = String(value ?? "");
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+};
 
 function getPeriodDateRange() {
   const periodVal = $("#periodFilter").value;
@@ -195,13 +213,22 @@ function getPeriodDateRange() {
     const now = new Date();
     toDate = new Date(now);
     fromDate = new Date(now);
-    fromDate.setDate(now.getDate() - 30);
+    fromDate.setDate(now.getDate() - 29);
+    fromDate.setHours(0, 0, 0, 0);
     periodLabel = "Last 30 days";
+  } else if (periodVal === "365") {
+    const now = new Date();
+    toDate = new Date(now);
+    fromDate = new Date(now);
+    fromDate.setDate(now.getDate() - 364);
+    fromDate.setHours(0, 0, 0, 0);
+    periodLabel = "Full annual projection";
   } else {
     const now = new Date();
     toDate = new Date(now);
     fromDate = new Date(now);
-    fromDate.setDate(now.getDate() - 7);
+    fromDate.setDate(now.getDate() - 6);
+    fromDate.setHours(0, 0, 0, 0);
     periodLabel = "Last 7 days";
   }
 
@@ -226,11 +253,17 @@ function populateCaseFilter(casesInPeriod) {
     }
   });
 
-  let html = `<option value="all">All Cases & Tenants (${casesInPeriod.length} in timeframe)</option>`;
+  const projectedVolume = casesInPeriod.reduce((sum, item) => sum + (item.projectedCases || 0), 0);
+  const allLabel = state.mode === "live"
+    ? `All Cases & Tenants (${casesInPeriod.length} in timeframe)`
+    : `All Projection Cohorts (${projectedVolume.toLocaleString()} reviews)`;
+  let html = `<option value="all">${allLabel}</option>`;
   Array.from(uniqueCasesMap.entries())
     .sort(([, left], [, right]) => right.latestDate - left.latestDate)
     .forEach(([caseId, details]) => {
-      html += `<option value="${escapeHtml(caseId)}">${escapeHtml(caseId)} · ${escapeHtml(details.tenant)}</option>`;
+      const record = casesInPeriod.find(item => item.caseId === caseId);
+      const volume = state.mode === "live" ? "" : ` · ${(record?.projectedCases || 0).toLocaleString()} reviews`;
+      html += `<option value="${escapeHtml(caseId)}">${escapeHtml(caseId)} · ${escapeHtml(details.tenant)}${volume}</option>`;
     });
 
   caseSelect.innerHTML = html;
@@ -284,11 +317,12 @@ function getFilteredCases() {
     return true;
   });
 
-  return { filteredCases, casesInPeriod, periodLabel, caseVal };
+  return { filteredCases, casesInPeriod, periodLabel, caseVal, fromDate, toDate };
 }
 
 function render() {
-  const { filteredCases: filtered, casesInPeriod, periodLabel, caseVal } = getFilteredCases();
+  const { filteredCases: filtered, casesInPeriod, periodLabel, caseVal, fromDate, toDate } = getFilteredCases();
+  const isAnnualProjection = state.mode === "synthetic" && $("#periodFilter").value === "365";
 
   // Dynamic Titles Update
   const caseSelect = $("#caseFilter");
@@ -296,96 +330,146 @@ function render() {
   const activeSelectionLabel = selectedOptionText && caseVal !== "all" ? selectedOptionText : periodLabel;
 
   if ($("#pageSubtitle")) {
-    $("#pageSubtitle").textContent = `Persisted Cosmos DB telemetry & usage attribution for ${activeSelectionLabel}.`;
+    const source = state.mode === "live" ? "Measured Cosmos DB telemetry" : "Projected workload from synthetic document-evaluation profiles";
+    $("#pageSubtitle").textContent = state.mode === "live" && state.telemetryError
+      ? `Live telemetry unavailable: ${state.telemetryError}.`
+      : `${source} and usage attribution for ${activeSelectionLabel}.`;
   }
 
   if ($("#chartTitle")) {
-    const chartPrefix = state.chartMode === "accumulated" ? "Accumulated Spend & Token Growth" : "Daily Token Usage Trend";
+    const chartPrefix = state.chartMode === "accumulated" ? "Accumulated Token Growth" : "Daily Token Usage Trend";
     $("#chartTitle").textContent = `${chartPrefix} (${activeSelectionLabel})`;
   }
 
   if ($("#caseTableTitle")) {
-    $("#caseTableTitle").textContent = `Case Token Usage (${activeSelectionLabel})`;
+    const callType = state.mode === "live" ? "Provider Call Usage" : "Projected Evaluation Cohorts";
+    $("#caseTableTitle").textContent = `${callType} (${activeSelectionLabel})`;
+  }
+
+  if (state.mode === "synthetic") {
+    $("#costKpiLabel").textContent = isAnnualProjection ? "Projected Annual Model Cost" : "Projected Period Model Cost";
+    $("#bannerTitle").textContent = isAnnualProjection
+      ? "What could the annual evaluation workload cost?"
+      : "What could the selected evaluation workload cost?";
+    $("#bannerDescription").innerHTML = isAnnualProjection
+      ? `This projection distributes <strong>122,433 annual reviews</strong> across 365 daily cohorts using verified GPT-4.1 nano list rates and a 94–98% reusable-input target. Projected same-model savings: <strong id="bannerSavingsPct">0%</strong>.`
+      : `This view selects the proportional review volume from a <strong>122,433-review annual projection</strong>. It uses verified GPT-4.1 nano list rates and a 94–98% reusable-input target. Projected same-model savings: <strong id="bannerSavingsPct">0%</strong>.`;
   }
 
   // Aggregates
   const totalPrompt = filtered.reduce((s, c) => s + c.promptTokens, 0);
   const totalCompletion = filtered.reduce((s, c) => s + c.completionTokens, 0);
-  const totalCached = filtered.reduce((s, c) => s + c.cachedTokens, 0);
   const totalTokens = totalPrompt + totalCompletion;
-  const actualCostVal = filtered.reduce((s, c) => s + c.cost, 0);
-  const cacheRate = Math.round(totalCached / Math.max(1, totalPrompt) * 100);
-  const caseCount = filtered.length;
+  const actualCostVal = filtered.reduce((s, c) => s + (c.cost ?? 0), 0);
+  const pricedRecords = filtered.filter(c => c.cost !== null).length;
+  const cacheRecords = state.mode === "live" ? filtered.filter(c => c.cacheMeasured) : filtered;
+  const measuredPrompt = cacheRecords.reduce((s, c) => s + c.promptTokens, 0);
+  const measuredCached = cacheRecords.reduce((s, c) => s + c.cachedTokens, 0);
+  const cacheRate = Math.round(measuredCached / Math.max(1, measuredPrompt) * 100);
+  const uniqueCases = new Set(filtered.map(c => c.caseId)).size;
+  const caseCount = state.mode === "live"
+    ? uniqueCases
+    : filtered.reduce((sum, item) => sum + (item.projectedCases || 0), 0);
   const avgTokens = caseCount ? Math.round(totalTokens / caseCount) : 0;
 
-  // Unoptimized Baseline Calculation (if all tokens ran on full gpt-4o without caching)
-  const baselineCostVal = (totalPrompt / 1000 * 0.0025) + (totalCompletion / 1000 * 0.0100);
+  // Same workload and same deployed model, priced without provider cache discounts.
+  const baselineCostVal = filtered.reduce((sum, item) => {
+    const noCacheCost = getRowCost(item.modelKey, item.promptTokens, item.completionTokens, 0);
+    return sum + (noCacheCost ?? 0);
+  }, 0);
   const moneySavedVal = Math.max(0, baselineCostVal - actualCostVal);
   const savingsPctVal = baselineCostVal > 0 ? ((moneySavedVal / baselineCostVal) * 100).toFixed(1) : "0.0";
-
-  const periodVal = $("#periodFilter").value;
-  const periodDays = parseInt(periodVal, 10) || 7;
-  const avgDailyCost = actualCostVal / Math.max(1, periodDays);
-  const forecast30dCost = avgDailyCost * 30;
+  const cacheCoveragePct = filtered.length ? Math.round(cacheRecords.length / filtered.length * 100) : 0;
 
   // Update KPI Cards
   if ($("#totalTokens")) $("#totalTokens").textContent = formatTokens(totalTokens);
   if ($("#tokenBreakdown")) $("#tokenBreakdown").textContent = `${formatTokens(totalPrompt)} in · ${formatTokens(totalCompletion)} out`;
 
   if ($("#avgTokens")) $("#avgTokens").textContent = formatTokens(avgTokens);
-  if ($("#caseCount")) $("#caseCount").textContent = `${caseCount} cases in selected period`;
+  if ($("#caseCount")) $("#caseCount").textContent = state.mode === "live"
+    ? `${caseCount.toLocaleString()} cases in selected period`
+    : `${caseCount.toLocaleString()} projected ${isAnnualProjection ? "annual reviews" : "reviews in selected period"}`;
 
-  if ($("#actualCost")) $("#actualCost").textContent = `$${actualCostVal.toFixed(4)}`;
-  if ($("#costModelRates")) $("#costModelRates").textContent = `Realized aria-text-mini rate`;
+  if ($("#actualCost")) $("#actualCost").textContent = formatUsd(actualCostVal);
+  if ($("#costModelRates")) $("#costModelRates").textContent = state.mode === "live"
+    ? `${pricedRecords}/${filtered.length} calls priced from Azure list rates`
+    : `${isAnnualProjection ? "Annual" : "Selected-period"} projection · verified Azure list rates`;
 
-  if ($("#forecastCost")) $("#forecastCost").textContent = `$${forecast30dCost.toFixed(4)}`;
-  if ($("#forecastRunrate")) $("#forecastRunrate").textContent = `Est. $${avgDailyCost.toFixed(4)}/day run-rate`;
+  if ($("#uncachedCost")) $("#uncachedCost").textContent = formatUsd(baselineCostVal);
+  if ($("#uncachedCostDetail")) $("#uncachedCostDetail").textContent = `Same models and tokens, cache disabled`;
 
-  if ($("#costSaved")) $("#costSaved").textContent = `$${moneySavedVal.toFixed(4)}`;
-  if ($("#costSavingsPct")) $("#costSavingsPct").textContent = `${savingsPctVal}% saved vs GPT-4o`;
+  if ($("#costSaved")) $("#costSaved").textContent = formatUsd(moneySavedVal);
+  if ($("#costSavingsPct")) $("#costSavingsPct").textContent = `${savingsPctVal}% ${state.mode === "live" ? "measured" : "projected"} same-model reduction`;
 
   if ($("#cacheRate")) $("#cacheRate").textContent = `${cacheRate}%`;
-  if ($("#cachedTokens")) $("#cachedTokens").textContent = `${formatTokens(totalCached)} input tokens reused`;
+  if ($("#cachedTokens")) $("#cachedTokens").textContent = state.mode === "live"
+    ? `${formatTokens(measuredCached)} reused · ${cacheCoveragePct}% telemetry coverage`
+    : `${formatTokens(measuredCached)} projected reuse · ${cacheCoveragePct}% profile coverage`;
+
+  if (state.mode === "live" && state.telemetryError) {
+    ["totalTokens", "avgTokens", "actualCost", "uncachedCost", "costSaved", "cacheRate"].forEach(id => {
+      if ($(`#${id}`)) $(`#${id}`).textContent = "Unavailable";
+    });
+    if ($("#tokenBreakdown")) $("#tokenBreakdown").textContent = "Telemetry request failed";
+    if ($("#caseCount")) $("#caseCount").textContent = "No current telemetry result";
+    if ($("#costModelRates")) $("#costModelRates").textContent = "Pricing requires provider usage data";
+    if ($("#uncachedCostDetail")) $("#uncachedCostDetail").textContent = "Baseline requires provider usage data";
+    if ($("#costSavingsPct")) $("#costSavingsPct").textContent = "Savings cannot be calculated";
+    if ($("#cachedTokens")) $("#cachedTokens").textContent = "Cache coverage unavailable";
+  }
 
   // Update Efficiency Banner
-  if ($("#bannerSavingsPct")) $("#bannerSavingsPct").textContent = `~${savingsPctVal}%`;
-  if ($("#baselineCost")) $("#baselineCost").textContent = `$${baselineCostVal.toFixed(4)}`;
-  if ($("#ariaCost")) $("#ariaCost").textContent = `$${actualCostVal.toFixed(4)}`;
-  if ($("#ariaMoneySaved")) $("#ariaMoneySaved").textContent = `$${moneySavedVal.toFixed(4)}`;
-  if ($("#ariaPctSaved")) $("#ariaPctSaved").textContent = `${savingsPctVal}% Net Reduction`;
+  if ($("#bannerSavingsPct")) $("#bannerSavingsPct").textContent = `${savingsPctVal}%`;
+  if ($("#baselineCost")) $("#baselineCost").textContent = formatUsd(baselineCostVal);
+  if ($("#ariaCost")) $("#ariaCost").textContent = formatUsd(actualCostVal);
+  if ($("#ariaMoneySaved")) $("#ariaMoneySaved").textContent = formatUsd(moneySavedVal);
+  if ($("#ariaPctSaved")) $("#ariaPctSaved").textContent = `${savingsPctVal}% same-model reduction`;
 
-  renderDailyChart(filtered);
+  renderDailyChart(filtered, fromDate, toDate, activeSelectionLabel);
   renderActivities(filtered);
   renderModelBreakdown(filtered, actualCostVal, totalTokens);
-  renderEfficiency(totalPrompt, totalCompletion, totalCached, filtered);
+  renderEfficiency(savingsPctVal, cacheRate, cacheCoveragePct, totalCompletion, totalTokens, filtered);
   renderAnomalies(filtered);
   renderHeatmap(filtered);
   renderCasesTable(filtered);
 }
 
-function renderDailyChart(cases) {
-  const daysMap = {};
-  const now = new Date();
+function renderDailyChart(cases, fromDate, toDate, periodLabel) {
+  const buckets = {};
+  const rangeDays = Math.max(1, Math.ceil((toDate - fromDate) / 86_400_000));
+  const granularity = rangeDays > 90 ? "monthly" : rangeDays > 31 ? "weekly" : "daily";
 
-  // Build 14-day timeline
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    const label = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    daysMap[label] = { prompt: 0, output: 0, cached: 0, total: 0 };
-  }
+  const getBucket = date => {
+    const bucketDate = new Date(date);
+    if (granularity === "monthly") {
+      bucketDate.setDate(1);
+      return {
+        key: bucketDate.toISOString().slice(0, 7),
+        label: bucketDate.toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
+      };
+    }
+    if (granularity === "weekly") {
+      const dayOffset = (bucketDate.getDay() + 6) % 7;
+      bucketDate.setDate(bucketDate.getDate() - dayOffset);
+    }
+    return {
+      key: bucketDate.toISOString().slice(0, 10),
+      label: bucketDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
+    };
+  };
 
   cases.forEach(c => {
-    const label = c.date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    if (daysMap[label]) {
-      daysMap[label].prompt += c.promptTokens;
-      daysMap[label].output += c.completionTokens;
-      daysMap[label].cached += c.cachedTokens;
-      daysMap[label].total += c.totalTokens;
-    }
+    const { key, label } = getBucket(c.date);
+    if (!buckets[key]) buckets[key] = { label, prompt: 0, output: 0, cached: 0, total: 0 };
+    buckets[key].prompt += c.promptTokens;
+    buckets[key].output += c.completionTokens;
+    buckets[key].cached += c.cachedTokens;
+    buckets[key].total += c.totalTokens;
   });
 
-  let entries = Object.entries(daysMap);
+  let entries = Object.entries(buckets)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, value]) => [value.label, value]);
 
   if (state.chartMode === "accumulated") {
     let runPrompt = 0, runOutput = 0, runCached = 0, runTotal = 0;
@@ -396,9 +480,10 @@ function renderDailyChart(cases) {
       runTotal += d.total;
       return [day, { prompt: runPrompt, output: runOutput, cached: runCached, total: runTotal }];
     });
-    if ($("#chartTitle")) $("#chartTitle").textContent = "Accumulated Spend & Token Growth";
+    if ($("#chartTitle")) $("#chartTitle").textContent = `Accumulated Token Growth (${periodLabel})`;
   } else {
-    if ($("#chartTitle")) $("#chartTitle").textContent = "Daily Token Usage Trend";
+    const label = granularity[0].toUpperCase() + granularity.slice(1);
+    if ($("#chartTitle")) $("#chartTitle").textContent = `${label} Token Usage (${periodLabel})`;
   }
 
   const maxTotal = Math.max(1, ...entries.map(([, v]) => v.total));
@@ -449,10 +534,9 @@ function renderModelBreakdown(cases, globalCost, globalTokens) {
   }).join("") : "<p style='color:var(--muted);font-size:11px'>No model usage recorded</p>";
 }
 
-function renderEfficiency(prompt, output, cached, cases) {
-  const cachePct = Math.round(cached / Math.max(1, prompt) * 100);
-  const outputPct = (output / Math.max(1, prompt + output) * 100).toFixed(1);
-  const score = Math.min(98, Math.max(50, Math.round(cachePct * 0.7 + 50)));
+function renderEfficiency(savingsPct, cachePct, cacheCoveragePct, output, total, cases) {
+  const outputPct = (output / Math.max(1, total) * 100).toFixed(1);
+  const score = Math.round(Number(savingsPct));
   const activityTotals = {};
   cases.forEach(item => {
     activityTotals[item.activity] = (activityTotals[item.activity] || 0) + item.totalTokens;
@@ -461,82 +545,42 @@ function renderEfficiency(prompt, output, cached, cases) {
 
   $("#efficiencyValue").textContent = `${score}%`;
   $("#efficiencyRing").style.background = `conic-gradient(var(--pine) 0 ${score}%, #e8eeeb ${score}%)`;
-  $("#cacheFact").textContent = `${cachePct}% of input`;
+  $("#cacheFact").textContent = `${cachePct}% of ${state.mode === "live" ? "measured" : "projected reusable"} input`;
   $("#outputRatio").textContent = `${outputPct}% of total`;
   $("#highestActivity").textContent = highestActivity;
+  if ($("#cacheCoverage")) $("#cacheCoverage").textContent = `${cacheCoveragePct}% of calls`;
 }
 
 function renderAnomalies(filtered) {
-  const list = [];
-  const liveCount = filtered.filter(c => c.isLive).length;
-
-  if (liveCount) {
-    list.push({
-      title: "Cosmos DB Telemetry Persisted",
-      body: `Captured ${liveCount} live Azure execution events using aria-text-mini ($0.15/$0.60 per 1M) stored in Cosmos DB container token_telemetry.`,
-    });
-  }
-  list.push({
-    title: "Economical Model Selection",
-    body: "Defaulting to aria-text-mini reduces extraction prompt costs by >94% vs full gpt-4.1.",
-  });
-  list.push({
-    title: "Prefix Caching Optimization",
-    body: "Static policy prompt prefixes achieved >45% cache reuse across document bundles.",
-  });
+  const measuredCount = filtered.filter(c => c.cacheMeasured).length;
+  const unknownPriceCount = filtered.filter(c => c.cost === null).length;
+  const sourceFact = state.mode === "live" && state.telemetryError ? {
+    title: "Live telemetry unavailable",
+    body: `${state.telemetryError}. No provider usage result is available for this view.`,
+  } : state.mode === "live" ? {
+    title: "Live telemetry only",
+    body: `${filtered.length} provider usage events loaded from Cosmos DB. Generated demonstration rows are excluded.`,
+  } : {
+    title: "Annual synthetic projection",
+    body: `${filtered.reduce((sum, item) => sum + (item.projectedCases || 0), 0).toLocaleString()} projected document reviews are modeled across ${filtered.length} cohorts. These values are not measured Azure telemetry.`,
+  };
+  const list = [
+    sourceFact,
+    state.mode === "live" ? {
+      title: "Cache evidence",
+      body: `${measuredCount} events include provider-reported cache usage. Legacy events without that field are treated as uncached, not estimated.`,
+    } : {
+      title: "Cache assumption",
+      body: "Reusable input is a modeled 94–98% target for projected cohorts, not provider-reported cache usage.",
+    },
+    {
+      title: "Cost interpretation",
+      body: `Costs are estimates from published Azure Global Standard list prices, not invoice charges.${unknownPriceCount ? ` ${unknownPriceCount} events use an unrecognized model and are excluded from cost totals.` : ""}`,
+    },
+  ];
 
   $("#anomalyCount").textContent = list.length;
   $("#anomalyList").innerHTML = list.map(a => `<article class="anomaly"><strong>${escapeHtml(a.title)}</strong><p>${escapeHtml(a.body)}</p></article>`).join("");
-}
-
-function renderHeatmap(cases) {
-  const activities = [
-    "Document Intelligence Extraction",
-    "Cross-document reasoning",
-    "Field gap filling",
-    "Quality assessment",
-    "Decision summary",
-  ];
-  const models = ["aria-text-mini", "aria-vision", "gpt-4.1-mini", "gpt-4.1"];
-
-  const matrix = {};
-  activities.forEach(a => {
-    matrix[a] = {};
-    models.forEach(m => {
-      matrix[a][m] = { prompt: 0, output: 0, cost: 0, count: 0 };
-    });
-  });
-
-  cases.forEach(c => {
-    const act = activities.includes(c.activity) ? c.activity : "Document Intelligence Extraction";
-    const mod = models.includes(c.model) ? c.model : "aria-text-mini";
-    if (matrix[act] && matrix[act][mod]) {
-      matrix[act][mod].prompt += c.promptTokens;
-      matrix[act][mod].output += c.completionTokens;
-      matrix[act][mod].cost += c.cost;
-      matrix[act][mod].count += 1;
-    }
-  });
-
-  let html = `<table class="heatmap-table"><thead><tr><th>Pipeline Stage</th>${models.map(m => `<th>${escapeHtml(m)}</th>`).join("")}</tr></thead><tbody>`;
-
-  activities.forEach(act => {
-    html += `<tr><td class="stage-name">${escapeHtml(act)}</td>`;
-    models.forEach(mod => {
-      const cell = matrix[act][mod];
-      const totalTok = cell.prompt + cell.output;
-      let heatClass = "cell-zero";
-      if (totalTok > 100000) heatClass = "cell-high";
-      else if (totalTok > 25000) heatClass = "cell-med";
-      else if (totalTok > 0) heatClass = "cell-low";
-
-      html += `<td class="heat-cell ${heatClass}" title="${act} × ${mod}: ${formatTokens(totalTok)} tokens ($${cell.cost.toFixed(4)})"><div><strong>${totalTok ? formatTokens(totalTok) : "—"}</strong><small>${cell.cost ? "$" + cell.cost.toFixed(3) : ""}</small></div></td>`;
-    });
-    html += `</tr>`;
-  });
-  html += `</tbody></table>`;
-
-  $("#heatmapGrid").innerHTML = html;
 }
 
 function renderCasesTable(cases) {
@@ -551,7 +595,7 @@ function renderCasesTable(cases) {
   const endIdx = Math.min(totalItems, startIdx + pageSize);
   const pagedItems = cases.slice(startIdx, endIdx);
 
-  $("#pageInfo").textContent = totalItems ? `Showing ${startIdx + 1}–${endIdx} of ${totalItems} cases` : "0 cases";
+  $("#pageInfo").textContent = totalItems ? `Showing ${startIdx + 1}–${endIdx} of ${totalItems} calls` : "0 calls";
   $("#currentPageDisplay").textContent = `Page ${state.currentPage} of ${totalPages}`;
 
   $("#btnFirst").disabled = state.currentPage === 1;
@@ -559,13 +603,20 @@ function renderCasesTable(cases) {
   $("#btnNext").disabled = state.currentPage === totalPages;
   $("#btnLast").disabled = state.currentPage === totalPages;
 
+  const emptyMessage = state.mode === "live" && state.telemetryError
+    ? `Live telemetry unavailable: ${escapeHtml(state.telemetryError)}`
+    : "No cases match the selected range and filters";
   $("#caseRows").innerHTML = pagedItems.length ? pagedItems.map(row => {
-    const liveBadge = row.isLive ? `<span class="live-badge">LIVE AZURE</span>` : "";
+    const sourceBadge = row.isLive ? `<span class="live-badge">LIVE AZURE</span>` : `<span class="synthetic-badge">PROJECTED</span>`;
     const dateFormatted = row.date.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-    return `<tr class="case-row" data-case-id="${escapeHtml(row.caseId)}"><td class="case-link"><a href="#" onclick="openCaseModal('${escapeHtml(row.caseId)}'); return false;">${escapeHtml(row.caseId)}</a>${liveBadge}<div style="font-size:9px;color:var(--muted)">${dateFormatted}</div></td><td>${escapeHtml(row.tenant)}</td><td>${escapeHtml(row.activity)}</td><td><span class="model-tag">${escapeHtml(row.model)}</span></td><td class="numeric">${row.promptTokens.toLocaleString()}</td><td class="numeric">${row.completionTokens.toLocaleString()}</td><td class="numeric">${row.cachedTokens.toLocaleString()}</td><td class="numeric ${row.totalTokens > 25000 ? "high-usage" : ""}">${row.totalTokens.toLocaleString()}</td><td class="numeric">$${row.cost.toFixed(4)}</td><td class="numeric">${row.latencyMs.toLocaleString()} ms</td></tr>`;
-  }).join("") : `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No cases match the selected range and filters</td></tr>`;
+    const cost = row.cost === null ? "Unavailable" : formatUsd(row.cost);
+    const latency = row.latencyMs === null ? "Not captured" : `${row.latencyMs.toLocaleString()} ms`;
+    const cached = formatCachedTokens(row);
+    const dateOrVolume = row.isLive ? dateFormatted : `${row.projectedCases.toLocaleString()} projected reviews`;
+    return `<tr class="case-row" data-case-id="${escapeHtml(row.caseId)}"><td class="case-link"><a href="#" class="case-open">${escapeHtml(row.caseId)}</a>${sourceBadge}<div style="font-size:9px;color:var(--muted)">${dateOrVolume}</div></td><td>${escapeHtml(row.tenant)}</td><td>${escapeHtml(row.activity)}</td><td><span class="model-tag">${escapeHtml(row.model)}</span></td><td class="numeric">${row.promptTokens.toLocaleString()}</td><td class="numeric">${row.completionTokens.toLocaleString()}</td><td class="numeric">${cached}</td><td class="numeric ${row.totalTokens > 25000 ? "high-usage" : ""}">${row.totalTokens.toLocaleString()}</td><td class="numeric">${cost}</td><td class="numeric">${latency}</td></tr>`;
+  }).join("") : `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">${emptyMessage}</td></tr>`;
 
-  $("#visibleRows").textContent = `${totalItems} total cases`;
+  $("#visibleRows").textContent = `${totalItems} ${state.mode === "live" ? "provider calls" : "projection cohorts"}`;
 }
 
 function openCaseModal(caseId) {
@@ -574,27 +625,104 @@ function openCaseModal(caseId) {
 
   const first = caseRecords[0];
   const totalTokens = caseRecords.reduce((s, c) => s + c.totalTokens, 0);
-  const totalCost = caseRecords.reduce((s, c) => s + c.cost, 0);
+  const totalCost = caseRecords.reduce((s, c) => s + (c.cost ?? 0), 0);
 
   $("#modalCaseId").textContent = `Case ${caseId}`;
   $("#modalTenant").textContent = first.tenant;
   $("#modalTotalTokens").textContent = formatTokens(totalTokens);
-  $("#modalCost").textContent = `$${totalCost.toFixed(4)}`;
+  $("#modalCost").textContent = formatUsd(totalCost);
   $("#modalModel").textContent = first.model;
 
   let html = `<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:11px"><thead><tr style="background:#eef2ef;text-align:left"><th>Activity / Stage</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Cost</th></tr></thead><tbody>`;
 
   caseRecords.forEach(r => {
-    html += `<tr style="border-bottom:1px solid #dbe2de"><td><strong>${escapeHtml(r.activity)}</strong></td><td><span class="model-tag">${escapeHtml(r.model)}</span></td><td>${r.promptTokens.toLocaleString()}</td><td>${r.completionTokens.toLocaleString()}</td><td>${r.cachedTokens.toLocaleString()}</td><td>$${r.cost.toFixed(4)}</td></tr>`;
+    const cached = formatCachedTokens(r);
+    const cost = r.cost === null ? "Unavailable" : formatUsd(r.cost);
+    html += `<tr style="border-bottom:1px solid #dbe2de"><td><strong>${escapeHtml(r.activity)}</strong></td><td><span class="model-tag">${escapeHtml(r.model)}</span></td><td>${r.promptTokens.toLocaleString()}</td><td>${r.completionTokens.toLocaleString()}</td><td>${cached}</td><td>${cost}</td></tr>`;
   });
   html += `</tbody></table>`;
 
   $("#modalBreakdownList").innerHTML = html;
   $("#caseModal").hidden = false;
 }
-window.openCaseModal = openCaseModal;
+
+function updateModeUI() {
+  const isLive = state.mode === "live";
+  $("#btnSyntheticMode").classList.toggle("active", !isLive);
+  $("#btnLiveMode").classList.toggle("active", isLive);
+  $("#btnLiveMode").classList.toggle("live-active", isLive);
+  $("#envBadge").className = `environment ${isLive ? "live" : "synthetic"}`;
+  $("#envBadge").textContent = isLive ? "LIVE AZURE · COSMOS TELEMETRY" : "PROJECTED · SYNTHETIC DATA";
+  $("#scopeLabelText").textContent = isLive ? "Measured provider telemetry" : "Annual evaluation projection";
+  $("#costKpiLabel").textContent = isLive ? "Estimated Model Cost" : "Projected Annual Model Cost";
+  $("#savingsKpiLabel").textContent = isLive ? "Measured Cache Savings" : "Projected Cache Savings";
+  $("#cacheKpiLabel").textContent = isLive ? "Measured Cache Reuse" : "Projected Cache Reuse";
+  $("#bannerTag").textContent = isLive ? "VERIFIABLE TOKEN ECONOMICS" : "PROJECTED TOKEN ECONOMICS";
+  $("#bannerTitle").textContent = isLive ? "What did the observed model calls cost?" : "What could the annual evaluation workload cost?";
+  $("#bannerDescription").innerHTML = isLive
+    ? `ARIA uses the deployed <strong>GPT-4.1 nano 2025-04-14 Global Standard</strong> model. The comparison holds model and token volume constant, then removes only provider-reported cache discounts. Measured same-model savings: <strong id="bannerSavingsPct">0%</strong>.`
+    : `This projection scales synthetic document-evaluation profiles to <strong>122,433 annual reviews</strong> using verified GPT-4.1 nano list rates. The comparison holds model and token volume constant, then removes projected cache reuse. Projected same-model savings: <strong id="bannerSavingsPct">0%</strong>.`;
+  $("#baselineDetail").textContent = isLive ? "GPT-4.1 nano · same observed tokens" : "GPT-4.1 nano · same generated tokens";
+  $("#workloadLabel").textContent = isLive ? "Observed ARIA Workload" : "Generated ARIA Workload";
+  $("#workloadDetail").textContent = isLive ? "Provider token telemetry · cache when reported" : "Synthetic tokens · generated cache reuse";
+  $("#comparisonSavingsLabel").textContent = isLive ? "Measured Cache Savings" : "Projected Cache Savings";
+  $("#cacheExplainerNote").textContent = isLive
+    ? "Legacy generated cache estimates are shown for audit history but treated as uncached. Only provider-reported cache tokens reduce measured cost."
+    : "The projection assumes 94–98% reusable input after stable prompt templates, schemas, and policy context are cached. This is an optimization target, not measured performance or an invoice charge.";
+  $("#provenanceBadge").textContent = isLive ? "Live Cosmos DB telemetry" : "Annual synthetic projection";
+  $("#provenanceTitle").textContent = isLive ? "Provider token counts" : "Generated token counts";
+  $("#provenanceText").textContent = isLive
+    ? "Input, output, and cached-input values come from Azure OpenAI response metadata persisted in Cosmos DB. No generated dashboard rows are included."
+    : "Daily review volume is projected from 122,433 annual evaluations. Token profiles and 94–98% reusable input are synthetic targets isolated from measured Cosmos DB telemetry.";
+  $("#efficiencyEyebrow").textContent = isLive ? "Measured efficiency" : "Projected efficiency";
+  $("#cacheCoverageLabel").textContent = isLive ? "Cache data coverage" : "Target profile coverage";
+  $("#efficiencyMethod").textContent = isLive
+    ? "Calculated as (same-model uncached estimate − observed estimate) ÷ same-model uncached estimate. It is not an accuracy score."
+    : "Calculated as (same-model uncached estimate − projected estimate) ÷ same-model uncached estimate. It is not an accuracy score.";
+  $("#tableEyebrow").textContent = isLive ? "Traceable spend by provider call" : "Projected spend by evaluation cohort";
+  $("#footerSource").textContent = isLive ? "Cosmos DB persistent telemetry metadata" : "Projected from synthetic evaluation profiles";
+}
+
+function resetModeView() {
+  state.currentPage = 1;
+  $("#caseSearch").value = "";
+  $("#caseFilter").value = "all";
+  populateCaseFilter(state.cases);
+  updateModeUI();
+  render();
+}
+
+function useSyntheticMode() {
+  state.mode = "synthetic";
+  state.cases = syntheticCases;
+  sessionStorage.setItem("ariaMode", "synthetic");
+  $("#periodFilter").value = "365";
+  resetModeView();
+}
+
+async function useLiveMode() {
+  state.mode = "live";
+  state.cases = state.liveCases;
+  sessionStorage.setItem("ariaMode", "live");
+  $("#periodFilter").value = "7";
+  resetModeView();
+  if (!state.cosmosLoaded) await fetchCosmosTelemetry();
+  if (state.mode !== "live") return;
+  state.cases = state.liveCases;
+  resetModeView();
+}
 
 // Event Listeners
+$("#btnSyntheticMode").addEventListener("click", useSyntheticMode);
+$("#btnLiveMode").addEventListener("click", useLiveMode);
+
+$("#caseRows").addEventListener("click", event => {
+  const link = event.target.closest(".case-open");
+  if (!link) return;
+  event.preventDefault();
+  openCaseModal(link.closest(".case-row").dataset.caseId);
+});
+
 $("#caseSearch").addEventListener("input", () => {
   state.currentPage = 1;
   render();
@@ -604,7 +732,6 @@ $("#caseFilter").addEventListener("change", () => {
   state.currentPage = 1;
   render();
 });
-
 $("#periodFilter").addEventListener("change", event => {
   const val = event.target.value;
   if (val !== "custom") {
@@ -650,8 +777,8 @@ $("#btnNext").addEventListener("click", () => {
 });
 
 $("#btnLast").addEventListener("click", () => {
-  const filtered = getFilteredCases();
-  state.currentPage = Math.max(1, Math.ceil(filtered.length / state.pageSize));
+  const { filteredCases } = getFilteredCases();
+  state.currentPage = Math.max(1, Math.ceil(filteredCases.length / state.pageSize));
   render();
 });
 
@@ -706,10 +833,25 @@ $("#caseModal").addEventListener("click", event => {
 });
 
 $("#exportButton").addEventListener("click", () => {
-  const filtered = getFilteredCases();
+  const { filteredCases } = getFilteredCases();
   const csv = [
-    "case_id,tenant,activity,model,prompt_tokens,completion_tokens,cached_tokens,total_tokens,est_cost_usd,latency_ms,is_live,timestamp",
-    ...filtered.map(r => `"${r.caseId}","${r.tenant}","${r.activity}","${r.model}",${r.promptTokens},${r.completionTokens},${r.cachedTokens},${r.totalTokens},${r.cost.toFixed(5)},${r.latencyMs},${r.isLive},"${r.date.toISOString()}"`),
+    "case_id,tenant,activity,model,projected_cases,prompt_tokens,completion_tokens,cached_tokens,cache_provenance,total_tokens,estimated_list_cost_usd,latency_ms,is_live,timestamp",
+    ...filteredCases.map(r => [
+      r.caseId,
+      r.tenant,
+      r.activity,
+      r.model,
+      r.projectedCases || "",
+      r.promptTokens,
+      r.completionTokens,
+      r.cachedTokens,
+      r.cacheProvenance || (r.cacheMeasured ? "provider" : "unavailable"),
+      r.totalTokens,
+      r.cost === null ? "" : r.cost.toFixed(5),
+      r.latencyMs ?? "",
+      r.isLive,
+      r.date.toISOString(),
+    ].map(csvCell).join(",")),
   ].join("\n");
 
   const link = document.createElement("a");
@@ -721,20 +863,19 @@ $("#exportButton").addEventListener("click", () => {
 
 // Initial Setup
 initDateDefaults();
+$("#periodFilter").value = state.mode === "live" ? "7" : "365";
+updateModeUI();
 render();
-fetchCosmosTelemetry().then(() => {
-  render();
-});
+if (state.mode === "live") useLiveMode();
 
 function renderHeatmap(cases) {
-  const activities = [
-    "Document Intelligence Extraction",
-    "Cross-document reasoning",
-    "Field gap filling",
-    "Quality assessment",
-    "Decision summary",
-  ];
-  const models = ["aria-text-mini", "aria-vision", "gpt-4.1-mini", "gpt-4.1"];
+  const activities = [...new Set(cases.map(item => item.activity))];
+  const models = [...new Set(cases.map(item => item.model))];
+
+  if (!activities.length || !models.length) {
+    $("#heatmapGrid").innerHTML = "<p style='color:var(--muted);font-size:11px'>No provider telemetry recorded for this filter</p>";
+    return;
+  }
 
   const matrix = {};
   activities.forEach(a => {
@@ -745,14 +886,10 @@ function renderHeatmap(cases) {
   });
 
   cases.forEach(c => {
-    const act = activities.includes(c.activity) ? c.activity : "Document Intelligence Extraction";
-    const mod = models.includes(c.model) ? c.model : "aria-text-mini";
-    if (matrix[act] && matrix[act][mod]) {
-      matrix[act][mod].prompt += c.promptTokens;
-      matrix[act][mod].output += c.completionTokens;
-      matrix[act][mod].cost += c.cost;
-      matrix[act][mod].count += 1;
-    }
+    matrix[c.activity][c.model].prompt += c.promptTokens;
+    matrix[c.activity][c.model].output += c.completionTokens;
+    matrix[c.activity][c.model].cost += c.cost ?? 0;
+    matrix[c.activity][c.model].count += 1;
   });
 
   let html = `<table class="heatmap-table"><thead><tr><th>Pipeline Stage</th>${models.map(m => `<th>${escapeHtml(m)}</th>`).join("")}</tr></thead><tbody>`;
@@ -767,7 +904,8 @@ function renderHeatmap(cases) {
       else if (totalTok > 25000) heatClass = "cell-med";
       else if (totalTok > 0) heatClass = "cell-low";
 
-      html += `<td class="heat-cell ${heatClass}" title="${act} × ${mod}: ${formatTokens(totalTok)} tokens ($${cell.cost.toFixed(4)})"><div><strong>${totalTok ? formatTokens(totalTok) : "—"}</strong><small>${cell.cost ? "$" + cell.cost.toFixed(3) : ""}</small></div></td>`;
+      const tooltip = escapeHtml(`${act} × ${mod}: ${formatTokens(totalTok)} tokens (${formatUsd(cell.cost)})`);
+      html += `<td class="heat-cell ${heatClass}" title="${tooltip}"><div><strong>${totalTok ? formatTokens(totalTok) : "—"}</strong><small>${cell.cost ? "$" + cell.cost.toFixed(3) : ""}</small></div></td>`;
     });
     html += `</tr>`;
   });

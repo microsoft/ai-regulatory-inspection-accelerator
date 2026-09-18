@@ -7,11 +7,11 @@ Extract facts. Reconcile evidence. Apply policy. Explain the recommendation.
 
 <br>
 
-[**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**BUSINESS USE CASES**](#business-use-cases) &nbsp;|&nbsp; [**WINNING FORMULA**](#winning-formula) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**QUICK DEPLOY**](#quick-deploy) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
+[**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**BUSINESS USE CASES**](#business-use-cases) &nbsp;|&nbsp; [**WINNING FORMULA**](#winning-formula) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**QUICK DEPLOY**](#quick-deploy) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
 
 </div>
 
-ARIA turns a related evidence bundle into a reviewable recommendation. It extracts facts, reconciles them across documents, applies deterministic policy rules, scores risk, and preserves the evidence and timing trace for a human reviewer.
+ARIA turns a related evidence bundle into a reviewable recommendation. It extracts facts, reconciles them across documents, applies deterministic policy rules, scores risk, and preserves the evidence and timing trace for a human reviewer. Each review also produces governed signals that teams can use to improve reusable templates, rules, prompts, and delivery patterns.
 
 The reference implementation supports English and Arabic documents, including mixed right-to-left content. Additional languages can be added through reviewed evaluation data, field aliases, normalization, and domain templates.
 
@@ -25,15 +25,17 @@ ARIA treats the case, not the individual document, as the unit of review:
 4. **Evaluate** deterministic policy rules and risk.
 5. **Deliver** an explainable recommendation for human review.
 
-The first reference implementation covers food import inspection with invoices, declarations, health certificates, certificates of origin, and Halal certificates.
+The first reference implementation covers food import inspection with invoices, declarations, health certificates, certificates of origin, and Halal certificates. The platform packages these capabilities separately from domain configuration, allowing a proven implementation to become a reusable starting point rather than a one-off delivery.
+
+Reviewer approvals, overrides, rework, processing time, quality outcomes, and token telemetry form a governed feedback loop. Teams can use those signals to refine reusable assets and compare successive runs, making improvements in quality and efficiency visible instead of resetting learning for each deployment.
+
+The supplied solution architecture shows the broader Azure entry, AI, persistence, processing, monitoring, and analytics layers. Deployment-specific services can be selected or substituted by each adopter.
+
+![ARIA Azure solution architecture across customer entry, orchestration, AI services, processing, persistence, operations, and analytics](docs/images/readme/solution-architecture.png)
 
 ## Try the demo
 
-
-
 https://github.com/user-attachments/assets/0335c898-4e95-4909-be80-633d0e3eedba
-
-
 
 * [Open the live Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html)
 * [Open Token Analytics](https://stariainfra.z13.web.core.windows.net/tokens.html)
@@ -71,7 +73,7 @@ Open <http://localhost:4173/index.html>, keep **Synthetic** mode selected, load 
 ARIA is designed for decisions that depend on several documents agreeing:
 
 | Domain | Evidence bundle | Reviewer outcome |
-|---|---|---|
+|--------|-----------------|------------------|
 | Food import inspection | Invoice, declaration, health and Halal certificates | Pass, hold, or fail |
 | Customs clearance | Bill of lading, declaration, invoice, origin certificate | Clear, hold, or detain |
 | KYC and AML | Identity, ownership, address, and transaction records | Approve, review, or reject |
@@ -80,10 +82,28 @@ ARIA is designed for decisions that depend on several documents agreeing:
 
 ![ARIA business use case showing evidence flowing through extraction, reconciliation, and policy checks to a human-reviewed recommendation](docs/images/readme/business-use-case.png)
 
+The Inspection Workbench brings source evidence, cross-document findings, policy results, risk, and the human-controlled recommendation into one review surface.
+
+![ARIA Inspection Workbench showing a food inspection evidence bundle and a hold recommendation with linked findings](docs/images/readme/inspection-workbench.png)
+
+The companion operations view makes token use, provider cache reuse, model cost, and telemetry coverage inspectable by case and processing stage.
+
+![ARIA Token Analytics showing measured provider telemetry, cache reuse, and same-model cost comparison](docs/images/readme/token-analytics.png)
+
+### Token and cache economics
+
+The Token Analytics dashboard separates measured provider telemetry from modeled comparisons. For each Azure OpenAI call, ARIA records input, output, total, and provider-reported cached-input tokens, together with model, activity, latency, case, and timestamp metadata. Prompts, model responses, and document content are not stored in the telemetry container.
+
+Azure OpenAI manages prompt caching. ARIA improves cache eligibility by placing stable instructions and schema context before variable evidence, then reads `prompt_tokens_details.cached_tokens` from the provider response. Cosmos DB persists that measurement so usage can be compared over time; it does not perform the model cache lookup.
+
+The dashboard prices the observed workload at published model rates and compares it with the same model and token volume with caching disabled. Only records marked as provider-measured receive a cached-input discount. Historical estimates remain visible for audit context but are excluded from measured cache savings.
+
+See [Token Efficiency](docs/architecture/TechnicalArchitecture.md#6-token-efficiency) for the platform strategy and [ARIA Token Analytics](https://stariainfra.z13.web.core.windows.net/tokens.html) for the live operations view.
+
 ## Winning formula
 
 | Capability | ARIA outcome |
-|---|---|
+|------------|--------------|
 | Evidence bundle | One case view across invoices, declarations, certificates, and supporting records |
 | Document understanding | Azure AI Document Intelligence plus Azure OpenAI structured extraction |
 | Cross-document integrity | Canonical fields, aliases, unit normalization, and conflict detection |
@@ -91,6 +111,7 @@ ARIA is designed for decisions that depend on several documents agreeing:
 | Explainability | Findings link values, documents, rules, actions, and stage timings |
 | Human control | The system recommends; the reviewer decides and can override with a reason |
 | Operational governance | Cosmos DB telemetry, token attribution, cost views, and auditable case history |
+| Compounding reuse | Reviewer feedback and delivery telemetry guide improvements to shared templates, rules, prompts, and evaluation assets |
 
 ## Implementation
 
@@ -101,28 +122,37 @@ The tested reference implementation combines a domain-neutral platform, configur
 * Deterministic reconciliation, policy, risk, delivery, and audit components
 * Industry configuration under `templates/` and integration contracts under `connectors/`
 
-The live path extracts documents concurrently, reports per-document duration, and keeps telemetry persistence off the response critical path. The complete automated test suite currently passes 426 tests.
+The live path extracts documents concurrently, reports per-document duration, and keeps telemetry persistence off the response critical path. Automated tests cover orchestration, extraction, reconciliation, policy, risk, telemetry, templates, delivery, and audit behavior.
 
 Technical setup, security, deployment topology, and local development instructions are maintained in the [Technical Architecture](docs/architecture/TechnicalArchitecture.md), [Deployment Guide](docs/DeploymentGuide.md), and [Local Development Setup](docs/LocalDevelopmentSetup.md).
 
 ## Agentic framework
 
-Azure Durable Functions coordinates the processing stages. Each agent has a narrow responsibility and produces an inspectable output.
+Azure Durable Functions coordinates five specialized processing agents and a separate risk-persistence activity. Each agent has a narrow responsibility, passes an inspectable contract to the next stage, and routes failures to delivery so the adopting system receives a traceable outcome.
+
+![ARIA five-agent evidence-to-decision framework coordinated by Durable Functions](docs/images/readme/agentic-framework.png)
 
 ```mermaid
 flowchart LR
-    U[Adopting system or reviewer] --> I[Pre-validation agent]
-    I --> E[Document extraction agent]
-    E --> R[Reasoning and reconciliation agent]
-    R --> P[Rules and policy agent]
-    P --> D[Recommendation and delivery agent]
-    D --> H[Human reviewer]
-    E --> DI[Azure AI Document Intelligence]
-    E --> AO[Azure OpenAI]
-    R --> C[(Cosmos DB)]
-    P --> T[Industry template]
-    D --> C
-    C --> O[Token and operations analytics]
+  U[Adopting system] --> A[API Management]
+  A --> O[Durable orchestrator]
+  O --> I[Pre-validation agent]
+  I --> E[Document extraction agent]
+  E --> R[Reasoning and reconciliation agent]
+  R --> P[Rules and policy agent]
+  P --> RP[Risk persistence activity]
+  RP --> C[(Cosmos DB)]
+  P --> D[Recommendation and delivery agent]
+  D --> H[Human reviewer]
+  E --> DI[Azure AI Document Intelligence]
+  E --> AO[Azure OpenAI]
+  P --> T[Industry template]
+  D --> C
+  AO --> TM[Provider token metadata]
+  TM --> C
+  C --> AN[Token and operations analytics]
+  H --> F[Governed feedback]
+  F --> T
 ```
 
 The detailed architecture, security model, data flow, and Azure topology are in the [Technical Architecture](docs/architecture/TechnicalArchitecture.md).
@@ -162,7 +192,7 @@ The public synthetic demo requires no Azure subscription. For an owned deploymen
 
 * A grounded case chatbot for reviewer questions, evidence citations, and reasoning exploration
 * Reviewed multi-language packs with language-specific evaluation and abstention tests
-* Real-time telemetry streaming from Durable Functions
+* Longitudinal quality and efficiency curves across successive governed deployments
 * Broader industry templates and connector implementations
 
 ## Repository map

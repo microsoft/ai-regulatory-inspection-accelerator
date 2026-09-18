@@ -34,6 +34,11 @@ from src.platform.risk.evaluation_repository import AzureRiskEvaluationRepositor
 
 logger = logging.getLogger(__name__)
 _telemetry_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+_TELEMETRY_SCHEMA_VERSION = 2
+
+
+class _TelemetryUnavailableError(RuntimeError):
+    """Raised when persistent telemetry cannot be queried."""
 
 _FIELD_ALIASES = {
     "net_weight": "net_weight", "total_net_weight": "net_weight", "netweight": "net_weight", "weight": "net_weight",
@@ -86,8 +91,11 @@ def _save_telemetry(request_id: str, usage_items: list[dict], model_name: str, t
             "model": item.get("model", model_name),
             "promptTokens": item.get("promptTokens", 0),
             "completionTokens": item.get("completionTokens", 0),
-            "cachedTokens": int(item.get("promptTokens", 0) * 0.25),
+            "cachedTokens": item.get("cachedTokens", 0),
+            "cacheMeasurement": item.get("cacheMeasurement", "unavailable"),
+            "telemetrySchemaVersion": _TELEMETRY_SCHEMA_VERSION,
             "totalTokens": item.get("totalTokens", 0),
+            "latencyMs": item.get("durationMs"),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "isLive": True,
         }
@@ -104,7 +112,7 @@ def _save_telemetry(request_id: str, usage_items: list[dict], model_name: str, t
 def _fetch_telemetry():
     container = _get_cosmos_container()
     if not container:
-        return []
+        raise _TelemetryUnavailableError("Cosmos telemetry is not configured")
     try:
         items = list(container.query_items(
             query="SELECT * FROM c ORDER BY c._ts DESC",
@@ -113,7 +121,7 @@ def _fetch_telemetry():
         return items
     except AzureError:
         logger.exception("Unable to fetch telemetry from Cosmos DB")
-        return []
+        raise _TelemetryUnavailableError("Cosmos telemetry query failed") from None
 
 app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
 
@@ -342,12 +350,16 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
             "lowConfidenceFields": [],
         }
         response_usage = result.usage
+        prompt_details = getattr(response_usage, "prompt_tokens_details", None)
+        cached_tokens = getattr(prompt_details, "cached_tokens", None)
         usage_data = {
             "stage": "document-intelligence",
             "documentId": document_id,
-            "model": text_model,
+            "model": getattr(result, "model", text_model),
             "promptTokens": getattr(response_usage, "prompt_tokens", 0),
             "completionTokens": getattr(response_usage, "completion_tokens", 0),
+            "cachedTokens": cached_tokens or 0,
+            "cacheMeasurement": "provider" if cached_tokens is not None else "unavailable",
             "totalTokens": getattr(response_usage, "total_tokens", 0),
             "durationMs": round((time.perf_counter() - extraction_started) * 1000),
         }
@@ -506,7 +518,13 @@ async def live_inspection(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="telemetry", methods=["GET"])
 async def get_telemetry(req: func.HttpRequest) -> func.HttpResponse:
     """Return all persisted token consumption telemetry from Cosmos DB."""
-    records = _fetch_telemetry()
+    try:
+        records = _fetch_telemetry()
+    except _TelemetryUnavailableError as error:
+        return _json_response(503, {
+            "code": "TELEMETRY_UNAVAILABLE",
+            "message": str(error),
+        })
     return _json_response(200, {"items": records})
 
 

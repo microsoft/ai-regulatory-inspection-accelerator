@@ -23,8 +23,17 @@
       </div>
       <div><strong>ARIA</strong><span>AI Regulatory Operations</span></div>
     </div>
-    <div class="scope-label"><span></span> Persistent Telemetry · Cosmos DB</div>
-    <a class="back-link" href="index.html">← Inspection Workbench</a>
+    <div class="mode-controls">
+      <div class="mode-toggle-pill" aria-label="Telemetry mode">
+        <button id="btnSyntheticMode" type="button" class="mode-toggle-btn active">Synthetic</button>
+        <button id="btnLiveMode" type="button" class="mode-toggle-btn">Live Azure</button>
+      </div>
+      <span id="envBadge" class="environment synthetic">PROJECTED · SYNTHETIC DATA</span>
+    </div>
+    <div class="topbar-end">
+      <div class="scope-label"><span></span><span id="scopeLabelText">Generated sample telemetry</span></div>
+      <a class="back-link" href="index.html">← Inspection Workbench</a>
+    </div>
   </header>
 
   <main class="dashboard-shell">
@@ -37,7 +46,8 @@
       <div class="filters" aria-label="Dashboard filters">
         <label>Preset
           <select id="periodFilter">
-            <option value="7" selected>Last 7 days</option>
+            <option value="365" selected>Full Annual Projection</option>
+            <option value="7">Last 7 days</option>
             <option value="30">Last 30 days</option>
             <option value="1">Today (Last 24h)</option>
             <option value="custom">Custom Range</option>
@@ -72,52 +82,52 @@
       </article>
 
       <article class="kpi cost-primary">
-        <span>Actual Realized Cost</span>
+        <span id="costKpiLabel">Projected Annual Model Cost</span>
         <strong id="actualCost">$0.0000</strong>
-        <small id="costModelRates">Realized model billing</small>
+        <small id="costModelRates">Azure list-price estimate</small>
       </article>
 
       <article class="kpi cost-forecast">
-        <span>Forecast Cost (30-Day)</span>
-        <strong id="forecastCost">$0.0000</strong>
-        <small id="forecastRunrate">Projected 30d run-rate</small>
+        <span>Same-Model Cost Without Cache</span>
+        <strong id="uncachedCost">$0.0000</strong>
+        <small id="uncachedCostDetail">Same tokens and model</small>
       </article>
 
       <article class="kpi cost-savings">
-        <span>Net Cost Savings</span>
+        <span id="savingsKpiLabel">Projected Cache Savings</span>
         <strong id="costSaved">$0.0000</strong>
-        <small id="costSavingsPct">0% vs unoptimized GPT-4o</small>
+        <small id="costSavingsPct">0% same-model reduction</small>
       </article>
 
       <article class="kpi accent">
-        <span>Cache Hit Rate & Reused</span>
+        <span id="cacheKpiLabel">Projected Cache Reuse</span>
         <strong id="cacheRate">—</strong>
         <small id="cachedTokens">—</small>
       </article>
     </section>
 
-    <!-- ARIA Efficiency Banner -->
+    <!-- Transparent cost comparison -->
     <section class="panel efficiency-banner">
       <div class="efficiency-banner-content">
-        <div class="efficiency-badge-tag">🏆 ARIA TOKENOMICS EFFICIENCY PROOF</div>
-        <h2>How Efficient Is ARIA? <span>(Savings vs. Naive LLM Implementations)</span></h2>
-        <p>Unoptimized multi-agent document checkers route all OCR & extraction requests to full <strong>GPT-4o ($2.50/1M tokens)</strong> without prefix caching. ARIA's <strong>hybrid mini-routing (aria-text-mini @ $0.15/1M)</strong> + <strong>prompt caching</strong> reduces execution cost by <strong id="bannerSavingsPct">~80.1%</strong>.</p>
+        <div id="bannerTag" class="efficiency-badge-tag">PROJECTED TOKEN ECONOMICS</div>
+        <h2 id="bannerTitle">What could the annual evaluation workload cost?</h2>
+        <p id="bannerDescription">This projection scales synthetic document-evaluation profiles to <strong>122,433 annual reviews</strong> using verified GPT-4.1 nano list rates. The comparison holds model and token volume constant, then removes projected cache reuse. Projected same-model savings: <strong id="bannerSavingsPct">0%</strong>.</p>
         <div class="efficiency-comparison-bar">
           <div class="cmp-box baseline">
-            <span>Naive GPT-4o Baseline</span>
+            <span>Same Workload Without Cache</span>
             <strong id="baselineCost">$0.0000</strong>
-            <small>No caching · Full model tier</small>
+            <small id="baselineDetail">GPT-4.1 nano · same generated tokens</small>
           </div>
           <div class="cmp-arrow">➔</div>
           <div class="cmp-box optimized">
-            <span>ARIA Optimized Architecture</span>
+            <span id="workloadLabel">Generated ARIA Workload</span>
             <strong id="ariaCost">$0.0000</strong>
-            <small>aria-text-mini + Prefix Cache</small>
+            <small id="workloadDetail">Synthetic tokens · generated cache reuse</small>
           </div>
           <div class="cmp-box saved">
-            <span>Net Money Saved</span>
+            <span id="comparisonSavingsLabel">Synthetic Cache Savings</span>
             <strong id="ariaMoneySaved">$0.0000</strong>
-            <small id="ariaPctSaved">80.1% Cost Reduction</small>
+            <small id="ariaPctSaved">0% same-model reduction</small>
           </div>
         </div>
       </div>
@@ -131,40 +141,40 @@
           <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
         </div>
       </div>
-      <p>ARIA keeps the stable instruction prefix, template vocabulary, and policy context reusable. The model can reuse that prefix across calls instead of processing identical input tokens again.</p>
+      <p>When Azure reports cached input tokens, ARIA prices those tokens at the published cached-input rate for the deployed model. It does not infer cache use from prompt size.</p>
       <div class="cache-flow"><span>Stable template context</span><b>→</b><span>Provider prefix cache</span><b>→</b><span>Only new evidence costs input tokens</span></div>
-      <small>Cached tokens are still measured for traceability, but the dashboard estimates their cost separately from uncached input tokens.</small>
+      <small id="cacheExplainerNote">Generated cache reuse demonstrates list-price estimation behavior. Values are synthetic and are not invoice charges.</small>
     </section>
 
     <section class="panel perf-explainer">
       <div class="panel-title">
         <div>
-          <span class="eyebrow">Cost & Accuracy Governance</span>
-          <h2>How ARIA Guarantees High Accuracy While Remaining Cost-Efficient</h2>
+          <span class="eyebrow">Verified deployment</span>
+          <h2>What these numbers represent</h2>
         </div>
-        <span class="perf-badge">Dynamic Confidence Validation</span>
+        <span id="provenanceBadge" class="perf-badge">Synthetic demonstration telemetry</span>
       </div>
       <div class="perf-grid">
         <div class="perf-card">
-          <div class="perf-step">Step 1</div>
-          <h3>⚡ Micro-Tier First (`aria-text-mini`)</h3>
-          <p>Extracts fields using high-throughput, low-latency micro models ($0.15/1M). Computes a visual & structural confidence score for every extracted field.</p>
+          <div class="perf-step">Deployed model</div>
+          <h3>GPT-4.1 nano</h3>
+          <p><code>aria-text-mini</code> is the Azure deployment name. Azure reports model version 2025-04-14 on the Global Standard SKU.</p>
         </div>
         <div class="perf-card">
-          <div class="perf-step">Step 2</div>
-          <h3>🎯 Dynamic Fallback to Vision (`aria-vision`)</h3>
-          <p>If any field's extraction confidence falls below <strong>80%</strong>, ARIA automatically escalates that specific document section to multimodal <code>aria-vision</code> (GPT-4o).</p>
+          <div class="perf-step">Usage source</div>
+          <h3 id="provenanceTitle">Generated token counts</h3>
+          <p id="provenanceText">Input, output, and cached-input values are deterministic demonstration data. They are isolated from measured Cosmos DB telemetry.</p>
         </div>
         <div class="perf-card">
-          <div class="perf-step">Step 3</div>
-          <h3>🛡️ 100% Deterministic Policy Validation</h3>
-          <p>Extracted values undergo strict code-level rule evaluation (unit normalization, alias mapping, authority lists) to ensure <strong>zero hallucinated risk verdicts</strong>.</p>
+          <div class="perf-step">Pricing basis</div>
+          <h3>Published Azure list rates</h3>
+          <p>GPT-4.1 nano Global Standard is estimated at $0.10/M input, $0.025/M cached input, and $0.40/M output. Actual invoiced cost may differ.</p>
         </div>
       </div>
     </section>
 
-    <!-- Production Scale & React Architecture Roadmap -->
-    <section class="panel production-roadmap">
+    <!-- Roadmap content is intentionally excluded from measured analytics. -->
+    <section class="panel production-roadmap" hidden>
       <div class="panel-title">
         <div>
           <span class="eyebrow">Production Scaling Roadmap (Phase 2)</span>
@@ -229,18 +239,19 @@
       </article>
 
       <article class="panel efficiency-panel">
-        <div class="panel-title"><div><span class="eyebrow">Optimization signal</span><h2>Efficiency profile</h2></div></div>
-        <div class="efficiency-score"><div id="efficiencyRing"><strong id="efficiencyValue">—</strong><span>composite signal</span></div></div>
+        <div class="panel-title"><div><span id="efficiencyEyebrow" class="eyebrow">Synthetic efficiency</span><h2>Same-model cache savings</h2></div></div>
+        <div class="efficiency-score"><div id="efficiencyRing"><strong id="efficiencyValue">—</strong><span>cost reduction</span></div></div>
         <dl class="efficiency-facts">
           <div><dt>Cached input</dt><dd id="cacheFact">—</dd></div>
+          <div><dt id="cacheCoverageLabel">Target profile coverage</dt><dd id="cacheCoverage">—</dd></div>
           <div><dt>Output ratio</dt><dd id="outputRatio">—</dd></div>
           <div><dt>Highest consumer</dt><dd id="highestActivity">—</dd></div>
         </dl>
-        <p class="efficiency-method">The signal combines cache reuse with a 50-point baseline. It is an operational indicator, not a model accuracy score.</p>
+        <p id="efficiencyMethod" class="efficiency-method">Calculated as (same-model uncached estimate − synthetic estimate) ÷ same-model uncached estimate. It is not an accuracy score.</p>
       </article>
 
       <article class="panel anomaly-panel">
-        <div class="panel-title"><div><span class="eyebrow">Attention</span><h2>Usage anomalies</h2></div><span id="anomalyCount" class="panel-count">0</span></div>
+        <div class="panel-title"><div><span class="eyebrow">Provenance</span><h2>Telemetry integrity</h2></div><span id="anomalyCount" class="panel-count">0</span></div>
         <div id="anomalyList" class="anomaly-list"></div>
       </article>
     </section>
@@ -262,7 +273,7 @@
 
     <section class="panel cases-panel">
       <div class="panel-title">
-        <div><span class="eyebrow">Traceable spend & per-case breakdown</span><h2 id="caseTableTitle">Case token usage</h2></div>
+        <div><span id="tableEyebrow" class="eyebrow">Generated spend by synthetic call</span><h2 id="caseTableTitle">Synthetic call usage</h2></div>
         <div class="table-tools"><input id="caseSearch" type="search" placeholder="Search Case ID or activity"><span id="visibleRows"></span></div>
       </div>
       <div class="table-scroll">
@@ -288,8 +299,8 @@
       </div>
     </section>
 
-    <!-- Floating Insights Toolbar & Modals at Bottom -->
-    <div class="insights-floating-bar">
+    <!-- Legacy roadmap modals are retained for compatibility but not presented as measured results. -->
+    <div class="insights-floating-bar" hidden>
       <span class="insights-bar-label">Architecture & Tokenomics Insights:</span>
       <button class="insight-tab-btn" data-target="modalCaching" type="button">🔄 Prompt Caching</button>
       <button class="insight-tab-btn" data-target="modalAccuracy" type="button">🎯 Accuracy Governance</button>
@@ -417,7 +428,7 @@
       </div>
     </div>
 
-    <footer><span>Cosmos DB persistent telemetry metadata</span><span>No prompts · No responses · No document content</span></footer>
+    <footer><span id="footerSource">Generated demonstration telemetry</span><span>No prompts · No responses · No document content</span></footer>
   </main>
 
   <!-- Per-case detail modal -->
