@@ -5,7 +5,6 @@ const state = {
   processing: false,
   scenario: "food-en",
   mode: "synthetic",
-  liveUnlocked: false,
 };
 
 const els = {
@@ -16,6 +15,7 @@ const els = {
   viewerHeading: document.querySelector("#viewerHeading"), zoomLabel: document.querySelector("#zoomLabel"),
   zoomIn: document.querySelector("#zoomIn"), zoomOut: document.querySelector("#zoomOut"),
   processingStrip: document.querySelector("#processingStrip"), progressBar: document.querySelector("#progressBar"),
+  progressTrack: document.querySelector("#progressTrack"),
   progressPercent: document.querySelector("#progressPercent"), processingLabel: document.querySelector("#processingLabel"),
   processingDetail: document.querySelector("#processingDetail"), caseId: document.querySelector("#caseId"),
   caseStatus: document.querySelector("#caseStatus"), decisionEmpty: document.querySelector("#decisionEmpty"),
@@ -24,6 +24,7 @@ const els = {
   verdictIcon: document.querySelector("#verdictIcon"), verdictSummary: document.querySelector("#verdictSummary"),
   caseReference: document.querySelector("#caseReference"),
   confidenceValue: document.querySelector("#confidenceValue"), confidenceBar: document.querySelector("#confidenceBar"),
+  confidenceTrack: document.querySelector("#confidenceTrack"),
   findingCount: document.querySelector("#findingCount"), findingsList: document.querySelector("#findingsList"),
   traceList: document.querySelector("#traceList"),
   comparisonCount: document.querySelector("#comparisonCount"), comparisonList: document.querySelector("#comparisonList"),
@@ -115,6 +116,7 @@ function inferType(name) {
 }
 
 function addFiles(files) {
+  if (state.mode !== "live" || !window.ARIA_CONFIG?.liveEndpoint) return;
   const accepted = [...files].filter(file => /pdf|png|jpeg|jpg|tiff/i.test(file.type) || /\.(pdf|png|jpe?g|tiff?)$/i.test(file.name));
   accepted.forEach(file => state.documents.push({ id: id(), name: file.name, type: inferType(file.name), size: file.size, file, url: URL.createObjectURL(file) }));
   if (!state.selectedId && state.documents.length) state.selectedId = state.documents[0].id;
@@ -138,8 +140,8 @@ function renderDocuments() {
     const safeType = escapeHtml(doc.type);
     const card = document.createElement("div");
     card.className = `document-row${doc.id === state.selectedId ? " active" : ""}`;
-    card.innerHTML = `<button class="document-select" type="button" data-select="${doc.id}">
-      <span class="file-icon">${doc.name.split(".").pop().slice(0, 4).toUpperCase()}</span>
+    card.innerHTML = `<button class="document-select" type="button" data-select="${doc.id}" aria-pressed="${doc.id === state.selectedId}">
+      <span class="file-icon" aria-hidden="true">${doc.name.split(".").pop().slice(0, 4).toUpperCase()}</span>
       <span><strong title="${safeName}">${safeName}</strong><small>${safeType} · ${prettySize(doc.size)}</small></span></button>
       <button class="remove-file" type="button" data-remove="${doc.id}" aria-label="Remove ${safeName}">×</button>`;
     card.querySelector("[data-select]").addEventListener("click", () => { state.selectedId = doc.id; renderDocuments(); renderViewer(); });
@@ -147,6 +149,7 @@ function renderDocuments() {
     els.documentList.appendChild(card);
   });
   els.documentCount.textContent = state.documents.length;
+  els.documentCount.setAttribute("aria-label", `${state.documents.length} ${state.documents.length === 1 ? "document" : "documents"}`);
   els.analyzeButton.disabled = state.documents.length === 0 || state.processing;
 }
 
@@ -159,9 +162,9 @@ function removeDocument(documentId) {
 }
 
 function sampleMarkup(doc) {
-  const rows = doc.rows.map(([label, value]) => `<tr><td>${escapeHtml(label)}</td><td><strong>${escapeHtml(value)}</strong></td></tr>`).join("");
+  const rows = doc.rows.map(([label, value]) => `<tr><th scope="row">${escapeHtml(label)}</th><td><strong>${escapeHtml(value)}</strong></td></tr>`).join("");
   return `<article class="sample-document"${doc.rtl ? ' dir="rtl"' : ""}><div class="doc-top"><div><h3>${escapeHtml(doc.title)}</h3><p>ARIA synthetic evidence</p></div><span class="seal">VERIFIED</span></div>
-    <p>Structured evidence prepared for the ARIA hackathon walkthrough.</p><table>${rows}</table><span class="document-stamp">SAMPLE CASE</span></article>`;
+    <p>Structured evidence prepared for the ARIA hackathon walkthrough.</p><table><caption class="visually-hidden">Extracted evidence fields</caption><tbody>${rows}</tbody></table><span class="document-stamp">SAMPLE CASE</span></article>`;
 }
 
 function renderViewer() {
@@ -201,6 +204,7 @@ async function analyze() {
   for (const [progress, label, detail] of stages) {
     els.processingLabel.textContent = label; els.processingDetail.textContent = detail;
     els.progressBar.style.width = `${progress}%`; els.progressPercent.textContent = `${progress}%`;
+    els.progressTrack.setAttribute("aria-valuenow", String(progress));
     await delay(620);
   }
   const scenario = scenarios[state.scenario];
@@ -263,6 +267,8 @@ async function analyzeLive() {
     els.processingDetail.textContent = `${detail} · ${elapsedSeconds}s elapsed`;
     els.progressBar.style.width = `${Math.min(92, 18 + (elapsedSeconds % 12) * 6)}%`;
     els.progressPercent.textContent = `${elapsedSeconds}s`;
+    els.progressTrack.removeAttribute("aria-valuenow");
+    els.progressTrack.setAttribute("aria-valuetext", `${elapsedSeconds} seconds elapsed`);
   };
   updateLiveProgress();
   const progressTimer = window.setInterval(updateLiveProgress, 1000);
@@ -283,7 +289,6 @@ async function analyzeLive() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(window.ARIA_CONFIG.apiKey ? { "x-functions-key": window.ARIA_CONFIG.apiKey } : {}),
       },
       body: JSON.stringify({ requestId: `LIVE-${Date.now()}`, documents }),
     });
@@ -293,6 +298,8 @@ async function analyzeLive() {
     els.caseReference.textContent = `Case reference: ${result.requestId}`;
     els.processingLabel.textContent = "Azure pipeline complete"; els.processingDetail.textContent = `${result.modelNames.text} · ${result.stages.length} stages`;
     els.progressBar.style.width = "100%"; els.progressPercent.textContent = "100%";
+    els.progressTrack.setAttribute("aria-valuenow", "100");
+    els.progressTrack.removeAttribute("aria-valuetext");
     state.liveResult = result;
 
     if (result.tokenUsage && Array.isArray(result.tokenUsage) && result.tokenUsage.length) {
@@ -322,9 +329,14 @@ async function analyzeLive() {
     showLiveDecision(result);
     els.caseStatus.textContent = "Live review ready";
   } catch (error) {
-    els.caseStatus.textContent = "Live unavailable · demo fallback";
+    els.caseStatus.textContent = "Live Azure unavailable";
+    els.recommendationHeading.textContent = "Inspection unavailable";
+    els.decisionEmpty.hidden = false;
+    els.decisionContent.hidden = true;
+    els.decisionEmpty.querySelector("p").textContent = error instanceof Error
+      ? error.message
+      : "The configured Azure inspection endpoint could not process this bundle.";
     state.processing = false; els.processingStrip.hidden = true;
-    showDecision();
   } finally {
     window.clearInterval(progressTimer);
     state.processing = false; renderDocuments(); await delay(300); els.processingStrip.hidden = true;
@@ -392,6 +404,7 @@ function showLiveDecision(result) {
   }
   els.confidenceValue.textContent = `${confidencePct}%`;
   els.confidenceBar.style.width = `${confidencePct}%`;
+  els.confidenceTrack.setAttribute("aria-valuenow", String(confidencePct));
 
   els.findingCount.textContent = findings.length;
   els.findingsList.innerHTML = findings.map(item => {
@@ -425,6 +438,7 @@ function showDecision() {
   els.caseReference.textContent = `Case reference: ${scenario?.caseId || els.caseId.textContent.replace("Case ", "")}`;
   els.verdictSummary.textContent = result.summary;
   els.confidenceValue.textContent = `${result.confidence}%`; els.confidenceBar.style.width = `${result.confidence}%`;
+  els.confidenceTrack.setAttribute("aria-valuenow", String(result.confidence));
   const findings = result.findings.map(([title, detail, pass]) => ({ title, detail, pass }));
   els.findingCount.textContent = findings.length;
   els.findingsList.innerHTML = findings.map(item => `<article class="finding${item.pass ? " pass" : ""}"><strong>${item.pass ? "✓ " : "! "}${item.title}</strong><p>${item.detail}</p></article>`).join("");
@@ -445,13 +459,16 @@ function reset(clearFiles = true) {
   state.documents = []; state.selectedId = null; state.zoom = 1; state.processing = false;
   if (els.fileInput) els.fileInput.value = "";
   els.caseId.textContent = "Case —"; els.caseStatus.textContent = "Ready"; els.caseReference.textContent = "Case reference: —"; els.processingStrip.hidden = true;
+  els.progressTrack.setAttribute("aria-valuenow", "0");
+  els.progressTrack.removeAttribute("aria-valuetext");
+  els.confidenceTrack.setAttribute("aria-valuenow", "0");
   els.decisionEmpty.hidden = false; els.decisionContent.hidden = true; els.recommendationHeading.textContent = "Awaiting evidence";
   els.riskBadge.textContent = "—"; els.riskBadge.className = "risk-badge neutral";
   renderDocuments(); renderViewer();
 }
 
 els.fileInput.addEventListener("change", event => addFiles(event.target.files));
-els.dropZone.addEventListener("dragover", event => { event.preventDefault(); els.dropZone.classList.add("dragging"); });
+els.dropZone.addEventListener("dragover", event => { event.preventDefault(); if (state.mode === "live") els.dropZone.classList.add("dragging"); });
 els.dropZone.addEventListener("dragleave", () => els.dropZone.classList.remove("dragging"));
 els.dropZone.addEventListener("drop", event => { event.preventDefault(); els.dropZone.classList.remove("dragging"); addFiles(event.dataTransfer.files); });
 els.sampleButton.addEventListener("click", loadSample); els.analyzeButton.addEventListener("click", analyze); els.resetButton.addEventListener("click", () => reset());
@@ -467,41 +484,82 @@ els.scenarioSelect.addEventListener("change", event => { state.scenario = event.
 const diffTrigger = document.querySelector("#differentiatorTrigger");
 const diffModal = document.querySelector("#differentiatorsModal");
 const diffClose = document.querySelector("#diffModalCloseBtn");
+let dialogReturnFocus = null;
+
+function closeDialog(dialog) {
+  dialog.hidden = true;
+  dialogReturnFocus?.focus();
+  dialogReturnFocus = null;
+}
 
 if (diffTrigger && diffModal && diffClose) {
   diffTrigger.addEventListener("click", e => {
     e.preventDefault();
+    dialogReturnFocus = diffTrigger;
     diffModal.hidden = false;
+    diffClose.focus();
   });
   diffClose.addEventListener("click", () => {
-    diffModal.hidden = true;
+    closeDialog(diffModal);
   });
   diffModal.addEventListener("click", e => {
-    if (e.target === diffModal) diffModal.hidden = true;
+    if (e.target === diffModal) closeDialog(diffModal);
+  });
+  diffModal.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeDialog(diffModal);
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const focusables = Array.from(diffModal.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(element => !element.hidden);
+    if (!focusables.length) {
+      e.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   });
 }
 
-// Mode Toggle & Password Lock Controls
+// Deployment mode controls
 const btnSyntheticMode = document.querySelector("#btnSyntheticMode");
 const btnLiveMode = document.querySelector("#btnLiveMode");
 const envBadge = document.querySelector("#envBadge");
-const liveAuthModal = document.querySelector("#liveAuthModal");
-const authModalCloseBtn = document.querySelector("#authModalCloseBtn");
-const authCancelBtn = document.querySelector("#authCancelBtn");
-const authForm = document.querySelector("#authForm");
-const passcodeInput = document.querySelector("#passcodeInput");
-const authError = document.querySelector("#authError");
+const liveConfigured = Boolean(
+  window.ARIA_CONFIG?.liveEndpoint
+);
 
 function updateModeUI() {
   const isLive = state.mode === "live";
   if (btnSyntheticMode) {
     btnSyntheticMode.classList.toggle("active", !isLive);
+    btnSyntheticMode.setAttribute("aria-pressed", String(!isLive));
   }
   if (btnLiveMode) {
     btnLiveMode.classList.toggle("active", isLive);
     btnLiveMode.classList.toggle("live-active", isLive);
-    btnLiveMode.textContent = state.liveUnlocked ? (isLive ? "🟢 Live Azure" : "🔓 Live Azure") : "🔒 Live Azure";
+    btnLiveMode.setAttribute("aria-pressed", String(isLive));
+    btnLiveMode.disabled = !liveConfigured;
+    btnLiveMode.textContent = liveConfigured ? "Live Azure" : "Set up Azure";
+    btnLiveMode.title = liveConfigured ? "Use the current Azure demo deployment" : "Configure an Azure deployment to process actual documents";
   }
+  els.fileInput.disabled = !isLive;
+  els.dropZone.classList.toggle("disabled", !isLive);
+  els.dropZone.setAttribute("aria-disabled", String(!isLive));
+  document.querySelector("#uploadTitle").textContent = isLive ? "Drop inspection files" : "Sample cases only";
+  document.querySelector("#uploadHelp").textContent = isLive ? "PDF, PNG, JPG or TIFF" : "Choose a scenario and load the sample case";
+  document.querySelector("#privacyText").textContent = isLive ? "Files are sent to your configured Azure deployment" : "Synthetic mode does not inspect uploaded files";
+  document.querySelector("#azureSetupNote").hidden = isLive;
   if (envBadge) {
     if (isLive) {
       envBadge.textContent = "LIVE AZURE · DURABLE FUNCTIONS";
@@ -516,55 +574,19 @@ function updateModeUI() {
 if (btnSyntheticMode) {
   btnSyntheticMode.addEventListener("click", () => {
     state.mode = "synthetic";
-    state.liveUnlocked = false;
     sessionStorage.setItem("ariaMode", "synthetic");
-    sessionStorage.removeItem("ariaLiveUnlocked");
+    reset();
     updateModeUI();
   });
 }
 
 if (btnLiveMode) {
   btnLiveMode.addEventListener("click", () => {
-    if (state.mode === "live") return;
-    if (authError) authError.hidden = true;
-    if (passcodeInput) passcodeInput.value = "";
-    if (liveAuthModal) liveAuthModal.hidden = false;
-    if (passcodeInput) setTimeout(() => passcodeInput.focus(), 100);
-  });
-}
-
-if (authForm) {
-  authForm.addEventListener("submit", e => {
-    e.preventDefault();
-    const val = (passcodeInput?.value || "").trim().toLowerCase();
-    if (val === "aria2026" || val === "aria") {
-      state.liveUnlocked = true;
-      state.mode = "live";
-      sessionStorage.setItem("ariaLiveUnlocked", "true");
-      sessionStorage.setItem("ariaMode", "live");
-      if (liveAuthModal) liveAuthModal.hidden = true;
-      updateModeUI();
-    } else {
-      if (authError) authError.hidden = false;
-    }
-  });
-}
-
-if (authCancelBtn && liveAuthModal) {
-  authCancelBtn.addEventListener("click", () => {
-    liveAuthModal.hidden = true;
-  });
-}
-
-if (authModalCloseBtn && liveAuthModal) {
-  authModalCloseBtn.addEventListener("click", () => {
-    liveAuthModal.hidden = true;
-  });
-}
-
-if (liveAuthModal) {
-  liveAuthModal.addEventListener("click", e => {
-    if (e.target === liveAuthModal) liveAuthModal.hidden = true;
+    if (!liveConfigured || state.mode === "live") return;
+    state.mode = "live";
+    sessionStorage.setItem("ariaMode", "live");
+    reset();
+    updateModeUI();
   });
 }
 

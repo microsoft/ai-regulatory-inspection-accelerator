@@ -10,6 +10,10 @@
 *.userosscache
 *.sln.docstates
 *.env
+reference-implementations/food-inspection/ui/config.local.js
+/.copilot-tracking/
+/*.code-workspace
+/aria-func.zip
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -154,6 +158,9 @@ ipch/
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
 terraform-plan.log
 *.e2e
 

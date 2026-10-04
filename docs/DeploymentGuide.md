@@ -20,7 +20,7 @@ The production ARIA deployment adheres to Microsoft’s **Zero-Secrets Security 
                                                     v
 +---------------------------------------------------------------------------------------------------------+
 |                                  AZURE DURABLE FUNCTIONS ORCHESTRATION                                  |
-|                                       func-aria-pipeline (Flex)                                         |
+|                                      <your-function-app> (Flex)                                        |
 |  +---------------------+   +---------------------+   +---------------------+   +-------------------+  |
 |  | Pre-Validation      |-->| Document Extraction |-->| Cross-Doc Reasoning |-->| Policy & Risk     |  |
 |  | Activity            |   | Activity            |   | Activity            |   | Activity          |  |
@@ -30,7 +30,7 @@ The production ARIA deployment adheres to Microsoft’s **Zero-Secrets Security 
           v                            v                         v                          v
 +-------------------+      +-----------------------+   +-------------------+      +-------------------+
 |  Azure Key Vault  |      | Azure AI Document     |   |  Azure OpenAI     |      | Azure Cosmos DB   |
-|  kv-aria-infra    |      | Intelligence          |   |  oai-aria-infra   |      | cosmos-aria-tele  |
+| <your-key-vault>  |      | Intelligence          |   | <your-openai>     |      | <your-cosmos>     |
 |  (Zero Secrets)   |      | (Layout & Extraction) |   | (Mini & Vision)   |      | (Audit & Telem)   |
 +-------------------+      +-----------------------+   +-------------------+      +-------------------+
 ```
@@ -64,18 +64,46 @@ An enterprise ARIA deployment provisions the following resource set within a sin
 
 | Service | Resource Name Pattern | SKU / Tier | Purpose |
 |---|---|---|---|
-| **API Management** | `apim-aria-infra` | Consumption / Standard | Public gateway, CORS policy, rate-limiting, and Function Key injection |
-| **Azure Function App** | `func-aria-pipeline` | Flex Consumption / Premium | Python 3.10 Durable Functions orchestrator and activity handlers |
-| **Azure OpenAI** | `oai-aria-infra` | Standard (`S0`) | Text extraction (`aria-text-mini`) and multimodal vision fallback (`aria-vision`) |
-| **Document Intelligence** | `di-aria-infra` | Standard (`S0`) | Layout, table, and OCR extraction |
-| **Key Vault** | `kv-aria-infra` | Standard | Zero-secrets storage for model API keys and service connection strings |
-| **Cosmos DB** | `cosmos-aria-telemetry` | Serverless (SQL API) | Immutable token consumption records, risk evaluations, and reviewer overrides |
-| **Storage Account** | `stariainfra` | Standard LRS | Raw document uploads, normalized markdown blobs, and Static Web App hosting |
+| **API Management** | `apim-aria-<unique>` | Consumption / Standard | Public gateway, CORS policy, rate-limiting, and server-side authentication |
+| **Azure Function App** | `func-aria-<unique>` | Flex Consumption / Premium | Python 3.10 Durable Functions orchestrator and activity handlers |
+| **Azure OpenAI** | `oai-aria-<unique>` | Standard (`S0`) | Text extraction (`aria-text-mini`) and multimodal vision fallback (`aria-vision`) |
+| **Document Intelligence** | `di-aria-<unique>` | Standard (`S0`) | Layout, table, and OCR extraction |
+| **Key Vault** | `kv-aria-<unique>` | Standard | Server-side storage for model API keys and service connection strings |
+| **Cosmos DB** | `cosmos-aria-<unique>` | Serverless (SQL API) | Immutable token consumption records, risk evaluations, and reviewer overrides |
+| **Storage Account** | `staria<unique>` | Standard LRS | Raw document uploads, normalized markdown blobs, and static website hosting |
 | **Managed Identity** | `id-aria-pipeline` | User-Assigned | Passwordless RBAC authentication between Function App and Azure services |
 
 ---
 
 ## 4. Step-by-Step Production Deployment Protocol
+
+### Terraform Setup
+
+The Terraform defaults describe the current project demo resources but contain no credentials. Override globally unique names for a deployment in your subscription:
+
+```powershell
+Push-Location infra/infra
+terraform init
+terraform plan -var-file terraform.tfvars -out aria.tfplan
+terraform show aria.tfplan
+terraform apply aria.tfplan
+Pop-Location
+```
+
+Create `terraform.tfvars` locally with your globally unique resource names and allowed workbench origin. Review the complete plan before applying it. Do not commit variable files, state files, plans, or credentials.
+
+After deployment, create the Git-ignored local workbench configuration at the path loaded by the browser:
+
+```powershell
+Copy-Item reference-implementations/food-inspection/ui/config.local.example.js reference-implementations/food-inspection/ui/config.local.js
+```
+
+Open the workbench with `?config=local`, for example
+`http://localhost:4173/index.html?config=local`, to load the override.
+
+Add only your public APIM route URLs. Do not store access tokens, client secrets, Function keys, or APIM subscription keys in source files. APIM injects the Function key server-side through a protected named value.
+
+The following manual steps describe the resource relationships and can also be used when adapting the deployment to an existing enterprise landing zone.
 
 ### Step 1: Resource Group & Identity Provisioning
 Create the resource group and user-assigned managed identity:
@@ -140,14 +168,14 @@ az cosmosdb sql container create --resource-group rg-aria-prod --account-name co
 ```
 
 ### Step 5: Configure Function App AppSettings & Key Vault References
-Wire environment settings and Key Vault references into `func-aria-pipeline`:
+Wire environment settings and Key Vault references into your Function App:
 
 ```bash
 # Retrieve Key Vault Secret URI
 SECRET_URI=$(az keyvault secret show --vault-name kv-aria-prod --name "AZURE-OPENAI-API-KEY" --query id -o tsv)
 
 # Configure Function App AppSettings
-az functionapp config appsettings set --resource-group rg-aria-prod --name func-aria-pipeline --settings \
+az functionapp config appsettings set --resource-group <your-resource-group> --name <your-function-app> --settings \
   "AZURE_OPENAI_ENDPOINT=https://oai-aria-prod.openai.azure.com/" \
   "AZURE_OPENAI_DEPLOYMENT=aria-text-mini" \
   "AZURE_OPENAI_VISION_DEPLOYMENT=aria-vision" \
@@ -167,7 +195,7 @@ Package and deploy the production Function code:
 python -c "import zipfile, os; src = '.'; zf = zipfile.ZipFile('aria-func.zip', 'w', zipfile.ZIP_DEFLATED); [zf.write(os.path.join(r, f), os.path.relpath(os.path.join(r, f), src)) for r, d, fs in os.walk(src) if not any(x.startswith('.') or x in ('__pycache__', 'venv') for x in r.split(os.sep)) for f in fs if not f.endswith('.zip')]; zf.close()"
 
 # Zip deploy to Azure Function App
-az functionapp deployment source config-zip --resource-group rg-aria-prod --name func-aria-pipeline --src aria-func.zip
+az functionapp deployment source config-zip --resource-group <your-resource-group> --name <your-function-app> --src aria-func.zip
 ```
 
 ### Step 7: Configure APIM Gateway Routes & CORS Security
@@ -175,7 +203,7 @@ Set up APIM proxy operations and inject Function keys server-side:
 
 ```powershell
 # Set APIM backend base URL
-$base = "https://management.azure.com/subscriptions/<sub-id>/resourceGroups/rg-aria-prod/providers/Microsoft.ApiManagement/service/apim-aria-prod"
+$base = "https://management.azure.com/subscriptions/<sub-id>/resourceGroups/<your-resource-group>/providers/Microsoft.ApiManagement/service/<your-apim-name>"
 # Operations: POST /aria-demo/live/inspections & GET /aria-demo/telemetry
 ```
 
@@ -188,10 +216,10 @@ Verify production pipeline readiness:
 ```powershell
 # Test Live Inspection Route via APIM
 $body = '{ "requestId": "PROD-AUDIT-001", "documents": [{ "documentId": "1", "name": "Invoice.pdf", "type": "Commercial Invoice", "text": "Commodity: Poultry. Net Weight: 12400 kg. Origin: Brazil" }, { "documentId": "2", "name": "Certificate.pdf", "type": "Health Certificate", "text": "Commodity: Poultry. Net Weight: 12400 kg. Origin: Brazil" }] }'
-Invoke-WebRequest -Uri "https://apim-aria-prod.azure-api.net/aria-demo/live/inspections" -Method Post -ContentType "application/json" -Body $body
+Invoke-WebRequest -Uri "https://<your-apim-name>.azure-api.net/<inspection-route>" -Method Post -ContentType "application/json" -Body $body
 
 # Verify Cosmos DB Telemetry Persistence
-Invoke-WebRequest -Uri "https://apim-aria-prod.azure-api.net/aria-demo/telemetry" -Method Get
+Invoke-WebRequest -Uri "https://<your-apim-name>.azure-api.net/<telemetry-route>" -Method Get
 ```
 
 ---
