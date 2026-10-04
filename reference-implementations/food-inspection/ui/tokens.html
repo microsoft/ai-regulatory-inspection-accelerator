@@ -12,6 +12,7 @@
   <script src="config.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
   <header class="topbar">
     <div class="brand-lockup">
       <div class="brand-logo-badge" aria-hidden="true">
@@ -24,11 +25,11 @@
       <div><strong>ARIA</strong><span>AI Regulatory Operations</span></div>
     </div>
     <div class="mode-controls">
-      <div class="mode-toggle-pill" aria-label="Telemetry mode">
-        <button id="btnSyntheticMode" type="button" class="mode-toggle-btn active">Synthetic</button>
-        <button id="btnLiveMode" type="button" class="mode-toggle-btn">Live Azure</button>
+      <div class="mode-toggle-pill" role="group" aria-label="Telemetry mode">
+        <button id="btnSyntheticMode" type="button" class="mode-toggle-btn active" aria-pressed="true">Synthetic</button>
+        <button id="btnLiveMode" type="button" class="mode-toggle-btn" aria-pressed="false" disabled>Set up Azure</button>
       </div>
-      <span id="envBadge" class="environment synthetic">PROJECTED · SYNTHETIC DATA</span>
+      <span id="envBadge" class="environment synthetic" aria-live="polite">PROJECTED · SYNTHETIC DATA</span>
     </div>
     <div class="topbar-end">
       <div class="scope-label"><span></span><span id="scopeLabelText">Generated sample telemetry</span></div>
@@ -36,7 +37,7 @@
     </div>
   </header>
 
-  <main class="dashboard-shell">
+  <main id="mainContent" class="dashboard-shell" tabindex="-1">
     <section class="dashboard-heading">
       <div>
         <span class="eyebrow">Cost and efficiency governance</span>
@@ -137,8 +138,8 @@
       <div class="panel-title">
         <div><span class="eyebrow">How caching works</span><h2>Why cached tokens save money</h2></div>
         <div class="wiki-links">
-          <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/pafn-di-poc/wiki/Architecture.md" target="_blank" class="wiki-btn">📖 How Caching Works in ARIA (Wiki)</a>
-          <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
+          <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/architecture/TechnicalArchitecture.md#6-token-efficiency" target="_blank" rel="noopener noreferrer" class="wiki-btn">📖 How Caching Works in ARIA (Wiki)</a>
+          <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" rel="noopener noreferrer" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
         </div>
       </div>
       <p>When Azure reports cached input tokens, ARIA prices those tokens at the published cached-input rate for the deployed model. It does not infer cache use from prompt size.</p>
@@ -214,9 +215,9 @@
             <h2 id="chartTitle">Daily Token Usage Trend</h2>
           </div>
           <div class="chart-controls">
-            <div class="toggle-group" aria-label="Granularity toggle">
-              <button id="btnDailyGranular" class="toggle-btn active" type="button">Daily</button>
-              <button id="btnAccumulatedGranular" class="toggle-btn" type="button">Accumulated</button>
+            <div class="toggle-group" role="group" aria-label="Granularity toggle">
+              <button id="btnDailyGranular" class="toggle-btn active" type="button" aria-pressed="true">Daily</button>
+              <button id="btnAccumulatedGranular" class="toggle-btn" type="button" aria-pressed="false">Accumulated</button>
             </div>
             <div class="legend">
               <span class="prompt-dot"></span>Input
@@ -225,7 +226,8 @@
             </div>
           </div>
         </div>
-        <div id="usageChart" class="usage-chart" aria-label="Daily token usage bar chart"></div>
+        <div id="usageChart" class="usage-chart" role="img" aria-labelledby="chartTitle" aria-describedby="usageChartSummary"></div>
+        <p id="usageChartSummary" class="visually-hidden"></p>
       </article>
 
       <article class="panel activity-panel">
@@ -274,10 +276,15 @@
     <section class="panel cases-panel">
       <div class="panel-title">
         <div><span id="tableEyebrow" class="eyebrow">Generated spend by synthetic call</span><h2 id="caseTableTitle">Synthetic call usage</h2></div>
-        <div class="table-tools"><input id="caseSearch" type="search" placeholder="Search Case ID or activity"><span id="visibleRows"></span></div>
+        <div class="table-tools">
+          <label class="visually-hidden" for="caseSearch">Search case ID, tenant, activity, or model</label>
+          <input id="caseSearch" type="search" placeholder="Search Case ID or activity">
+          <span id="visibleRows" aria-live="polite"></span>
+        </div>
       </div>
       <div class="table-scroll">
         <table>
+          <caption class="visually-hidden">Token usage by case and model call</caption>
           <thead><tr><th>Case ID</th><th>Tenant / Scenario</th><th>Primary activity</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Total</th><th>Est. cost</th><th>Latency</th></tr></thead>
           <tbody id="caseRows"></tbody>
         </table>
@@ -285,11 +292,11 @@
       <div class="pagination-bar">
         <div class="pagination-info"><span id="pageInfo">Showing 1–10 of 10</span></div>
         <div class="pagination-controls">
-          <button id="btnFirst" type="button" title="First page">&laquo;</button>
+          <button id="btnFirst" type="button" title="First page" aria-label="First page">&laquo;</button>
           <button id="btnPrev" type="button" title="Previous page">&lt; Prev</button>
           <span id="currentPageDisplay">Page 1 of 1</span>
           <button id="btnNext" type="button" title="Next page">Next &gt;</button>
-          <button id="btnLast" type="button" title="Last page">&raquo;</button>
+          <button id="btnLast" type="button" title="Last page" aria-label="Last page">&raquo;</button>
           <select id="pageSizeSelect" aria-label="Page size">
             <option value="10" selected>10 per page</option>
             <option value="25">25 per page</option>
@@ -310,15 +317,15 @@
 
     <!-- Modal 1: Caching Explainer -->
     <div id="modalCaching" class="modal-backdrop insight-modal" hidden>
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalCachingTitle" tabindex="-1">
         <div class="modal-header">
-          <div><span class="eyebrow">How Caching Works</span><h2>Why Cached Tokens Save Money</h2></div>
-          <button class="modal-close insight-modal-close" type="button">&times;</button>
+          <div><span class="eyebrow">How Caching Works</span><h2 id="modalCachingTitle">Why Cached Tokens Save Money</h2></div>
+          <button class="modal-close insight-modal-close" type="button" aria-label="Close caching explanation">&times;</button>
         </div>
         <div class="modal-body">
           <div class="wiki-links" style="margin-bottom:14px">
-            <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/pafn-di-poc/wiki/Architecture.md" target="_blank" class="wiki-btn">📖 How Caching Works in ARIA (Wiki)</a>
-            <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
+            <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/architecture/TechnicalArchitecture.md#6-token-efficiency" target="_blank" rel="noopener noreferrer" class="wiki-btn">📖 How Caching Works in ARIA (Wiki)</a>
+            <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/Phase2-Backlog.md" target="_blank" rel="noopener noreferrer" class="wiki-btn secondary">📘 Token Optimization & Saving Process</a>
           </div>
           <p>ARIA keeps the stable instruction prefix, template vocabulary, and policy context reusable. The model reuses that prefix across calls instead of processing identical input tokens again.</p>
           <div class="cache-flow"><span>Stable template context</span><b>→</b><span>Provider prefix cache</span><b>→</b><span>Only new evidence costs input tokens</span></div>
@@ -329,10 +336,10 @@
 
     <!-- Modal 2: Cost & Accuracy Governance -->
     <div id="modalAccuracy" class="modal-backdrop insight-modal" hidden>
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalAccuracyTitle" tabindex="-1">
         <div class="modal-header">
-          <div><span class="eyebrow">Cost & Accuracy Governance</span><h2>How ARIA Guarantees High Accuracy While Remaining Cost-Efficient</h2></div>
-          <button class="modal-close insight-modal-close" type="button">&times;</button>
+          <div><span class="eyebrow">Cost & Accuracy Governance</span><h2 id="modalAccuracyTitle">How ARIA Guarantees High Accuracy While Remaining Cost-Efficient</h2></div>
+          <button class="modal-close insight-modal-close" type="button" aria-label="Close accuracy governance">&times;</button>
         </div>
         <div class="modal-body">
           <div class="perf-grid">
@@ -358,10 +365,10 @@
 
     <!-- Modal 3: Production Scaling Roadmap (Phase 2) -->
     <div id="modalRoadmap" class="modal-backdrop insight-modal" hidden>
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalRoadmapTitle" tabindex="-1">
         <div class="modal-header">
-          <div><span class="eyebrow">Production Scaling Roadmap (Phase 2)</span><h2>Enterprise Micro-Frontend Architecture & React Telemetry Engine</h2></div>
-          <button class="modal-close insight-modal-close" type="button">&times;</button>
+          <div><span class="eyebrow">Production Scaling Roadmap (Phase 2)</span><h2 id="modalRoadmapTitle">Enterprise Micro-Frontend Architecture & React Telemetry Engine</h2></div>
+          <button class="modal-close insight-modal-close" type="button" aria-label="Close production roadmap">&times;</button>
         </div>
         <div class="modal-body">
           <div class="roadmap-grid">
@@ -392,10 +399,10 @@
 
     <!-- Modal 4: Token Optimization & Saving Strategies -->
     <div id="modalTips" class="modal-backdrop insight-modal" hidden>
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTipsTitle" tabindex="-1">
         <div class="modal-header">
-          <div><span class="eyebrow">Cost Reduction Guide</span><h2>Token Optimization & Saving Strategies</h2></div>
-          <button class="modal-close insight-modal-close" type="button">&times;</button>
+          <div><span class="eyebrow">Cost Reduction Guide</span><h2 id="modalTipsTitle">Token Optimization & Saving Strategies</h2></div>
+          <button class="modal-close insight-modal-close" type="button" aria-label="Close token optimization strategies">&times;</button>
         </div>
         <div class="modal-body">
           <div class="tips-grid">
@@ -433,13 +440,13 @@
 
   <!-- Per-case detail modal -->
   <div id="caseModal" class="modal-backdrop" hidden>
-    <div class="modal-content">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalCaseId" tabindex="-1">
       <div class="modal-header">
         <div>
           <span class="eyebrow">Per-Case Detailed Telemetry</span>
           <h2 id="modalCaseId">Case CASE-1842</h2>
         </div>
-        <button id="modalCloseBtn" type="button" class="modal-close">&times;</button>
+        <button id="modalCloseBtn" type="button" class="modal-close" aria-label="Close case telemetry details">&times;</button>
       </div>
       <div class="modal-body">
         <div class="modal-kpi-row">
@@ -454,7 +461,6 @@
     </div>
   </div>
 
-  <script src="config.js"></script>
-  <script src="tokens.js"></script>
+  <script src="config-loader.js" data-application="tokens.js"></script>
 </body>
 </html>

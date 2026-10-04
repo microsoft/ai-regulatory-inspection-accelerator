@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
   <header class="app-header">
     <div class="brand-lockup">
       <div class="brand-logo-badge" aria-hidden="true">
@@ -26,13 +27,13 @@
       </div>
     </div>
     <div class="case-meta">
-      <div class="mode-toggle-pill" aria-label="Mode switch">
-        <button id="btnSyntheticMode" type="button" class="mode-toggle-btn active">Synthetic</button>
-        <button id="btnLiveMode" type="button" class="mode-toggle-btn">🔒 Live Azure</button>
+      <div class="mode-toggle-pill" role="group" aria-label="Mode switch">
+        <button id="btnSyntheticMode" type="button" class="mode-toggle-btn active" aria-pressed="true">Synthetic</button>
+        <button id="btnLiveMode" type="button" class="mode-toggle-btn" aria-pressed="false" disabled>Set up Azure</button>
       </div>
-      <span id="envBadge" class="environment synthetic">DEMO · SYNTHETIC (LOCAL)</span>
-      <span id="caseId">Case —</span>
-      <span id="caseStatus" class="status-dot">Ready</span>
+      <span id="envBadge" class="environment synthetic" aria-live="polite">DEMO · SYNTHETIC (LOCAL)</span>
+      <span id="caseId" aria-live="polite">Case —</span>
+      <span id="caseStatus" class="status-dot" role="status">Ready</span>
     </div>
     <div class="header-actions">
       <a class="header-link differentiator-btn" href="#differentiatorsModal" id="differentiatorTrigger">⚡ Platform Architecture</a>
@@ -41,22 +42,23 @@
     </div>
   </header>
 
-  <main class="workbench">
+  <main id="mainContent" class="workbench" tabindex="-1">
     <aside class="intake-panel" aria-labelledby="documentsHeading">
       <div class="panel-heading">
         <div>
           <span class="eyebrow">Evidence bundle</span>
           <h1 id="documentsHeading">Documents</h1>
         </div>
-        <span id="documentCount" class="count-badge">0</span>
+        <span id="documentCount" class="count-badge" aria-label="0 documents">0</span>
       </div>
 
       <label id="dropZone" class="drop-zone" for="fileInput">
         <span class="upload-symbol" aria-hidden="true">↑</span>
-        <strong>Drop inspection files</strong>
-        <span>PDF, PNG, JPG or TIFF</span>
-        <input id="fileInput" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" multiple>
+        <strong id="uploadTitle">Sample cases only</strong>
+        <span id="uploadHelp">Choose a scenario and load the sample case</span>
+        <input id="fileInput" type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff" multiple disabled>
       </label>
+      <p id="azureSetupNote" class="setup-note">To inspect actual documents, <a href="https://github.com/microsoft/ai-regulatory-inspection-accelerator/blob/main/docs/DeploymentGuide.md" target="_blank" rel="noopener noreferrer">set up ARIA in your Azure subscription</a>.</p>
 
       <div class="demo-row">
         <label class="scenario-picker" for="scenarioSelect">Scenario
@@ -70,7 +72,7 @@
       <div class="intake-footer">
         <div class="privacy-note">
           <span aria-hidden="true">⌁</span>
-          <span>Files stay in this browser</span>
+          <span id="privacyText">Synthetic mode does not inspect uploaded files</span>
         </div>
         <button id="analyzeButton" class="primary-button" type="button" disabled>
           <span>Run inspection</span>
@@ -97,20 +99,20 @@
           <span></span><span></span><span></span>
         </div>
         <h3>Evidence appears here</h3>
-        <p>Upload a bundle or load the sample case to begin.</p>
+        <p>Choose a scenario and load the sample case to begin.</p>
       </div>
 
-      <div id="processingStrip" class="processing-strip" hidden>
+      <div id="processingStrip" class="processing-strip" role="status" aria-live="polite" hidden>
         <div class="processing-copy">
           <span id="processingLabel">Preparing evidence</span>
           <strong id="processingDetail">Validating bundle integrity</strong>
         </div>
-        <div class="progress-track"><span id="progressBar"></span></div>
+        <div id="progressTrack" class="progress-track" role="progressbar" aria-label="Inspection progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="progressBar"></span></div>
         <span id="progressPercent">0%</span>
       </div>
     </section>
 
-    <aside class="decision-panel" aria-labelledby="recommendationHeading">
+    <aside class="decision-panel" aria-labelledby="recommendationHeading" aria-live="polite">
       <div class="panel-heading decision-heading">
         <div>
           <span class="eyebrow">AI recommendation</span>
@@ -137,7 +139,7 @@
 
         <section class="confidence-block">
           <div class="metric-row"><span>Confidence</span><strong id="confidenceValue">—</strong></div>
-          <div class="confidence-track"><span id="confidenceBar"></span></div>
+          <div id="confidenceTrack" class="confidence-track" role="progressbar" aria-label="Recommendation confidence" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="confidenceBar"></span></div>
         </section>
 
         <section class="findings-section">
@@ -175,13 +177,13 @@
 
   <!-- ARIA Differentiator Modal -->
   <div id="differentiatorsModal" class="modal-backdrop" hidden>
-    <div class="modal-content diff-modal-content">
+    <div class="modal-content diff-modal-content" role="dialog" aria-modal="true" aria-labelledby="differentiatorsTitle" tabindex="-1">
       <div class="modal-header">
         <div>
           <span class="eyebrow">Enterprise Distinction</span>
-          <h2>Why ARIA Goes Beyond Conventional Document Checkers</h2>
+          <h2 id="differentiatorsTitle">Why ARIA Goes Beyond Conventional Document Checkers</h2>
         </div>
-        <button id="diffModalCloseBtn" type="button" class="modal-close">&times;</button>
+        <button id="diffModalCloseBtn" type="button" class="modal-close" aria-label="Close platform architecture dialog">&times;</button>
       </div>
       <div class="modal-body diff-modal-body">
         <p class="diff-tagline">Conventional agentic doc checkers run unconstrained prompt chains that hallucinate risk decisions. ARIA introduces <strong>4 Core Enterprise Architectural Pillars</strong>:</p>
@@ -212,34 +214,7 @@
     </div>
   </div>
 
-  <!-- Password Auth Modal for Live Azure Mode -->
-  <div id="liveAuthModal" class="modal-backdrop" hidden>
-    <div class="modal-content auth-modal-content">
-      <div class="modal-header">
-        <div>
-          <span class="eyebrow">Security Governance</span>
-          <h2>Unlock Live Azure Execution</h2>
-        </div>
-        <button id="authModalCloseBtn" type="button" class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body auth-modal-body">
-        <p class="auth-desc">Live Mode calls active Azure Durable Functions & Document Intelligence endpoints. Enter the admin passcode to unlock Live Azure processing.</p>
-        <form id="authForm" onsubmit="return false;">
-          <div class="auth-input-group">
-            <label for="passcodeInput" class="auth-label">Admin Passcode</label>
-            <input id="passcodeInput" type="password" class="auth-input" placeholder="Enter admin passcode" autocomplete="off">
-          </div>
-          <div id="authError" class="auth-error" hidden>Incorrect passcode. Live Azure access denied.</div>
-          <div class="auth-actions">
-            <button id="authCancelBtn" type="button" class="auth-btn-secondary">Cancel</button>
-            <button id="authSubmitBtn" type="submit" class="auth-btn-primary">Unlock Live Azure</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="config-loader.js" data-application="app.js"></script>
 </body>
 </html>

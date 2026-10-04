@@ -7,7 +7,7 @@ Extract facts. Reconcile evidence. Apply policy. Explain the recommendation.
 
 <br>
 
-[**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**BUSINESS USE CASES**](#business-use-cases) &nbsp;|&nbsp; [**WINNING FORMULA**](#winning-formula) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**QUICK DEPLOY**](#quick-deploy) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
+[**SOLUTION OVERVIEW**](#solution-overview) &nbsp;|&nbsp; [**TRY THE DEMO**](#try-the-demo) &nbsp;|&nbsp; [**BUSINESS USE CASES**](#business-use-cases) &nbsp;|&nbsp; [**ARCHITECTURE**](#agentic-framework) &nbsp;|&nbsp; [**GUARDRAILS**](#guardrails-security-and-responsible-ai) &nbsp;|&nbsp; [**SETUP**](#setup) &nbsp;|&nbsp; [**TEMPLATES**](#reference-templates)
 
 </div>
 
@@ -35,10 +35,8 @@ The supplied solution architecture shows the broader Azure entry, AI, persistenc
 
 ## Try the demo
 
-https://github.com/user-attachments/assets/0335c898-4e95-4909-be80-633d0e3eedba
-
-* [Open the live Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html)
-* [Open Token Analytics](https://stariainfra.z13.web.core.windows.net/tokens.html)
+* [Open the hosted Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html)
+* [Open the hosted Token Analytics dashboard](https://stariainfra.z13.web.core.windows.net/tokens.html)
 * [Read the demo walkthrough](docs/HackathonDemo.md)
 
 <video controls preload="metadata" width="100%">
@@ -46,27 +44,17 @@ https://github.com/user-attachments/assets/0335c898-4e95-4909-be80-633d0e3eedba
   Your browser does not support embedded video. [Watch or download the ARIA demo](media/ARIA-Demo-with-speech.mp4).
 </video>
 
-The demo runs a live three-document inspection, shows the recommendation and timed decision trace, then moves to token and cost analytics.
+The current incremental demo runs on the project Azure deployment. Synthetic mode uses curated samples and projected analytics; Live Azure processes uploaded documents and displays provider-measured telemetry.
 
-### Public demo steps
+### Demo steps
 
-1. Open the [Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html).
-2. Keep **Synthetic** mode selected. This path runs in the browser and does not use an Azure subscription.
-3. Select **Load sample case**, choose the Food Safety English or Arabic scenario, and select **Run inspection**.
+1. Open the [hosted Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html), or complete the [sample demo setup](#sample-demo-setup) for a local preview.
+2. Keep **Synthetic** mode selected.
+3. Choose a scenario, select **Load sample case**, and then select **Run inspection**.
 4. Review the recommendation, findings, cross-document checks, confidence, and decision trace.
-5. Open [Token Analytics](https://stariainfra.z13.web.core.windows.net/tokens.html) to review the operations view.
+5. Open the [hosted Token Analytics dashboard](https://stariainfra.z13.web.core.windows.net/tokens.html) to compare projected and provider-measured operations views.
 
-The hosted demo is provided for evaluation and uses shared demo assets. Do not enable Live Azure mode unless you are an authorized maintainer of the deployment.
-
-### Local browser-only preview
-
-No Azure subscription or Python package installation is required for the synthetic workbench:
-
-```powershell
-python -m http.server 4173 --directory reference-implementations/food-inspection/ui
-```
-
-Open <http://localhost:4173/index.html>, keep **Synthetic** mode selected, load a sample case, and run the inspection. This local path does not call Azure AI services.
+Synthetic mode is intentionally sample-only and does not inspect uploaded documents. Select **Live Azure** to process actual documents with the current Azure-backed demo. The hosted environment is an incremental demonstration, not a production service; adopters should deploy the solution into their own subscription for sustained use.
 
 ## Business use cases
 
@@ -98,9 +86,9 @@ Azure OpenAI manages prompt caching. ARIA improves cache eligibility by placing 
 
 The dashboard prices the observed workload at published model rates and compares it with the same model and token volume with caching disabled. Only records marked as provider-measured receive a cached-input discount. Historical estimates remain visible for audit context but are excluded from measured cache savings.
 
-See [Token Efficiency](docs/architecture/TechnicalArchitecture.md#6-token-efficiency) for the platform strategy and [ARIA Token Analytics](https://stariainfra.z13.web.core.windows.net/tokens.html) for the live operations view.
+See [How Caching Works in ARIA](docs/architecture/TechnicalArchitecture.md#6-token-efficiency) for the platform strategy.
 
-## Winning formula
+### Reusable capabilities across use cases
 
 | Capability | ARIA outcome |
 |------------|--------------|
@@ -157,6 +145,64 @@ flowchart LR
 
 The detailed architecture, security model, data flow, and Azure topology are in the [Technical Architecture](docs/architecture/TechnicalArchitecture.md).
 
+## Guardrails, security, and Responsible AI
+
+ARIA embeds guardrails, security, and Responsible AI principles throughout the evidence-to-decision lifecycle. These measures help ensure that every recommendation is secure, explainable, auditable, and subject to meaningful human oversight.
+
+### Responsible AI
+
+Recommendations remain explainable and traceable to source evidence, deterministic rules, risk components, model and policy versions, timestamps, and reviewer actions. Before production use, adopters must evaluate representative languages, document types, demographic groups, and edge cases. Human oversight, bias evaluation, privacy assessment, security testing, continuous monitoring, and regulatory approval are mandatory deployment gates.
+
+### Guardrails
+
+ARIA separates probabilistic AI extraction from deterministic policy evaluation and risk scoring. It validates model outputs, applies confidence and document-quality thresholds, detects missing or conflicting evidence, and escalates uncertain cases for human review. Models are instructed not to invent values, and reviewers retain final decision authority with documented overrides.
+
+### Security
+
+The solution uses managed identities, role-based access control, encrypted communications, protected secrets, authenticated APIs, request validation, file-integrity checks, and least-privilege access to Azure resources. Rate and payload limits help protect AI services from misuse and cost exhaustion. Sensitive data is minimized, access-controlled, and retained according to applicable privacy and regulatory requirements.
+
+### Accessibility
+
+The reference web interfaces support skip navigation, keyboard-visible focus,
+semantic status and progress announcements, accessible data tables and charts,
+reduced-motion preferences, and keyboard-safe dialogs. Adopters must validate
+their configured deployment against Microsoft accessibility guidance and
+applicable WCAG 2.1 Level AA requirements before production use.
+
+## Setup
+
+### Sample demo setup
+
+The hosted demo is available from the [Inspection Workbench](https://stariainfra.z13.web.core.windows.net/index.html). For a local preview, Python is required only as a static-file server. Synthetic mode uses no Azure resources and accepts no document uploads.
+
+```powershell
+git clone https://github.com/microsoft/ai-regulatory-inspection-accelerator.git
+cd ai-regulatory-inspection-accelerator
+python -m http.server 4173 --directory reference-implementations/food-inspection/ui
+```
+
+Open <http://localhost:4173/index.html>, choose a scenario, and select **Load sample case**.
+
+### Deploy your own Azure environment
+
+The repository currently points to the project Azure demo through public, non-secret APIM endpoints. For sustained use, deploy an environment in your Azure subscription:
+
+1. Follow the [Deployment Guide](docs/DeploymentGuide.md) to provision the Azure resources in your subscription.
+2. Create the Git-ignored local configuration at the path loaded by the workbench:
+
+  ```powershell
+  Copy-Item reference-implementations/food-inspection/ui/config.local.example.js reference-implementations/food-inspection/ui/config.local.js
+  ```
+
+  Open <http://localhost:4173/index.html?config=local> to load the local endpoint
+  override.
+
+3. Set `liveEndpoint` and `telemetryEndpoint` to your public APIM routes. Endpoint and resource names are not secrets.
+4. Keep credentials, keys, and connection strings in Azure Key Vault, APIM named values, or server-side application settings. Never place them in browser configuration.
+5. Serve the workbench locally. **Live Azure** and actual-document upload become available when the endpoint is configured.
+
+For development prerequisites and local Function execution, see [Local Development Setup](docs/LocalDevelopmentSetup.md).
+
 ## Reference templates
 
 An industry template separates reusable platform code from domain policy. The food-safety reference includes:
@@ -183,10 +229,6 @@ Example mandatory evidence configuration:
   ]
 }
 ```
-
-## Quick deploy
-
-The public synthetic demo requires no Azure subscription. For an owned deployment, use the [Deployment Guide](docs/DeploymentGuide.md), which contains the Azure prerequisites, identity requirements, service topology, and configuration steps.
 
 ## Future scope
 
@@ -218,8 +260,6 @@ tests/                        Automated platform and policy tests
 * [Local Development Setup](docs/LocalDevelopmentSetup.md)
 * [Adoption Guide](docs/AdoptionGuide.md)
 * [Responsible AI Transparency FAQ](TRANSPARENCY_FAQ.md)
-
-ARIA produces recommendations, not autonomous high-stakes decisions. Each adopter must complete representative evaluation, security, privacy, responsible AI, and regulatory review before production use.
 
 ## License
 

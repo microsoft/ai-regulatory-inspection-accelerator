@@ -10,7 +10,7 @@ This guide details common deployment, runtime, and API issue resolution procedur
 * **Symptom**: `az cosmosdb create` fails with high-demand quota errors in region `eastus`.
 * **Resolution**: Deploy the Cosmos DB account in an adjacent region supporting Serverless capability (e.g. `eastus2` or `westus3`):
   ```bash
-  az cosmosdb create --name cosmos-aria-telemetry --resource-group rg-aria-infra --locations regionName=eastus2 --capabilities EnableServerless
+  az cosmosdb create --name <your-cosmos-account> --resource-group <your-resource-group> --locations regionName=eastus2 --capabilities EnableServerless
   ```
 
 ### Issue: APIM Policy Error — `rate-limit-by-key is not allowed in Consumption SKU`
@@ -22,7 +22,7 @@ This guide details common deployment, runtime, and API issue resolution procedur
       <base />
       <set-backend-service backend-id="inspector-live-demo-backend" />
       <cors allow-credentials="false">
-        <allowed-origins><origin>https://stariainfra.z13.web.core.windows.net</origin></allowed-origins>
+        <allowed-origins><origin>https://<your-workbench-origin></origin></allowed-origins>
         <allowed-methods><method>POST</method><method>GET</method><method>OPTIONS</method></allowed-methods>
         <allowed-headers><header>*</header></allowed-headers>
       </cors>
@@ -55,9 +55,9 @@ This guide details common deployment, runtime, and API issue resolution procedur
 
 ## 4. Security & Authentication Issues
 
-### Issue: Live Azure Passcode Rejection
-* **Symptom**: Switching to Live Azure mode in the Workbench UI prompts for a passcode and displays `Incorrect passcode`.
-* **Resolution**: Enter the admin passcode: **`aria2026`**. Passcode entry is case-insensitive.
+### Issue: Live Azure is unavailable in the Workbench
+* **Symptom**: The **Set up Azure** control is disabled and document upload is unavailable.
+* **Resolution**: Confirm that `config.js` contains the current public APIM routes. For another deployment, copy `reference-implementations/food-inspection/ui/config.local.example.js` to `reference-implementations/food-inspection/ui/config.local.js`, configure its APIM routes, and open the workbench with `?config=local`. Do not place Function keys, client secrets, subscription keys, or access tokens in browser code.
 
 ---
 

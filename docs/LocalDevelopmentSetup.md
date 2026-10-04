@@ -68,12 +68,12 @@ ruff check .
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "python",
-    "AZURE_OPENAI_ENDPOINT": "https://oai-aria-infra.openai.azure.com/",
+    "AZURE_OPENAI_ENDPOINT": "https://<your-openai-account>.openai.azure.com/",
     "AZURE_OPENAI_DEPLOYMENT": "aria-text-mini",
     "AZURE_OPENAI_VISION_DEPLOYMENT": "aria-vision",
     "AZURE_OPENAI_API_KEY": "<your-dev-key>",
-    "DOCUMENT_INTELLIGENCE_ENDPOINT": "https://di-aria-infra.cognitiveservices.azure.com/",
-    "COSMOS_ENDPOINT": "https://cosmos-aria-telemetry.documents.azure.com:443/",
+    "DOCUMENT_INTELLIGENCE_ENDPOINT": "https://<your-document-intelligence-account>.cognitiveservices.azure.com/",
+    "COSMOS_ENDPOINT": "https://<your-cosmos-account>.documents.azure.com:443/",
     "COSMOS_KEY": "<your-cosmos-key>",
     "COSMOS_DATABASE": "aria",
     "COSMOS_CONTAINER": "token_telemetry"
@@ -97,4 +97,15 @@ To serve and test the static Workbench UI locally:
 python -m http.server 4173 --directory reference-implementations/food-inspection/ui
 ```
 
-Open `http://localhost:4173/index.html` in your browser. You can toggle between **Synthetic Mode** (local browser mock) and **Live Mode** (pointing at your local or dev Azure Functions endpoints).
+Open `http://localhost:4173/index.html` in your browser. Synthetic mode is sample-only and does not accept uploads.
+
+To process actual documents, create the local configuration at the path loaded by the workbench:
+
+```powershell
+Copy-Item reference-implementations/food-inspection/ui/config.local.example.js reference-implementations/food-inspection/ui/config.local.js
+```
+
+Open <http://localhost:4173/index.html?config=local> to load the local
+configuration override.
+
+Set the endpoints to the public APIM routes from your Azure deployment. The local config file is ignored by Git. Never add API keys, client secrets, subscription keys, or access tokens to browser configuration.

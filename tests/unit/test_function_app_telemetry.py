@@ -69,7 +69,7 @@ def test_get_telemetry_returns_service_unavailable_for_cosmos_failure(monkeypatc
 
 
 def test_get_telemetry_returns_success_for_valid_empty_result(monkeypatch):
-    monkeypatch.setattr(function_app, "_fetch_telemetry", lambda: [])
+    monkeypatch.setattr(function_app, "_fetch_telemetry", list)
 
     response = asyncio.run(function_app.get_telemetry(Mock()))
 

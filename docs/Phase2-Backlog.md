@@ -35,12 +35,10 @@ the hosted demo.
 
 ## Demo boundary
 
-The hosted demo at
-<https://stariainfra.z13.web.core.windows.net/> remains a deterministic,
-browser-local walkthrough. It uses synthetic English, Arabic, customs, KYC,
-and insurance scenarios. Its public configuration points to the deployed APIM
-and Function App endpoints, but live authenticated submission is a Phase 2
-integration path.
+The repository demo supports deterministic browser-local samples and the current
+incremental Azure-backed workflow. Synthetic English, Arabic, customs, KYC, and
+insurance scenarios remain sample-only. Live Azure accepts actual documents through
+the public APIM route while credentials and Function keys remain server-side.
 
 The hybrid document strategy is intentional: deterministic preprocessing and
 Azure Document Intelligence are the common path; AI vision is reserved for

@@ -99,7 +99,7 @@ const state = {
   liveCases: [],
   cosmosLoaded: false,
   telemetryError: null,
-  mode: sessionStorage.getItem("ariaMode") === "live" ? "live" : "synthetic",
+  mode: sessionStorage.getItem("ariaMode") === "live" && window.ARIA_CONFIG?.telemetryEndpoint ? "live" : "synthetic",
   currentPage: 1,
   pageSize: 10,
   chartMode: "daily", // "daily" | "accumulated"
@@ -173,6 +173,55 @@ async function fetchCosmosTelemetry() {
 }
 
 const $ = selector => document.querySelector(selector);
+let activeDialog = null;
+let dialogReturnFocus = null;
+
+function getDialogFocusables(dialog) {
+  return Array.from(dialog.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(element => !element.hidden);
+}
+
+function openDialog(dialog, trigger = document.activeElement) {
+  dialogReturnFocus = trigger;
+  activeDialog = dialog;
+  dialog.hidden = false;
+  const focusables = getDialogFocusables(dialog);
+  (focusables[0] || dialog.querySelector('[role="dialog"]')).focus();
+}
+
+function closeDialog(dialog) {
+  dialog.hidden = true;
+  activeDialog = null;
+  dialogReturnFocus?.focus();
+  dialogReturnFocus = null;
+}
+
+function handleDialogKeydown(event) {
+  if (!activeDialog) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeDialog(activeDialog);
+    return;
+  }
+  if (event.key !== "Tab") return;
+
+  const focusables = getDialogFocusables(activeDialog);
+  if (!focusables.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 const formatTokens = value => {
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
@@ -496,6 +545,10 @@ function renderDailyChart(cases, fromDate, toDate, periodLabel) {
 
     return `<div class="day-column" title="${day} (${state.chartMode}): ${formatTokens(d.total)} total (${formatTokens(d.prompt)} prompt, ${formatTokens(d.output)} output)"><div class="bar-stack" style="height:${Math.max(10, heightPx)}px"><span class="bar-prompt" style="height:${pPct}%"></span><span class="bar-output" style="height:${oPct}%"></span><span class="bar-cache" style="height:${cPx}px"></span></div><small>${day}</small></div>`;
   }).join("");
+  const total = entries.reduce((sum, [, data]) => sum + data.total, 0);
+  $("#usageChartSummary").textContent = entries.length
+    ? `${state.chartMode === "accumulated" ? "Accumulated" : "Daily"} token usage across ${entries.length} periods, totaling ${formatTokens(total)} tokens.`
+    : "No token usage is available for the selected filters.";
 }
 
 function renderActivities(cases) {
@@ -633,7 +686,7 @@ function openCaseModal(caseId) {
   $("#modalCost").textContent = formatUsd(totalCost);
   $("#modalModel").textContent = first.model;
 
-  let html = `<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:11px"><thead><tr style="background:#eef2ef;text-align:left"><th>Activity / Stage</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Cost</th></tr></thead><tbody>`;
+  let html = `<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:11px"><caption class="visually-hidden">Token usage stages for ${escapeHtml(caseId)}</caption><thead><tr style="background:#eef2ef;text-align:left"><th>Activity / Stage</th><th>Model</th><th>Input</th><th>Output</th><th>Cached</th><th>Cost</th></tr></thead><tbody>`;
 
   caseRecords.forEach(r => {
     const cached = formatCachedTokens(r);
@@ -643,14 +696,20 @@ function openCaseModal(caseId) {
   html += `</tbody></table>`;
 
   $("#modalBreakdownList").innerHTML = html;
-  $("#caseModal").hidden = false;
+  openDialog($("#caseModal"), dialogReturnFocus);
 }
 
 function updateModeUI() {
   const isLive = state.mode === "live";
+  const liveConfigured = Boolean(window.ARIA_CONFIG?.telemetryEndpoint);
   $("#btnSyntheticMode").classList.toggle("active", !isLive);
   $("#btnLiveMode").classList.toggle("active", isLive);
   $("#btnLiveMode").classList.toggle("live-active", isLive);
+  $("#btnSyntheticMode").setAttribute("aria-pressed", String(!isLive));
+  $("#btnLiveMode").setAttribute("aria-pressed", String(isLive));
+  $("#btnLiveMode").disabled = !liveConfigured;
+  $("#btnLiveMode").textContent = liveConfigured ? "Live Azure" : "Set up Azure";
+  $("#btnLiveMode").title = liveConfigured ? "Load telemetry from your Azure deployment" : "Configure your own Azure telemetry endpoint";
   $("#envBadge").className = `environment ${isLive ? "live" : "synthetic"}`;
   $("#envBadge").textContent = isLive ? "LIVE AZURE · COSMOS TELEMETRY" : "PROJECTED · SYNTHETIC DATA";
   $("#scopeLabelText").textContent = isLive ? "Measured provider telemetry" : "Annual evaluation projection";
@@ -701,6 +760,7 @@ function useSyntheticMode() {
 }
 
 async function useLiveMode() {
+  if (!window.ARIA_CONFIG?.telemetryEndpoint) return;
   state.mode = "live";
   state.cases = state.liveCases;
   sessionStorage.setItem("ariaMode", "live");
@@ -720,6 +780,7 @@ $("#caseRows").addEventListener("click", event => {
   const link = event.target.closest(".case-open");
   if (!link) return;
   event.preventDefault();
+  dialogReturnFocus = link;
   openCaseModal(link.closest(".case-row").dataset.caseId);
 });
 
@@ -783,7 +844,7 @@ $("#btnLast").addEventListener("click", () => {
 });
 
 $("#modalCloseBtn").addEventListener("click", () => {
-  $("#caseModal").hidden = true;
+  closeDialog($("#caseModal"));
 });
 
 // Floating Insights Toolbar & Modals Handler
@@ -791,20 +852,20 @@ document.querySelectorAll(".insight-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const targetId = btn.getAttribute("data-target");
     const modal = document.getElementById(targetId);
-    if (modal) modal.hidden = false;
+    if (modal) openDialog(modal, btn);
   });
 });
 
 document.querySelectorAll(".insight-modal-close").forEach(btn => {
   btn.addEventListener("click", () => {
     const modal = btn.closest(".insight-modal");
-    if (modal) modal.hidden = true;
+    if (modal) closeDialog(modal);
   });
 });
 
 document.querySelectorAll(".insight-modal").forEach(modal => {
   modal.addEventListener("click", event => {
-    if (event.target === modal) modal.hidden = true;
+    if (event.target === modal) closeDialog(modal);
   });
 });
 
@@ -813,6 +874,8 @@ if ($("#btnDailyGranular")) {
     state.chartMode = "daily";
     $("#btnDailyGranular").classList.add("active");
     $("#btnAccumulatedGranular").classList.remove("active");
+    $("#btnDailyGranular").setAttribute("aria-pressed", "true");
+    $("#btnAccumulatedGranular").setAttribute("aria-pressed", "false");
     render();
   });
 }
@@ -822,14 +885,20 @@ if ($("#btnAccumulatedGranular")) {
     state.chartMode = "accumulated";
     $("#btnAccumulatedGranular").classList.add("active");
     $("#btnDailyGranular").classList.remove("active");
+    $("#btnAccumulatedGranular").setAttribute("aria-pressed", "true");
+    $("#btnDailyGranular").setAttribute("aria-pressed", "false");
     render();
   });
 }
 
 $("#caseModal").addEventListener("click", event => {
   if (event.target === $("#caseModal")) {
-    $("#caseModal").hidden = true;
+    closeDialog($("#caseModal"));
   }
+});
+
+document.querySelectorAll(".modal-backdrop").forEach(modal => {
+  modal.addEventListener("keydown", handleDialogKeydown);
 });
 
 $("#exportButton").addEventListener("click", () => {
@@ -892,7 +961,7 @@ function renderHeatmap(cases) {
     matrix[c.activity][c.model].count += 1;
   });
 
-  let html = `<table class="heatmap-table"><thead><tr><th>Pipeline Stage</th>${models.map(m => `<th>${escapeHtml(m)}</th>`).join("")}</tr></thead><tbody>`;
+  let html = `<table class="heatmap-table"><caption class="visually-hidden">Token intensity by pipeline stage and model</caption><thead><tr><th>Pipeline Stage</th>${models.map(m => `<th>${escapeHtml(m)}</th>`).join("")}</tr></thead><tbody>`;
 
   activities.forEach(act => {
     html += `<tr><td class="stage-name">${escapeHtml(act)}</td>`;
